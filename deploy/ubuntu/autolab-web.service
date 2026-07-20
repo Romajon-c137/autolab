@@ -1,0 +1,17 @@
+[Unit]
+Description=Auto Laboratory Next.js web
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/autolab/web
+Environment=NODE_ENV=production
+EnvironmentFile=-/opt/autolab/web/.env
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
