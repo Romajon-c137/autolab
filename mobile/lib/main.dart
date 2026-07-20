@@ -12,7 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const _defaultServerUrl = String.fromEnvironment(
   'SERVER_URL',
-  defaultValue: 'http://192.168.0.212:8000',
+  defaultValue: 'https://autolab.glasscenter.kg',
 );
 const _carViewsAsset = 'assets/car_views.jpeg';
 
