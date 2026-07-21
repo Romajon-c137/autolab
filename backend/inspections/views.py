@@ -199,6 +199,9 @@ def login_view(request):
         "user": {
             "id": user.id,
             "login": user.get_username(),
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "full_name": user.get_full_name() or user.get_username(),
             "role": UserProfile.ROLE_ADMIN if user.is_superuser else profile.role,
             "branch": None if profile is None or profile.branch is None else {
                 "id": profile.branch.id,

@@ -497,12 +497,34 @@ function InspectionDetail({
       {inspection.document_pdf ? (
         <section className="document-panel">
           <div className="document-panel-header">
-            <h3>Документ PDF</h3>
-            <a href={inspection.document_pdf} target="_blank" rel="noreferrer">
-              Открыть
+            <h3>Документ</h3>
+            <a href={inspection.document_pdf} download target="_blank" rel="noreferrer">
+              Скачать PDF
             </a>
           </div>
-          <iframe title="Документ PDF" src={inspection.document_pdf} />
+          <div className="document-preview-card">
+            <div className="document-preview-page">
+              <div className="document-preview-lines">
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="document-preview-table">
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+            </div>
+            <div>
+              <strong>PDF документ готов</strong>
+              <p>Файл сохранен вместе с осмотром. Для просмотра или печати скачайте PDF.</p>
+            </div>
+          </div>
         </section>
       ) : null}
     </section>

@@ -9,8 +9,6 @@ import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'document_html_view.dart';
@@ -19,6 +17,7 @@ const _defaultServerUrl = String.fromEnvironment(
   'SERVER_URL',
   defaultValue: 'https://autolab.glasscenter.kg',
 );
+const _pdfChannel = MethodChannel('autolab/pdf');
 void main() {
   runApp(const AutoInspectionApp());
 }
@@ -136,6 +135,7 @@ class _LoginPageState extends State<_LoginPage> {
       await widget.storage.setSession(
         sessionKey: result.sessionKey,
         userLabel: result.userLabel,
+        userFullName: result.userFullName,
       );
 
       if (!mounted) {
@@ -664,23 +664,11 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       return;
     }
 
-    final size = MediaQuery.sizeOf(context);
-    final isTabletLandscape = size.width >= 900 && size.width > size.height;
-    if (isTabletLandscape) {
-      setState(() {
-        _showDocument = true;
-        _status = null;
-        _statusIsError = false;
-      });
-      return;
-    }
-
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) =>
-            _InspectionDocumentPage(storage: widget.storage, draft: draft),
-      ),
-    );
+    setState(() {
+      _showDocument = true;
+      _status = null;
+      _statusIsError = false;
+    });
   }
 
   void _backToPhotos() {
@@ -708,6 +696,20 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     });
   }
 
+  String get _expertName {
+    final fullName = widget.storage.userFullName?.trim();
+    if (fullName != null && fullName.isNotEmpty) {
+      return fullName;
+    }
+
+    final label = widget.storage.userLabel?.split('/').first.trim();
+    if (label != null && label.isNotEmpty) {
+      return label;
+    }
+
+    return widget.storage.lastLogin ?? '';
+  }
+
   Future<void> _sendInspection() async {
     final draft = _buildDraft(requireBrand: true);
     if (draft == null) {
@@ -724,7 +726,9 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       final sent = await _sendInspectionDraft(
         storage: widget.storage,
         draft: draft,
+        expertName: _expertName,
         signatureSvg: _documentSigned ? widget.storage.signatureSvg() : null,
+        documentStateJson: _documentStateJson,
       );
 
       if (!mounted) {
@@ -840,9 +844,6 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    final isTabletLandscape = size.width >= 900 && size.width > size.height;
-
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditingDraft ? 'Черновик' : 'Новый осмотр'),
@@ -855,9 +856,25 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
         ],
       ),
       body: SafeArea(
-        child: isTabletLandscape
-            ? _buildTabletLandscapeForm()
-            : _buildPhoneForm(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isLandscape =
+                MediaQuery.orientationOf(context) == Orientation.landscape;
+            final isWideLandscape = isLandscape && constraints.maxWidth >= 700;
+            final isTabletLandscape =
+                isLandscape && constraints.maxWidth >= 900;
+
+            if (_showDocument) {
+              return isWideLandscape
+                  ? _buildDocumentLandscapeForm()
+                  : _buildDocumentPortraitForm();
+            }
+
+            return isTabletLandscape
+                ? _buildTabletLandscapeForm()
+                : _buildPhoneForm();
+          },
+        ),
       ),
     );
   }
@@ -908,20 +925,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
           const SizedBox(width: 14),
           Expanded(
             child: _showDocument
-                ? _EmbeddedInspectionDocument(
-                    draft: _draftSnapshot(),
-                    signatureSvg: _documentSigned
-                        ? widget.storage.signatureSvg()
-                        : null,
-                    documentStateJson: _documentStateJson,
-                    onDocumentStateChanged: (state) {
-                      _documentStateJson = state;
-                    },
-                    isSigned: _documentSigned,
-                    isSaving: _isSaving,
-                    onSign: _signDocument,
-                    onSend: _sendInspection,
-                  )
+                ? _buildEmbeddedDocument()
                 : _buildPhotoGrid(
                     columns: 3,
                     childAspectRatio: 1.22,
@@ -930,6 +934,79 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDocumentLandscapeForm() {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 330,
+            child: ListView(
+              children: [
+                _buildFields(compact: true),
+                if (_status != null) ...[
+                  const SizedBox(height: 10),
+                  _StatusBox(text: _status!, isError: _statusIsError),
+                ],
+                const SizedBox(height: 10),
+                _buildFormActions(),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          const VerticalDivider(width: 1),
+          const SizedBox(width: 12),
+          Expanded(child: _buildEmbeddedDocument()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDocumentPortraitForm() {
+    return Column(
+      children: [
+        Material(
+          color: Theme.of(context).colorScheme.surface,
+          child: ExpansionTile(
+            initiallyExpanded: false,
+            title: const Text('Данные авто'),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            children: [
+              _buildFields(compact: true),
+              if (_status != null) ...[
+                const SizedBox(height: 10),
+                _StatusBox(text: _status!, isError: _statusIsError),
+              ],
+              const SizedBox(height: 10),
+              _buildFormActions(),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: _buildEmbeddedDocument(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmbeddedDocument() {
+    return _EmbeddedInspectionDocument(
+      draft: _draftSnapshot(),
+      expertName: _expertName,
+      signatureSvg: _documentSigned ? widget.storage.signatureSvg() : null,
+      documentStateJson: _documentStateJson,
+      onDocumentStateChanged: (state) {
+        _documentStateJson = state;
+      },
+      onSign: _signDocument,
     );
   }
 
@@ -1546,133 +1623,22 @@ class _ReadonlyPhotoTile extends StatelessWidget {
   }
 }
 
-class _InspectionDocumentPage extends StatefulWidget {
-  const _InspectionDocumentPage({required this.storage, required this.draft});
-
-  final _AppStorage storage;
-  final _InspectionDraft draft;
-
-  @override
-  State<_InspectionDocumentPage> createState() =>
-      _InspectionDocumentPageState();
-}
-
-class _InspectionDocumentPageState extends State<_InspectionDocumentPage> {
-  bool _isSaving = false;
-  bool _isSigned = false;
-  String? _status;
-  bool _statusIsError = false;
-  String _documentStateJson = '';
-
-  void _signDocument() {
-    if (widget.storage.signatureSvg() == null) {
-      setState(() {
-        _status = 'Сначала сохраните подпись в пункте "Подпись".';
-        _statusIsError = true;
-      });
-      return;
-    }
-
-    setState(() {
-      _isSigned = true;
-      _status = null;
-      _statusIsError = false;
-    });
-  }
-
-  Future<void> _send() async {
-    setState(() {
-      _isSaving = true;
-      _status = 'Отправляю осмотр...';
-      _statusIsError = false;
-    });
-
-    try {
-      final sent = await _sendInspectionDraft(
-        storage: widget.storage,
-        draft: widget.draft,
-        signatureSvg: _isSigned ? widget.storage.signatureSvg() : null,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _status = 'Осмотр отправлен. ID: ${sent.remoteId}';
-        _statusIsError = false;
-      });
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _status = _humanError(error);
-        _statusIsError = true;
-      });
-    } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Документ осмотра')),
-      body: SafeArea(
-        child: Column(
-          children: [
-            if (_status != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                child: _StatusBox(text: _status!, isError: _statusIsError),
-              ),
-            Expanded(
-              child: _DocumentHtmlPanel(
-                draft: widget.draft,
-                signatureSvg: _isSigned ? widget.storage.signatureSvg() : null,
-                documentStateJson: _documentStateJson,
-                onDocumentStateChanged: (state) {
-                  _documentStateJson = state;
-                },
-              ),
-            ),
-            _DocumentBottomActions(
-              isSigned: _isSigned,
-              isSaving: _isSaving,
-              onSign: _signDocument,
-              onSend: _send,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _EmbeddedInspectionDocument extends StatelessWidget {
   const _EmbeddedInspectionDocument({
     required this.draft,
+    required this.expertName,
     required this.signatureSvg,
     required this.documentStateJson,
     required this.onDocumentStateChanged,
-    required this.isSigned,
-    required this.isSaving,
     required this.onSign,
-    required this.onSend,
   });
 
   final _InspectionDraft draft;
+  final String expertName;
   final String? signatureSvg;
   final String documentStateJson;
   final ValueChanged<String> onDocumentStateChanged;
-  final bool isSigned;
-  final bool isSaving;
   final VoidCallback onSign;
-  final VoidCallback onSend;
 
   @override
   Widget build(BuildContext context) {
@@ -1683,23 +1649,13 @@ class _EmbeddedInspectionDocument extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Column(
-          children: [
-            Expanded(
-              child: _DocumentHtmlPanel(
-                draft: draft,
-                signatureSvg: signatureSvg,
-                documentStateJson: documentStateJson,
-                onDocumentStateChanged: onDocumentStateChanged,
-              ),
-            ),
-            _DocumentBottomActions(
-              isSigned: isSigned,
-              isSaving: isSaving,
-              onSign: onSign,
-              onSend: onSend,
-            ),
-          ],
+        child: _DocumentHtmlPanel(
+          draft: draft,
+          expertName: expertName,
+          signatureSvg: signatureSvg,
+          documentStateJson: documentStateJson,
+          onDocumentStateChanged: onDocumentStateChanged,
+          onSignRequested: onSign,
         ),
       ),
     );
@@ -1709,15 +1665,19 @@ class _EmbeddedInspectionDocument extends StatelessWidget {
 class _DocumentHtmlPanel extends StatelessWidget {
   const _DocumentHtmlPanel({
     required this.draft,
+    required this.expertName,
     required this.signatureSvg,
     required this.documentStateJson,
     required this.onDocumentStateChanged,
+    required this.onSignRequested,
   });
 
   final _InspectionDraft draft;
+  final String expertName;
   final String? signatureSvg;
   final String documentStateJson;
   final ValueChanged<String> onDocumentStateChanged;
+  final VoidCallback onSignRequested;
 
   @override
   Widget build(BuildContext context) {
@@ -1727,58 +1687,11 @@ class _DocumentHtmlPanel extends StatelessWidget {
         brand: draft.brand,
         country: draft.country,
         vin: draft.vin,
+        expertName: expertName,
         signatureSvg: signatureSvg,
         documentStateJson: documentStateJson,
         onDocumentStateChanged: onDocumentStateChanged,
-      ),
-    );
-  }
-}
-
-class _DocumentBottomActions extends StatelessWidget {
-  const _DocumentBottomActions({
-    required this.isSigned,
-    required this.isSaving,
-    required this.onSign,
-    required this.onSend,
-  });
-
-  final bool isSigned;
-  final bool isSaving;
-  final VoidCallback onSign;
-  final VoidCallback onSend;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Theme.of(context).colorScheme.surface,
-      padding: const EdgeInsets.all(10),
-      child: Row(
-        children: [
-          if (!isSigned) ...[
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: isSaving ? null : onSign,
-                icon: const Icon(Icons.draw),
-                label: const Text('Подписать'),
-              ),
-            ),
-            const SizedBox(width: 10),
-          ],
-          Expanded(
-            child: FilledButton.icon(
-              onPressed: isSaving ? null : onSend,
-              icon: isSaving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send),
-              label: const Text('Отправить'),
-            ),
-          ),
-        ],
+        onSignRequested: onSignRequested,
       ),
     );
   }
@@ -2107,11 +2020,15 @@ class _SentInspection {
 Future<_SentInspection> _sendInspectionDraft({
   required _AppStorage storage,
   required _InspectionDraft draft,
+  required String expertName,
   required String? signatureSvg,
+  required String documentStateJson,
 }) async {
   final documentPdfBytes = await _createInspectionPdf(
     draft: draft,
+    expertName: expertName,
     signatureSvg: signatureSvg,
+    documentStateJson: documentStateJson,
   );
   final api = _ApiClient(
     serverUrl: storage.serverUrl,
@@ -2130,105 +2047,68 @@ Future<_SentInspection> _sendInspectionDraft({
 
 Future<List<int>> _createInspectionPdf({
   required _InspectionDraft draft,
+  required String expertName,
   required String? signatureSvg,
+  required String documentStateJson,
 }) async {
-  final fontData = await rootBundle.load('assets/fonts/Arial.ttf');
-  final font = pw.Font.ttf(fontData);
-  final document = pw.Document();
-
-  pw.Widget row(String label, String value) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 4),
-      child: pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.SizedBox(
-            width: 150,
-            child: pw.Text(
-              label,
-              style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
-            ),
-          ),
-          pw.Expanded(
-            child: pw.Text(
-              value.isEmpty ? '-' : value,
-              style: pw.TextStyle(font: font),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  document.addPage(
-    pw.MultiPage(
-      pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(32),
-      theme: pw.ThemeData.withFont(base: font, bold: font),
-      build: (context) => [
-        pw.Center(
-          child: pw.Text(
-            'ПРОТОКОЛ ТЕХНИЧЕСКОЙ ЭКСПЕРТИЗЫ',
-            style: pw.TextStyle(
-              font: font,
-              fontSize: 16,
-              fontWeight: pw.FontWeight.bold,
-            ),
-          ),
-        ),
-        pw.SizedBox(height: 18),
-        row('Марка авто', draft.brand),
-        row('Страна', draft.country),
-        row('VIN', draft.vin),
-        row('Дата', _formatDate(DateTime.now())),
-        pw.SizedBox(height: 18),
-        pw.Text(
-          'Фотографии в осмотре',
-          style: pw.TextStyle(
-            font: font,
-            fontSize: 13,
-            fontWeight: pw.FontWeight.bold,
-          ),
-        ),
-        pw.SizedBox(height: 8),
-        for (final kind in _PhotoKind.values)
-          row(kind.label, draft.photos.containsKey(kind) ? 'Есть' : '-'),
-        pw.Spacer(),
-        pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.end,
-          children: [
-            pw.Text(
-              'Технический эксперт',
-              style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(width: 32),
-            pw.Container(
-              width: 160,
-              height: 54,
-              alignment: pw.Alignment.center,
-              decoration: const pw.BoxDecoration(
-                border: pw.Border(
-                  bottom: pw.BorderSide(color: PdfColors.black),
-                ),
-              ),
-              child: signatureSvg == null
-                  ? pw.SizedBox()
-                  : pw.SvgImage(svg: signatureSvg, fit: pw.BoxFit.contain),
-            ),
-          ],
-        ),
-      ],
-    ),
+  final html = await _buildInspectionDocumentHtml(
+    draft: draft,
+    expertName: expertName,
+    signatureSvg: signatureSvg,
+    documentStateJson: documentStateJson,
   );
+  final bytes = await _pdfChannel.invokeMethod<Uint8List>('htmlToPdf', {
+    'html': html,
+  });
+  if (bytes == null || bytes.isEmpty) {
+    throw Exception('Не удалось создать PDF документа.');
+  }
+  return bytes;
+}
 
-  return document.save();
+Future<String> _buildInspectionDocumentHtml({
+  required _InspectionDraft draft,
+  required String expertName,
+  required String? signatureSvg,
+  required String documentStateJson,
+}) async {
+  final source = await rootBundle.loadString('assets/M1_document_clean.html');
+  final params = Uri(
+    queryParameters: {
+      'brand': draft.brand,
+      'country': draft.country,
+      'vin': draft.vin,
+      'expert_name': expertName,
+      // ignore: use_null_aware_elements
+      if (signatureSvg case final svg?) 'signature': svg,
+      if (documentStateJson.isNotEmpty) 'state': documentStateJson,
+    },
+  ).query;
+  const pdfCss = '''
+  @media screen {
+    html,body { background:#fff!important; padding:0!important; }
+    .page { margin:0!important; box-shadow:none!important; width:210mm!important; height:297mm!important; min-height:297mm!important; }
+    .signature-button { display:none!important; }
+  }
+  ''';
+  return source
+      .replaceFirst('</style>', '$pdfCss</style>')
+      .replaceFirst(
+        'new URLSearchParams(window.location.search)',
+        'new URLSearchParams(${jsonEncode(params)})',
+      );
 }
 
 class _LoginResult {
-  const _LoginResult({required this.sessionKey, required this.userLabel});
+  const _LoginResult({
+    required this.sessionKey,
+    required this.userLabel,
+    required this.userFullName,
+  });
 
   final String sessionKey;
   final String userLabel;
+  final String userFullName;
 }
 
 class _ApiClient {
@@ -2267,8 +2147,14 @@ class _ApiClient {
     final userLabel = branch == null
         ? '${user['login'] ?? login}'
         : '${user['login'] ?? login} / ${branch['name']}';
+    final userFullName = '${user['full_name'] ?? user['login'] ?? login}'
+        .trim();
 
-    return _LoginResult(sessionKey: sessionKey, userLabel: userLabel);
+    return _LoginResult(
+      sessionKey: sessionKey,
+      userLabel: userLabel,
+      userFullName: userFullName.isEmpty ? login : userFullName,
+    );
   }
 
   Future<void> logout() async {
@@ -2385,6 +2271,7 @@ class _AppStorage {
     lastPassword = _prefs.getString('last_password');
     sessionKey = _prefs.getString('session_key');
     userLabel = _prefs.getString('user_label');
+    userFullName = _prefs.getString('user_full_name');
     drafts = _decodeList(_prefs.getString('drafts'), _InspectionDraft.fromJson);
     sent = _decodeList(
       _prefs.getString('sent_inspections'),
@@ -2398,6 +2285,7 @@ class _AppStorage {
   String? lastPassword;
   String? sessionKey;
   String? userLabel;
+  String? userFullName;
   late List<_InspectionDraft> drafts;
   late List<_SentInspection> sent;
 
@@ -2423,18 +2311,23 @@ class _AppStorage {
   Future<void> setSession({
     required String sessionKey,
     required String userLabel,
+    required String userFullName,
   }) async {
     this.sessionKey = sessionKey;
     this.userLabel = userLabel;
+    this.userFullName = userFullName;
     await _prefs.setString('session_key', sessionKey);
     await _prefs.setString('user_label', userLabel);
+    await _prefs.setString('user_full_name', userFullName);
   }
 
   Future<void> clearSession() async {
     sessionKey = null;
     userLabel = null;
+    userFullName = null;
     await _prefs.remove('session_key');
     await _prefs.remove('user_label');
+    await _prefs.remove('user_full_name');
   }
 
   String get _signatureKey {

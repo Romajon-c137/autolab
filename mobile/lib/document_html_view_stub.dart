@@ -10,17 +10,21 @@ class DocumentHtmlView extends StatefulWidget {
     required this.brand,
     required this.country,
     required this.vin,
+    required this.expertName,
     required this.signatureSvg,
     required this.documentStateJson,
     required this.onDocumentStateChanged,
+    required this.onSignRequested,
   });
 
   final String brand;
   final String country;
   final String vin;
+  final String expertName;
   final String? signatureSvg;
   final String documentStateJson;
   final ValueChanged<String> onDocumentStateChanged;
+  final VoidCallback onSignRequested;
 
   @override
   State<DocumentHtmlView> createState() => _DocumentHtmlViewState();
@@ -41,6 +45,12 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
         onMessageReceived: (message) {
           widget.onDocumentStateChanged(message.message);
         },
+      )
+      ..addJavaScriptChannel(
+        'SignDocument',
+        onMessageReceived: (_) {
+          widget.onSignRequested();
+        },
       );
     _loadDocument();
   }
@@ -51,6 +61,7 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
     if (oldWidget.brand != widget.brand ||
         oldWidget.country != widget.country ||
         oldWidget.vin != widget.vin ||
+        oldWidget.expertName != widget.expertName ||
         oldWidget.signatureSvg != widget.signatureSvg) {
       _loadDocument();
     }
@@ -63,6 +74,7 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
         'brand': widget.brand,
         'country': widget.country,
         'vin': widget.vin,
+        'expert_name': widget.expertName,
         if (widget.signatureSvg != null) 'signature': widget.signatureSvg!,
         if (widget.documentStateJson.isNotEmpty)
           'state': widget.documentStateJson,
@@ -79,6 +91,15 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
 
     _lastHtml = html;
     await _controller.loadHtmlString(html);
+    if (widget.signatureSvg != null) {
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      if (!mounted) {
+        return;
+      }
+      await _controller.runJavaScript(
+        "document.querySelector('.signature-line')?.scrollIntoView({block:'center'});",
+      );
+    }
   }
 
   @override

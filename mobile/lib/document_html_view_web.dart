@@ -9,17 +9,21 @@ class DocumentHtmlView extends StatefulWidget {
     required this.brand,
     required this.country,
     required this.vin,
+    required this.expertName,
     required this.signatureSvg,
     required this.documentStateJson,
     required this.onDocumentStateChanged,
+    required this.onSignRequested,
   });
 
   final String brand;
   final String country;
   final String vin;
+  final String expertName;
   final String? signatureSvg;
   final String documentStateJson;
   final ValueChanged<String> onDocumentStateChanged;
+  final VoidCallback onSignRequested;
 
   @override
   State<DocumentHtmlView> createState() => _DocumentHtmlViewState();
@@ -37,6 +41,7 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
         'brand': widget.brand,
         'country': widget.country,
         'vin': widget.vin,
+        'expert_name': widget.expertName,
         if (widget.signatureSvg != null) 'signature': widget.signatureSvg!,
         if (widget.documentStateJson.isNotEmpty)
           'state': widget.documentStateJson,
@@ -66,6 +71,7 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
     if (oldWidget.brand != widget.brand ||
         oldWidget.country != widget.country ||
         oldWidget.vin != widget.vin ||
+        oldWidget.expertName != widget.expertName ||
         oldWidget.signatureSvg != widget.signatureSvg) {
       _iframe?.src = _documentUrl;
     }
