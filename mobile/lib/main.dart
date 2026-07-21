@@ -10,12 +10,12 @@ import 'package:mime/mime.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'document_html_view.dart';
+
 const _defaultServerUrl = String.fromEnvironment(
   'SERVER_URL',
   defaultValue: 'https://autolab.glasscenter.kg',
 );
-const _carViewsAsset = 'assets/car_views.jpeg';
-
 void main() {
   runApp(const AutoInspectionApp());
 }
@@ -326,15 +326,14 @@ class _InspectionFormPage extends StatefulWidget {
 }
 
 class _InspectionFormPageState extends State<_InspectionFormPage> {
-  final _plateController = TextEditingController();
   final _brandController = TextEditingController();
+  final _countryController = TextEditingController();
   final _vinController = TextEditingController();
   final _picker = ImagePicker();
   final Map<_PhotoKind, String> _photos = {};
   final Map<_PhotoKind, DateTime> _photoTakenAt = {};
-  bool _isSaving = false;
   bool _isRecognizingVin = false;
-  bool _isCompleted = false;
+  bool _showDocument = false;
   String? _status;
   bool _statusIsError = false;
   late String _draftId;
@@ -348,25 +347,23 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     final draft = widget.initialDraft;
     _draftId = draft?.id ?? DateTime.now().microsecondsSinceEpoch.toString();
     if (draft != null) {
-      _plateController.text = draft.plateNumber;
       _brandController.text = draft.brand;
+      _countryController.text = draft.country;
       _vinController.text = draft.vin;
       _photos.addAll(draft.photos);
       _photoTakenAt.addAll(draft.photoTakenAt);
     }
-    _plateController.addListener(_scheduleAutoSave);
-    _brandController.addListener(_scheduleAutoSave);
-    _vinController.addListener(_scheduleAutoSave);
+    _brandController.addListener(_handleFieldChanged);
+    _countryController.addListener(_handleFieldChanged);
+    _vinController.addListener(_handleFieldChanged);
   }
 
   @override
   void dispose() {
     _autoSaveTimer?.cancel();
-    if (!_isCompleted) {
-      _autoSaveDraft();
-    }
-    _plateController.dispose();
+    _autoSaveDraft();
     _brandController.dispose();
+    _countryController.dispose();
     _vinController.dispose();
     super.dispose();
   }
@@ -378,6 +375,13 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   void _scheduleAutoSave() {
     _autoSaveTimer?.cancel();
     _autoSaveTimer = Timer(const Duration(milliseconds: 500), _autoSaveDraft);
+  }
+
+  void _handleFieldChanged() {
+    _scheduleAutoSave();
+    if (_showDocument) {
+      setState(() {});
+    }
   }
 
   Future<void> _autoSaveDraft() async {
@@ -474,47 +478,46 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     return File(image.path).copy(target.path).then((file) => file.path);
   }
 
-  Future<void> _sendInspection() async {
-    final draft = _buildDraft(requireBrand: true, requireAllPhotos: true);
+  Future<void> _continueToDocument() async {
+    final draft = _buildDraft(requireBrand: true);
     if (draft == null) {
       return;
     }
 
-    setState(() {
-      _isSaving = true;
-      _status = 'Отправляю осмотр...';
-      _statusIsError = false;
-    });
+    await widget.storage.upsertDraft(draft);
 
-    try {
-      final api = _ApiClient(
-        serverUrl: widget.storage.serverUrl,
-        sessionKey: widget.storage.sessionKey,
-      );
-      final sent = await api.createInspection(draft);
-      final sentWithPhotos = sent.copyWithPhotos(draft.photos);
+    if (!mounted) {
+      return;
+    }
 
-      await widget.storage.removeDraft(draft.id);
-      await widget.storage.addSent(sentWithPhotos);
-      _isCompleted = true;
-
-      if (!mounted) {
-        return;
-      }
-
+    final size = MediaQuery.sizeOf(context);
+    final isTabletLandscape = size.width >= 900 && size.width > size.height;
+    if (isTabletLandscape) {
       setState(() {
-        _status = 'Осмотр отправлен. ID: ${sentWithPhotos.remoteId}';
+        _showDocument = true;
+        _status = null;
         _statusIsError = false;
       });
-
-      Navigator.of(context).pop();
-    } catch (error) {
-      await _handleActionError(error);
-    } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
+      return;
     }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => _InspectionDocumentPage(draft: draft)),
+    );
+  }
+
+  _InspectionDraft _draftSnapshot() {
+    return _InspectionDraft(
+      id: _draftId,
+      plateNumber: '',
+      brand: _brandController.text.trim(),
+      country: _countryController.text.trim(),
+      vin: _vinController.text.trim().toUpperCase(),
+      photos: Map<_PhotoKind, String>.from(_photos),
+      photoTakenAt: Map<_PhotoKind, DateTime>.from(_photoTakenAt),
+      createdAt: widget.initialDraft?.createdAt ?? DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
   }
 
   Future<void> _handleActionError(Object error) async {
@@ -545,13 +548,13 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     bool requireAllPhotos = false,
     bool showErrors = true,
   }) {
-    final plate = _plateController.text.trim().toUpperCase();
     final brand = _brandController.text.trim();
+    final country = _countryController.text.trim();
     final vin = _vinController.text.trim().toUpperCase();
 
     if (!requireBrand &&
-        plate.isEmpty &&
         brand.isEmpty &&
+        country.isEmpty &&
         vin.isEmpty &&
         _photos.isEmpty) {
       return null;
@@ -584,8 +587,9 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
 
     return _InspectionDraft(
       id: _draftId,
-      plateNumber: plate,
+      plateNumber: '',
       brand: brand,
+      country: country,
       vin: vin,
       photos: Map<_PhotoKind, String>.from(_photos),
       photoTakenAt: Map<_PhotoKind, DateTime>.from(_photoTakenAt),
@@ -630,7 +634,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
         ],
         _buildPhotoGrid(columns: 2),
         const SizedBox(height: 16),
-        _buildSendButton(),
+        _buildNextButton(),
       ],
     );
   }
@@ -655,7 +659,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
                 ] else
                   const Spacer(),
                 const SizedBox(height: 10),
-                _buildSendButton(),
+                _buildNextButton(),
               ],
             ),
           ),
@@ -663,11 +667,13 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
           const VerticalDivider(width: 1),
           const SizedBox(width: 14),
           Expanded(
-            child: _buildPhotoGrid(
-              columns: 3,
-              childAspectRatio: 1.22,
-              spacing: 8,
-            ),
+            child: _showDocument
+                ? _EmbeddedInspectionDocument(draft: _draftSnapshot())
+                : _buildPhotoGrid(
+                    columns: 3,
+                    childAspectRatio: 1.22,
+                    spacing: 8,
+                  ),
           ),
         ],
       ),
@@ -678,17 +684,6 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     final gap = compact ? 8.0 : 12.0;
     return Column(
       children: [
-        TextField(
-          controller: _plateController,
-          textCapitalization: TextCapitalization.characters,
-          decoration: InputDecoration(
-            border: const OutlineInputBorder(),
-            isDense: compact,
-            labelText: 'Гос номер (необязательно)',
-            hintText: '01KG123ABC',
-          ),
-        ),
-        SizedBox(height: gap),
         TextField(
           controller: _brandController,
           textInputAction: TextInputAction.done,
@@ -701,12 +696,23 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
         ),
         SizedBox(height: gap),
         TextField(
+          controller: _countryController,
+          textInputAction: TextInputAction.done,
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            isDense: compact,
+            labelText: 'Страна',
+            hintText: 'Япония',
+          ),
+        ),
+        SizedBox(height: gap),
+        TextField(
           controller: _vinController,
           textCapitalization: TextCapitalization.characters,
           decoration: InputDecoration(
             border: const OutlineInputBorder(),
             isDense: compact,
-            labelText: 'VIN',
+            labelText: 'VIN номер',
             hintText: 'Распознается после фото VIN',
             suffixIcon: _isRecognizingVin
                 ? const Padding(
@@ -742,27 +748,22 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
         for (final kind in _PhotoKind.values)
           _PhotoTile(
             label: kind.label,
+            asset: kind.asset,
             path: _photos[kind],
-            onTap: _isSaving || _isRecognizingVin
-                ? null
-                : () => _takePhoto(kind),
+            onTap: _isRecognizingVin ? null : () => _takePhoto(kind),
           ),
       ],
     );
   }
 
-  Widget _buildSendButton() {
+  Widget _buildNextButton() {
     return SizedBox(
       height: 48,
-      child: FilledButton(
-        onPressed: _isSaving || _isRecognizingVin ? null : _sendInspection,
-        child: _isSaving
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Text('Отправить'),
+      child: FilledButton.icon(
+        onPressed: _isRecognizingVin ? null : _continueToDocument,
+        iconAlignment: IconAlignment.end,
+        label: const Text('Далее'),
+        icon: const Icon(Icons.arrow_forward),
       ),
     );
   }
@@ -857,7 +858,7 @@ class _DraftCard extends StatelessWidget {
     final photoCount = draft.photos.length;
     final title = [
       if (draft.brand.isNotEmpty) draft.brand else 'Без марки',
-      if (draft.plateNumber.isNotEmpty) draft.plateNumber,
+      if (draft.country.isNotEmpty) draft.country,
     ].join(' ');
 
     return Material(
@@ -898,6 +899,9 @@ class _DraftCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
+                    Text(
+                      'Страна: ${draft.country.isEmpty ? '-' : draft.country}',
+                    ),
                     Text('VIN: ${draft.vin.isEmpty ? '-' : draft.vin}'),
                     Text(
                       'Фото: $photoCount/6 • ${_formatDate(draft.updatedAt)}',
@@ -1068,7 +1072,7 @@ class _InspectionRegisterCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final title = [
       item.brand,
-      if (item.plateNumber.isNotEmpty) item.plateNumber,
+      if (item.country.isNotEmpty) item.country,
     ].join(' ');
 
     return Material(
@@ -1132,13 +1136,13 @@ class _InspectionDetailsPage extends StatelessWidget {
     final isTablet = MediaQuery.sizeOf(context).width >= 720;
     final title = [
       item.brand,
-      if (item.plateNumber.isNotEmpty) item.plateNumber,
+      if (item.country.isNotEmpty) item.country,
     ].join(' ');
     final details = _StatusBox(
       text:
           '$title\n'
-          'Гос номер: ${item.plateNumber.isEmpty ? '-' : item.plateNumber}\n'
           'Марка: ${item.brand}\n'
+          'Страна: ${item.country.isEmpty ? '-' : item.country}\n'
           'VIN: ${item.vin.isEmpty ? '-' : item.vin}\n'
           'ID: ${item.remoteId}\n'
           'Дата: ${_formatDate(item.sentAt)}',
@@ -1259,6 +1263,58 @@ class _ReadonlyPhotoTile extends StatelessWidget {
   }
 }
 
+class _InspectionDocumentPage extends StatelessWidget {
+  const _InspectionDocumentPage({required this.draft});
+
+  final _InspectionDraft draft;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Документ осмотра')),
+      body: SafeArea(child: _DocumentHtmlPanel(draft: draft)),
+    );
+  }
+}
+
+class _EmbeddedInspectionDocument extends StatelessWidget {
+  const _EmbeddedInspectionDocument({required this.draft});
+
+  final _InspectionDraft draft;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: _DocumentHtmlPanel(draft: draft),
+      ),
+    );
+  }
+}
+
+class _DocumentHtmlPanel extends StatelessWidget {
+  const _DocumentHtmlPanel({required this.draft});
+
+  final _InspectionDraft draft;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Colors.white,
+      child: DocumentHtmlView(
+        brand: draft.brand,
+        country: draft.country,
+        vin: draft.vin,
+      ),
+    );
+  }
+}
+
 class _MenuButton extends StatelessWidget {
   const _MenuButton({
     required this.title,
@@ -1306,11 +1362,13 @@ class _MenuButton extends StatelessWidget {
 class _PhotoTile extends StatelessWidget {
   const _PhotoTile({
     required this.label,
+    required this.asset,
     required this.path,
     required this.onTap,
   });
 
   final String label;
+  final String asset;
   final String? path;
   final VoidCallback? onTap;
 
@@ -1331,44 +1389,22 @@ class _PhotoTile extends StatelessWidget {
           children: [
             if (path == null)
               ColoredBox(
-                color: colorScheme.surfaceContainerHighest,
+                color: Colors.white,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Opacity(
-                        opacity: 0.2,
-                        child: Image.asset(
-                          _carViewsAsset,
-                          fit: BoxFit.contain,
-                          color: colorScheme.onSurface,
-                          colorBlendMode: BlendMode.srcIn,
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: const BoxDecoration(color: Colors.white),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Image.asset(
+                            asset,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const SizedBox.shrink(),
+                          ),
                         ),
-                      ),
-                    ),
-                    Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            label,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Сфотографировать',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                   ],
@@ -1438,17 +1474,18 @@ class _StatusBox extends StatelessWidget {
 }
 
 enum _PhotoKind {
-  front('front_photo', 'Спереди'),
-  rear('rear_photo', 'Сзади'),
-  left('left_photo', 'Слева'),
-  right('right_photo', 'Справа'),
-  mileage('mileage_photo', 'Пробег'),
-  vin('vin_photo', 'VIN');
+  front('front_photo', 'Спереди', 'assets/front.jpg'),
+  right('right_photo', 'Справа', 'assets/right.jpg'),
+  rear('rear_photo', 'Сзади', 'assets/back.jpg'),
+  left('left_photo', 'Слева', 'assets/left.jpg'),
+  vin('vin_photo', 'VIN', 'assets/vin.jpg'),
+  mileage('mileage_photo', 'Пробег', 'assets/left-1.jpg');
 
-  const _PhotoKind(this.apiField, this.label);
+  const _PhotoKind(this.apiField, this.label, this.asset);
 
   final String apiField;
   final String label;
+  final String asset;
 
   String get key => apiField;
 }
@@ -1458,6 +1495,7 @@ class _InspectionDraft {
     required this.id,
     required this.plateNumber,
     required this.brand,
+    required this.country,
     required this.vin,
     required this.photos,
     required this.photoTakenAt,
@@ -1468,6 +1506,7 @@ class _InspectionDraft {
   final String id;
   final String plateNumber;
   final String brand;
+  final String country;
   final String vin;
   final Map<_PhotoKind, String> photos;
   final Map<_PhotoKind, DateTime> photoTakenAt;
@@ -1479,6 +1518,7 @@ class _InspectionDraft {
       'id': id,
       'plate_number': plateNumber,
       'brand': brand,
+      'country': country,
       'vin': vin,
       'photos': photos.map((key, value) => MapEntry(key.apiField, value)),
       'photo_taken_at': photoTakenAt.map(
@@ -1515,6 +1555,7 @@ class _InspectionDraft {
       id: json['id'] as String,
       plateNumber: json['plate_number'] as String? ?? '',
       brand: json['brand'] as String? ?? '',
+      country: json['country'] as String? ?? '',
       vin: json['vin'] as String? ?? '',
       photos: photos,
       photoTakenAt: photoTakenAt,
@@ -1533,6 +1574,7 @@ class _SentInspection {
     required this.remoteId,
     required this.plateNumber,
     required this.brand,
+    required this.country,
     required this.vin,
     required this.photos,
     required this.sentAt,
@@ -1541,6 +1583,7 @@ class _SentInspection {
   final int remoteId;
   final String plateNumber;
   final String brand;
+  final String country;
   final String vin;
   final Map<_PhotoKind, String> photos;
   final DateTime sentAt;
@@ -1550,6 +1593,7 @@ class _SentInspection {
       remoteId: remoteId,
       plateNumber: plateNumber,
       brand: brand,
+      country: country,
       vin: vin,
       photos: Map<_PhotoKind, String>.from(photos),
       sentAt: sentAt,
@@ -1561,6 +1605,7 @@ class _SentInspection {
       'remote_id': remoteId,
       'plate_number': plateNumber,
       'brand': brand,
+      'country': country,
       'vin': vin,
       'photos': photos.map((key, value) => MapEntry(key.apiField, value)),
       'sent_at': sentAt.toIso8601String(),
@@ -1581,6 +1626,7 @@ class _SentInspection {
       remoteId: json['remote_id'] as int? ?? 0,
       plateNumber: json['plate_number'] as String? ?? '',
       brand: json['brand'] as String? ?? '',
+      country: json['country'] as String? ?? '',
       vin: json['vin'] as String? ?? '',
       photos: photos,
       sentAt:
@@ -1648,6 +1694,7 @@ class _ApiClient {
     request.fields.addAll({
       'plate_number': draft.plateNumber,
       'brand': draft.brand,
+      'country': draft.country,
       'vin': draft.vin,
     });
 
@@ -1679,6 +1726,7 @@ class _ApiClient {
       remoteId: data['id'] as int? ?? 0,
       plateNumber: data['plate_number'] as String? ?? draft.plateNumber,
       brand: data['brand'] as String? ?? draft.brand,
+      country: data['country'] as String? ?? draft.country,
       vin: data['vin'] as String? ?? draft.vin,
       photos: const {},
       sentAt: DateTime.now(),

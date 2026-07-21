@@ -127,6 +127,7 @@ def _serialize_inspection(request, inspection):
         "title": inspection.title,
         "plate_number": inspection.plate_number,
         "brand": inspection.brand,
+        "country": inspection.country,
         "vin": inspection.vin,
         "created_at": inspection.created_at.isoformat(),
         "branch": None if inspection.branch is None else {
@@ -275,6 +276,8 @@ def inspections_list(request):
     if query:
         queryset = queryset.filter(
             brand__icontains=query
+        ) | queryset.filter(
+            country__icontains=query
         ) | queryset.filter(
             plate_number__icontains=query
         ) | queryset.filter(
@@ -474,6 +477,7 @@ def create_inspection(request):
     title = request.POST.get("title", "").strip()
     plate_number = request.POST.get("plate_number", "").strip().upper()
     brand = request.POST.get("brand", "").strip()
+    country = request.POST.get("country", "").strip()
     profile = getattr(user, "profile", None)
     branch = None if profile is None else profile.branch
 
@@ -523,6 +527,7 @@ def create_inspection(request):
         title=title,
         plate_number=plate_number,
         brand=brand,
+        country=country,
         branch=branch,
         created_by=user,
         vin=request.POST.get("vin", "").strip().upper(),
@@ -546,6 +551,7 @@ def create_inspection(request):
         "title": inspection.title,
         "plate_number": inspection.plate_number,
         "brand": inspection.brand,
+        "country": inspection.country,
         "vin": inspection.vin,
         "branch": {
             "id": branch.id,
