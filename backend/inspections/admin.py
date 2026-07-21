@@ -106,6 +106,7 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
         "rear_preview",
         "left_preview",
         "right_preview",
+        "document_link",
     )
     readonly_fields = (
         "created_at",
@@ -115,6 +116,7 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
         "rear_preview",
         "left_preview",
         "right_preview",
+        "document_link",
     )
     search_fields = ("title", "plate_number", "brand", "country", "vin")
     list_filter = ("branch", "created_by", "created_at")
@@ -146,6 +148,12 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
                 ("right_photo", "right_preview"),
             ),
         }),
+        ("Документ", {
+            "fields": (
+                "document_pdf",
+                "document_link",
+            ),
+        }),
     )
 
     @admin.display(description="Пробег")
@@ -171,6 +179,16 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
     @admin.display(description="Справа")
     def right_preview(self, obj):
         return self._image_preview(obj.right_photo)
+
+    @admin.display(description="PDF документ")
+    def document_link(self, obj):
+        if not obj.document_pdf:
+            return "-"
+
+        return format_html(
+            '<a href="{url}" target="_blank">Открыть PDF</a>',
+            url=obj.document_pdf.url,
+        )
 
     def _image_preview(self, image):
         if not image:

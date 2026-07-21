@@ -146,6 +146,7 @@ def _serialize_inspection(request, inspection):
             "mileage_photo": _file_url(request, inspection.mileage_photo),
             "vin_photo": _file_url(request, inspection.vin_photo),
         },
+        "document_pdf": _file_url(request, inspection.document_pdf),
         "photo_taken_at": {
             "front_photo": _serialize_datetime(inspection.front_photo_taken_at),
             "rear_photo": _serialize_datetime(inspection.rear_photo_taken_at),
@@ -493,17 +494,12 @@ def create_inspection(request):
             "error": "User branch is not selected",
         }, status=400)
 
-    missing_photos = [field for field in REQUIRED_PHOTO_FIELDS if field not in request.FILES]
-    if missing_photos:
-        return JsonResponse({
-            "ok": False,
-            "error": "All inspection photos are required",
-            "missing": missing_photos,
-        }, status=400)
-
     invalid_photos = []
     for field in REQUIRED_PHOTO_FIELDS:
-        uploaded_file = request.FILES[field]
+        uploaded_file = request.FILES.get(field)
+        if uploaded_file is None:
+            continue
+
         if not _is_image_file(uploaded_file):
             invalid_photos.append({
                 "field": field,
@@ -516,6 +512,14 @@ def create_inspection(request):
             "ok": False,
             "error": "All uploaded files must be images",
             "invalid_photos": invalid_photos,
+        }, status=400)
+
+    document_pdf = request.FILES.get("document_pdf")
+    if document_pdf is not None and document_pdf.content_type != "application/pdf":
+        return JsonResponse({
+            "ok": False,
+            "error": "Uploaded document must be a PDF",
+            "content_type": document_pdf.content_type,
         }, status=400)
 
     photo_taken_at = {
@@ -531,12 +535,13 @@ def create_inspection(request):
         branch=branch,
         created_by=user,
         vin=request.POST.get("vin", "").strip().upper(),
-        front_photo=request.FILES["front_photo"],
-        rear_photo=request.FILES["rear_photo"],
-        left_photo=request.FILES["left_photo"],
-        right_photo=request.FILES["right_photo"],
-        mileage_photo=request.FILES["mileage_photo"],
-        vin_photo=request.FILES["vin_photo"],
+        front_photo=request.FILES.get("front_photo"),
+        rear_photo=request.FILES.get("rear_photo"),
+        left_photo=request.FILES.get("left_photo"),
+        right_photo=request.FILES.get("right_photo"),
+        mileage_photo=request.FILES.get("mileage_photo"),
+        vin_photo=request.FILES.get("vin_photo"),
+        document_pdf=document_pdf,
         front_photo_taken_at=photo_taken_at["front_photo"],
         rear_photo_taken_at=photo_taken_at["rear_photo"],
         left_photo_taken_at=photo_taken_at["left_photo"],
@@ -553,6 +558,7 @@ def create_inspection(request):
         "brand": inspection.brand,
         "country": inspection.country,
         "vin": inspection.vin,
+        "document_pdf": _file_url(request, inspection.document_pdf),
         "branch": {
             "id": branch.id,
             "name": branch.name,

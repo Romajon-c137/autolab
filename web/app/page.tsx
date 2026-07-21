@@ -38,6 +38,7 @@ type Inspection = {
   branch: null | { id: number; name: string };
   created_by: null | { id: number; login: string };
   photos: Record<string, string>;
+  document_pdf?: string;
   photo_taken_at?: Record<string, string>;
 };
 
@@ -493,6 +494,17 @@ function InspectionDetail({
           </div>
         ))}
       </div>
+      {inspection.document_pdf ? (
+        <section className="document-panel">
+          <div className="document-panel-header">
+            <h3>Документ PDF</h3>
+            <a href={inspection.document_pdf} target="_blank" rel="noreferrer">
+              Открыть
+            </a>
+          </div>
+          <iframe title="Документ PDF" src={inspection.document_pdf} />
+        </section>
+      ) : null}
     </section>
   );
 }

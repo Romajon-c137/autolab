@@ -107,10 +107,30 @@ class VehicleInspection(models.Model):
         blank=True,
         verbose_name="Создал",
     )
-    front_photo = models.ImageField("Фото спереди", upload_to="inspections/front/")
-    rear_photo = models.ImageField("Фото сзади", upload_to="inspections/rear/")
-    left_photo = models.ImageField("Фото слева", upload_to="inspections/left/")
-    right_photo = models.ImageField("Фото справа", upload_to="inspections/right/")
+    front_photo = models.ImageField(
+        "Фото спереди",
+        upload_to="inspections/front/",
+        null=True,
+        blank=True,
+    )
+    rear_photo = models.ImageField(
+        "Фото сзади",
+        upload_to="inspections/rear/",
+        null=True,
+        blank=True,
+    )
+    left_photo = models.ImageField(
+        "Фото слева",
+        upload_to="inspections/left/",
+        null=True,
+        blank=True,
+    )
+    right_photo = models.ImageField(
+        "Фото справа",
+        upload_to="inspections/right/",
+        null=True,
+        blank=True,
+    )
     mileage_photo = models.ImageField(
         "Фото пробега",
         upload_to="inspections/mileage/",
@@ -120,6 +140,12 @@ class VehicleInspection(models.Model):
     vin_photo = models.ImageField(
         "Фото VIN",
         upload_to="inspections/vin/",
+        null=True,
+        blank=True,
+    )
+    document_pdf = models.FileField(
+        "Документ PDF",
+        upload_to="inspections/documents/",
         null=True,
         blank=True,
     )

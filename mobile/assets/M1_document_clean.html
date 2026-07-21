@@ -74,6 +74,8 @@
   .conclusion-result { white-space:nowrap; }
   .signature-line { display:grid; grid-template-columns:42mm 38mm minmax(0,1fr); column-gap:7mm; align-items:end; margin-top:7mm; font-family:"Times New Roman", Times, serif; font-size:11pt; font-weight:700; }
   .signature-space { border-bottom:1px solid #111; height:5mm; }
+  .signature-space.signed { display:flex; align-items:end; justify-content:center; height:12mm; }
+  .signature-space.signed img { max-width:100%; max-height:12mm; object-fit:contain; }
   .expert-input { border:0; border-bottom:1px solid #111; outline:none; text-align:center; height:5mm; width:100%; }
   .signature-caption { display:grid; grid-template-columns:42mm 38mm minmax(0,1fr); column-gap:7mm; font-family:"Times New Roman", Times, serif; font-size:9pt; text-align:center; margin-top:.8mm; }
   .signature-caption span:first-child { grid-column:2; }
@@ -1105,7 +1107,63 @@
       element.classList.toggle('needs-fill', !element.value.trim());
       element.addEventListener('input', function () {
         element.classList.toggle('needs-fill', !element.value.trim());
+        notifyStateChanged();
       });
+    }
+
+    function notifyStateChanged() {
+      if (!window.DocumentState || !window.DocumentState.postMessage) {
+        return;
+      }
+      window.DocumentState.postMessage(JSON.stringify(collectDocumentState()));
+    }
+
+    function collectDocumentState() {
+      return {
+        fields: Array.prototype.map.call(document.querySelectorAll('[data-field]'), function (element) {
+          return { name: element.getAttribute('data-field'), value: element.value || '' };
+        }),
+        actual: Array.prototype.map.call(document.querySelectorAll('.col-actual'), function (cell) {
+          var button = cell.querySelector('.actual-toggle');
+          var input = cell.querySelector('.actual-mm input');
+          return {
+            state: button ? (button.dataset.state || '') : null,
+            value: input ? input.value : null
+          };
+        })
+      };
+    }
+
+    function applyDocumentState(raw) {
+      if (!raw) {
+        return;
+      }
+      try {
+        var state = JSON.parse(raw);
+        (state.fields || []).forEach(function (fieldState) {
+          var element = field(fieldState.name);
+          if (element) {
+            element.value = fieldState.value || '';
+            element.classList.toggle('needs-fill', !element.value.trim());
+          }
+        });
+        (state.actual || []).forEach(function (actualState, index) {
+          var cell = document.querySelectorAll('.col-actual')[index];
+          if (!cell) {
+            return;
+          }
+          var button = cell.querySelector('.actual-toggle');
+          if (button) {
+            button.dataset.state = actualState.state || '';
+            button.textContent = button.dataset.state === 'check' ? '✓' : (button.dataset.state === 'dash' ? '-' : '');
+          }
+          var input = cell.querySelector('.actual-mm input');
+          if (input && actualState.value !== null && actualState.value !== undefined) {
+            input.value = actualState.value;
+          }
+        });
+      } catch (error) {
+      }
     }
 
     setValue('protocol_date', value);
@@ -1115,6 +1173,17 @@
     markIfEmpty(setValue('vin', params.get('vin') || ''));
     markIfEmpty(field('temperature'));
     markIfEmpty(field('humidity'));
+
+    var signature = params.get('signature');
+    var signatureSpace = document.querySelector('.signature-space');
+    if (signature && signatureSpace) {
+      signatureSpace.classList.add('signed');
+      signatureSpace.innerHTML = '';
+      var image = document.createElement('img');
+      image.alt = 'Подпись';
+      image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(signature);
+      signatureSpace.appendChild(image);
+    }
 
     document.querySelectorAll('.col-actual').forEach(function (cell) {
       var initial = cell.textContent.replace(/\u00a0/g, ' ').trim();
@@ -1127,6 +1196,7 @@
         input.inputMode = 'decimal';
         input.placeholder = '';
         input.setAttribute('aria-label', 'Фактическое значение, мм');
+        input.addEventListener('input', notifyStateChanged);
         var unit = document.createElement('span');
         unit.textContent = 'мм';
         wrapper.appendChild(input);
@@ -1152,9 +1222,12 @@
           button.dataset.state = '';
           button.textContent = '';
         }
+        notifyStateChanged();
       });
       cell.appendChild(button);
     });
+    applyDocumentState(params.get('state'));
+    notifyStateChanged();
   })();
 </script>
 </body>

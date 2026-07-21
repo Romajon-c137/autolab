@@ -9,11 +9,17 @@ class DocumentHtmlView extends StatefulWidget {
     required this.brand,
     required this.country,
     required this.vin,
+    required this.signatureSvg,
+    required this.documentStateJson,
+    required this.onDocumentStateChanged,
   });
 
   final String brand;
   final String country;
   final String vin;
+  final String? signatureSvg;
+  final String documentStateJson;
+  final ValueChanged<String> onDocumentStateChanged;
 
   @override
   State<DocumentHtmlView> createState() => _DocumentHtmlViewState();
@@ -31,6 +37,9 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
         'brand': widget.brand,
         'country': widget.country,
         'vin': widget.vin,
+        if (widget.signatureSvg != null) 'signature': widget.signatureSvg!,
+        if (widget.documentStateJson.isNotEmpty)
+          'state': widget.documentStateJson,
       },
     ).toString();
   }
@@ -56,7 +65,8 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.brand != widget.brand ||
         oldWidget.country != widget.country ||
-        oldWidget.vin != widget.vin) {
+        oldWidget.vin != widget.vin ||
+        oldWidget.signatureSvg != widget.signatureSvg) {
       _iframe?.src = _documentUrl;
     }
   }
