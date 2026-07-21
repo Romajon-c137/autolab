@@ -34,6 +34,9 @@ class MainActivity : FlutterActivity() {
 
     private fun createPdfFromHtml(html: String, result: MethodChannel.Result) {
         runOnUiThread {
+            val density = resources.displayMetrics.density
+            val sourceWidth = (794 * density).toInt()
+            val sourcePageHeight = (1123 * density).toInt()
             val container = FrameLayout(this)
             val webView = WebView(this)
             var finished = false
@@ -66,18 +69,34 @@ class MainActivity : FlutterActivity() {
 
             container.addView(
                 webView,
-                FrameLayout.LayoutParams(794, 1123)
+                FrameLayout.LayoutParams(sourceWidth, sourcePageHeight)
             )
+            container.translationX = -sourceWidth.toFloat() * 2
             addContentView(
                 container,
-                ViewGroup.LayoutParams(1, 1)
+                ViewGroup.LayoutParams(sourceWidth, sourcePageHeight)
             )
 
             webView.webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView, url: String?) {
                     view.postDelayed({
                         view.evaluateJavascript(
-                            "String(document.querySelectorAll('.page').length || Math.max(1, Math.ceil(document.body.scrollHeight / 1123)))"
+                            """
+                            (function(){
+                              document.querySelectorAll('input, textarea').forEach(function(element) {
+                                if (element.tagName === 'TEXTAREA') {
+                                  element.textContent = element.value || '';
+                                } else {
+                                  element.setAttribute('value', element.value || '');
+                                }
+                              });
+                              window.__autolabPages = Array.prototype.map.call(
+                                document.querySelectorAll('.page'),
+                                function(page) { return page.outerHTML; }
+                              );
+                              return String(window.__autolabPages.length || 1);
+                            })();
+                            """.trimIndent()
                         ) { rawCount ->
                             val pageCount = rawCount
                                 ?.trim('"')
@@ -141,14 +160,16 @@ class MainActivity : FlutterActivity() {
                       document.body.style.background = '#fff';
                       document.body.style.padding = '0';
                       document.body.style.margin = '0';
-                      document.querySelectorAll('.page').forEach(function(page, index) {
-                        page.style.display = index === $pageIndex ? 'block' : 'none';
+                      document.body.innerHTML = window.__autolabPages[$pageIndex] || '';
+                      var page = document.querySelector('.page');
+                      if (page) {
+                        page.style.display = 'block';
                         page.style.margin = '0';
                         page.style.boxShadow = 'none';
                         page.style.width = '210mm';
                         page.style.height = '297mm';
                         page.style.minHeight = '297mm';
-                      });
+                      }
                       'ok';
                     })();
                 """.trimIndent()

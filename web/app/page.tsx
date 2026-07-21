@@ -385,7 +385,6 @@ function InspectionsPage({
             <>
               <div className="inspection-header" aria-hidden="true">
                 <span>Марка / модель</span>
-                <span>Госномер</span>
                 <span>VIN</span>
                 <span>Дата</span>
                 <span>Оператор</span>
@@ -419,10 +418,6 @@ function InspectionCard({
         <span>Марка / модель</span>
         <strong>{inspection.brand || "-"}</strong>
       </div>
-      <div className="inspection-cell">
-        <span>Госномер</span>
-        <strong>{inspection.plate_number || "-"}</strong>
-      </div>
       <div className="inspection-cell vin-cell">
         <span>VIN</span>
         <strong>{inspection.vin || "-"}</strong>
@@ -449,41 +444,86 @@ function InspectionDetail({
 }: {
   inspection: Inspection;
 }) {
+  const [activePhoto, setActivePhoto] = useState<null | { src: string; label: string }>(null);
+  const pdfName = pdfFileName(inspection);
+
   return (
     <section className="detail-grid">
-      <table className="detail-table">
-        <tbody>
-          <tr>
-            <th>Название</th>
-            <td>{inspection.title || "-"}</td>
-          </tr>
-          <tr>
-            <th>Марка / модель</th>
-            <td>{inspection.brand || "-"}</td>
-          </tr>
-          <tr>
-            <th>Госномер</th>
-            <td>{inspection.plate_number || "-"}</td>
-          </tr>
-          <tr>
-            <th>VIN</th>
-            <td>{inspection.vin || "-"}</td>
-          </tr>
-          <tr>
-            <th>Дата</th>
-            <td>{formatDate(inspection.created_at)}</td>
-          </tr>
-          <tr>
-            <th>Оператор</th>
-            <td>{inspection.created_by?.login ?? "-"}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div className="detail-sidebar">
+        <table className="detail-table">
+          <tbody>
+            <tr>
+              <th>Название</th>
+              <td>{inspection.title || "-"}</td>
+            </tr>
+            <tr>
+              <th>Марка / модель</th>
+              <td>{inspection.brand || "-"}</td>
+            </tr>
+            <tr>
+              <th>VIN</th>
+              <td>{inspection.vin || "-"}</td>
+            </tr>
+            <tr>
+              <th>Дата</th>
+              <td>{formatDate(inspection.created_at)}</td>
+            </tr>
+            <tr>
+              <th>Оператор</th>
+              <td>{inspection.created_by?.login ?? "-"}</td>
+            </tr>
+          </tbody>
+        </table>
+        {inspection.document_pdf ? (
+          <section className="document-panel">
+            <div className="document-panel-header">
+              <h3>Документ</h3>
+              <div className="document-actions">
+                <a href={inspection.document_pdf} target="_blank" rel="noreferrer">
+                  Предпросмотр
+                </a>
+                <a href={inspection.document_pdf} download={pdfName}>
+                  Скачать PDF
+                </a>
+              </div>
+            </div>
+            <div className="document-preview-card">
+              <div className="document-preview-page">
+                <div className="document-preview-lines">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <div className="document-preview-table">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+              <div>
+                <strong>PDF документ готов</strong>
+                <p>Файл сохранен вместе с осмотром.</p>
+              </div>
+            </div>
+          </section>
+        ) : null}
+      </div>
       <div className="photo-grid">
         {Object.entries(photoLabels).map(([key, label]) => (
           <div className="photo-card" key={key}>
             {inspection.photos[key] ? (
-              <img src={inspection.photos[key]} alt={label} />
+              <button
+                className="photo-open-button"
+                type="button"
+                onClick={() => setActivePhoto({ src: inspection.photos[key], label })}
+              >
+                <img src={inspection.photos[key]} alt={label} />
+              </button>
             ) : (
               <div style={{ aspectRatio: "4 / 3" }} />
             )}
@@ -494,38 +534,16 @@ function InspectionDetail({
           </div>
         ))}
       </div>
-      {inspection.document_pdf ? (
-        <section className="document-panel">
-          <div className="document-panel-header">
-            <h3>Документ</h3>
-            <a href={inspection.document_pdf} download target="_blank" rel="noreferrer">
-              Скачать PDF
-            </a>
+      {activePhoto ? (
+        <div className="photo-modal" role="dialog" aria-modal="true" onClick={() => setActivePhoto(null)}>
+          <div className="photo-modal-content" onClick={(event) => event.stopPropagation()}>
+            <button className="photo-modal-close" type="button" onClick={() => setActivePhoto(null)}>
+              Закрыть
+            </button>
+            <img src={activePhoto.src} alt={activePhoto.label} />
+            <span>{activePhoto.label}</span>
           </div>
-          <div className="document-preview-card">
-            <div className="document-preview-page">
-              <div className="document-preview-lines">
-                <span />
-                <span />
-                <span />
-                <span />
-                <span />
-              </div>
-              <div className="document-preview-table">
-                <span />
-                <span />
-                <span />
-                <span />
-                <span />
-                <span />
-              </div>
-            </div>
-            <div>
-              <strong>PDF документ готов</strong>
-              <p>Файл сохранен вместе с осмотром. Для просмотра или печати скачайте PDF.</p>
-            </div>
-          </div>
-        </section>
+        </div>
       ) : null}
     </section>
   );
@@ -624,7 +642,6 @@ function ReportsPage({
               <>
                 <div className="inspection-header" aria-hidden="true">
                   <span>Марка / модель</span>
-                  <span>Госномер</span>
                   <span>VIN</span>
                   <span>Дата</span>
                   <span>Оператор</span>
@@ -635,10 +652,6 @@ function ReportsPage({
                     <div className="inspection-cell">
                       <span>Марка / модель</span>
                       <strong>{inspection.brand || "-"}</strong>
-                    </div>
-                    <div className="inspection-cell">
-                      <span>Госномер</span>
-                      <strong>{inspection.plate_number || "-"}</strong>
                     </div>
                     <div className="inspection-cell vin-cell">
                       <span>VIN</span>
@@ -718,6 +731,20 @@ function formatDate(value: string) {
 
 function formatPhotoDate(inspection: Inspection, photoKey: string) {
   return formatDate(inspection.photo_taken_at?.[photoKey] || inspection.created_at);
+}
+
+function pdfFileName(inspection: Inspection) {
+  const brand = sanitizeFilePart(inspection.brand) || "auto";
+  const vin = sanitizeFilePart(inspection.vin) || `inspection-${inspection.id}`;
+  return `${brand}-${vin}.pdf`;
+}
+
+function sanitizeFilePart(value: string) {
+  return value
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[\\/:*?"<>|]/g, "")
+    .slice(0, 80);
 }
 
 function humanError(error: unknown) {

@@ -699,12 +699,12 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   String get _expertName {
     final fullName = widget.storage.userFullName?.trim();
     if (fullName != null && fullName.isNotEmpty) {
-      return fullName;
+      return _shortExpertName(fullName);
     }
 
     final label = widget.storage.userLabel?.split('/').first.trim();
     if (label != null && label.isNotEmpty) {
-      return label;
+      return _shortExpertName(label);
     }
 
     return widget.storage.lastLogin ?? '';
@@ -2089,6 +2089,10 @@ Future<String> _buildInspectionDocumentHtml({
     html,body { background:#fff!important; padding:0!important; }
     .page { margin:0!important; box-shadow:none!important; width:210mm!important; height:297mm!important; min-height:297mm!important; }
     .signature-button { display:none!important; }
+    .needs-fill,
+    .info-table textarea.needs-fill,
+    .info-table input.needs-fill,
+    .actual-mm input { background:transparent!important; }
   }
   ''';
   return source
@@ -2486,6 +2490,19 @@ String _formatDate(DateTime value) {
 String _formatDateOnly(DateTime value) {
   String two(int number) => number.toString().padLeft(2, '0');
   return '${two(value.day)}.${two(value.month)}.${value.year}';
+}
+
+String _shortExpertName(String value) {
+  final parts = value
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.length < 2) {
+    return value.trim();
+  }
+
+  return '${parts.first} ${parts[1].characters.first.toUpperCase()}';
 }
 
 bool _isToday(_SentInspection item) {
