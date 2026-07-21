@@ -13,7 +13,7 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://autolab.glasscenter.kg";
 
 type Role = "operator" | "manager" | "admin";
 type Section = "inspections" | "dailyReport" | "dailyReportsArchive" | "reports";
@@ -89,7 +89,7 @@ export default function Page() {
 
   useEffect(() => {
     setSessionKey(localStorage.getItem("session_key") ?? "");
-    setServerUrl(localStorage.getItem("server_url") ?? API_URL);
+    setServerUrl(normalizeServerUrl(localStorage.getItem("server_url") ?? API_URL));
   }, []);
 
   useEffect(() => {
@@ -109,7 +109,7 @@ export default function Page() {
         serverUrl={serverUrl}
         onServerUrl={setServerUrl}
         onLogin={(nextSession, nextUser) => {
-          localStorage.setItem("server_url", serverUrl);
+          localStorage.setItem("server_url", normalizeServerUrl(serverUrl));
           localStorage.setItem("session_key", nextSession);
           setSessionKey(nextSession);
           setUser(nextUser);
@@ -264,8 +264,10 @@ function LoginPage({
     setLoading(true);
     onError("");
     try {
+      const normalizedServerUrl = normalizeServerUrl(serverUrl);
+      onServerUrl(normalizedServerUrl);
       const data = await apiFetch<{ session_key: string; user: User }>(
-        serverUrl,
+        normalizedServerUrl,
         "",
         "/api/auth/login/",
         {
@@ -1000,13 +1002,14 @@ async function apiFetch<T>(
   path: string,
   init: RequestInit = {}
 ): Promise<T> {
+  const normalizedServerUrl = normalizeServerUrl(serverUrl);
   const headers = new Headers(init.headers);
   if (sessionKey) headers.set("X-Session-Key", sessionKey);
-  const response = await fetch(`${serverUrl}${path}`, {
+  const response = await fetch(`${normalizedServerUrl}${path}`, {
     ...init,
     headers,
   });
-  const url = `${serverUrl}${path}`;
+  const url = `${normalizedServerUrl}${path}`;
   const text = await response.text();
   const data = text ? JSON.parse(text) : {};
   if (!response.ok || data.ok === false) {
@@ -1014,6 +1017,16 @@ async function apiFetch<T>(
     throw new Error(`HTTP ${response.status}: ${message}\nURL: ${url}`);
   }
   return data;
+}
+
+function normalizeServerUrl(value: string) {
+  const trimmed = value.trim() || API_URL;
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    return new URL(withProtocol).origin;
+  } catch {
+    return API_URL;
+  }
 }
 
 function roleLabel(role: Role) {
