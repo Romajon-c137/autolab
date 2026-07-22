@@ -17,6 +17,8 @@ const _defaultServerUrl = String.fromEnvironment(
   'SERVER_URL',
   defaultValue: 'https://autolab.glasscenter.kg',
 );
+const _appVersion = '1.0.1';
+const _appTitle = 'Авто лаборатория v$_appVersion';
 const _pdfChannel = MethodChannel('autolab/pdf');
 void main() {
   runApp(const AutoInspectionApp());
@@ -29,7 +31,7 @@ class AutoInspectionApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Авто лаборатория',
+      title: _appTitle,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
@@ -222,6 +224,30 @@ class _HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<_HomePage> {
+  @override
+  void initState() {
+    super.initState();
+    _refreshUserProfile();
+  }
+
+  Future<void> _refreshUserProfile() async {
+    try {
+      final profile = await _ApiClient(
+        serverUrl: widget.storage.serverUrl,
+        sessionKey: widget.storage.sessionKey,
+      ).currentUser();
+      await widget.storage.setUserProfile(
+        userLabel: profile.userLabel,
+        userFullName: profile.userFullName,
+      );
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (_) {
+      // Existing local session can still be used if profile refresh fails.
+    }
+  }
+
   Future<void> _logout() async {
     try {
       await _ApiClient(
@@ -257,7 +283,7 @@ class _HomePageState extends State<_HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Техосмотр'),
+        title: const Text(_appTitle),
         actions: [
           IconButton(
             tooltip: 'Выйти',
@@ -265,6 +291,11 @@ class _HomePageState extends State<_HomePage> {
             icon: const Icon(Icons.logout),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.small(
+        tooltip: 'Подпись',
+        onPressed: () => _open(_SignaturePage(storage: widget.storage)),
+        child: const Icon(Icons.draw),
       ),
       body: SafeArea(
         child: LayoutBuilder(
@@ -283,21 +314,15 @@ class _HomePageState extends State<_HomePage> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _StatusBox(
-                      text:
-                          'Пользователь: ${widget.storage.userLabel ?? '-'}\nСервер: ${widget.storage.serverUrl}',
+                    _HomeSummary(
+                      userLabel: widget.storage.userLabel ?? '-',
+                      version: _appVersion,
                     ),
                     const SizedBox(height: 16),
                     _MenuButton(
-                      title: 'Подпись',
-                      subtitle: 'Нарисовать подпись пользователя',
-                      onTap: () =>
-                          _open(_SignaturePage(storage: widget.storage)),
-                    ),
-                    const SizedBox(height: 10),
-                    _MenuButton(
                       title: 'Новый осмотр',
                       subtitle: 'Создать осмотр',
+                      primary: true,
                       onTap: () =>
                           _open(_InspectionFormPage(storage: widget.storage)),
                     ),
@@ -1697,16 +1722,64 @@ class _DocumentHtmlPanel extends StatelessWidget {
   }
 }
 
+class _HomeSummary extends StatelessWidget {
+  const _HomeSummary({required this.userLabel, required this.version});
+
+  final String userLabel;
+  final String version;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+        color: colorScheme.surface,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Icon(Icons.account_circle, color: colorScheme.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                userLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.info_outline, size: 18, color: colorScheme.secondary),
+            const SizedBox(width: 4),
+            Text(
+              'v$version',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _MenuButton extends StatelessWidget {
   const _MenuButton({
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.primary = false,
   });
 
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final bool primary;
 
   @override
   Widget build(BuildContext context) {
@@ -1716,19 +1789,39 @@ class _MenuButton extends StatelessWidget {
       onPressed: onTap,
       style: OutlinedButton.styleFrom(
         alignment: Alignment.centerLeft,
-        backgroundColor: colorScheme.surfaceContainerLow,
-        foregroundColor: colorScheme.onSurface,
-        side: BorderSide(color: colorScheme.outlineVariant),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        backgroundColor: primary
+            ? colorScheme.primaryContainer
+            : colorScheme.surfaceContainerLow,
+        foregroundColor: primary
+            ? colorScheme.onPrimaryContainer
+            : colorScheme.onSurface,
+        side: BorderSide(
+          color: primary ? colorScheme.primary : colorScheme.outlineVariant,
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: primary ? 16 : 14,
+          vertical: primary ? 20 : 16,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       child: Row(
         children: [
+          if (primary) ...[
+            Icon(Icons.add_circle, size: 30, color: colorScheme.primary),
+            const SizedBox(width: 12),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  title,
+                  style:
+                      (primary
+                              ? Theme.of(context).textTheme.titleLarge
+                              : Theme.of(context).textTheme.titleMedium)
+                          ?.copyWith(fontWeight: FontWeight.w800),
+                ),
                 const SizedBox(height: 2),
                 Text(subtitle),
               ],
@@ -2115,6 +2208,16 @@ class _LoginResult {
   final String userFullName;
 }
 
+class _UserProfileResult {
+  const _UserProfileResult({
+    required this.userLabel,
+    required this.userFullName,
+  });
+
+  final String userLabel;
+  final String userFullName;
+}
+
 class _ApiClient {
   const _ApiClient({required this.serverUrl, this.sessionKey});
 
@@ -2165,6 +2268,31 @@ class _ApiClient {
     await http
         .post(_uri('/api/auth/logout/'), headers: _authHeaders())
         .timeout(const Duration(seconds: 10));
+  }
+
+  Future<_UserProfileResult> currentUser() async {
+    final response = await http
+        .get(_uri('/api/auth/me/'), headers: _authHeaders())
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      if (response.statusCode == 401) {
+        throw _AuthException(response.body);
+      }
+      throw Exception('HTTP ${response.statusCode}: ${response.body}');
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final user = data['user'] as Map<String, dynamic>? ?? {};
+    final login = '${user['login'] ?? ''}'.trim();
+    final branch = user['branch'] as Map<String, dynamic>?;
+    final userLabel = branch == null ? login : '$login / ${branch['name']}';
+    final userFullName = '${user['full_name'] ?? login}'.trim();
+
+    return _UserProfileResult(
+      userLabel: userLabel.isEmpty ? '-' : userLabel,
+      userFullName: userFullName.isEmpty ? login : userFullName,
+    );
   }
 
   Future<_SentInspection> createInspection(
@@ -2318,9 +2446,16 @@ class _AppStorage {
     required String userFullName,
   }) async {
     this.sessionKey = sessionKey;
+    await _prefs.setString('session_key', sessionKey);
+    await setUserProfile(userLabel: userLabel, userFullName: userFullName);
+  }
+
+  Future<void> setUserProfile({
+    required String userLabel,
+    required String userFullName,
+  }) async {
     this.userLabel = userLabel;
     this.userFullName = userFullName;
-    await _prefs.setString('session_key', sessionKey);
     await _prefs.setString('user_label', userLabel);
     await _prefs.setString('user_full_name', userFullName);
   }
