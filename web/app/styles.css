@@ -670,7 +670,7 @@ button:disabled {
 
 .report-totals {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(240px, 1.3fr) minmax(180px, 0.7fr);
   border: 1px solid var(--border);
   border-bottom: 0;
   margin-bottom: 16px;
@@ -678,7 +678,7 @@ button:disabled {
 }
 
 .report-totals div {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-right: 1px solid var(--border);
 }
 
@@ -686,10 +686,16 @@ button:disabled {
   border-right: 0;
 }
 
+.report-totals .primary-total {
+  background: #f4fbf6;
+}
+
 .report-totals span {
   display: block;
   color: var(--muted);
   font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .report-totals strong {
@@ -697,6 +703,13 @@ button:disabled {
   color: var(--primary-dark);
   font-size: 24px;
   margin-top: 4px;
+}
+
+.report-totals small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .report-inspection-list {
@@ -918,7 +931,7 @@ button:disabled {
   }
 
   .report-totals {
-    grid-template-columns: repeat(4, minmax(96px, 1fr));
+    grid-template-columns: repeat(2, minmax(138px, 1fr));
     margin-right: -12px;
     margin-left: -12px;
     overflow-x: auto;
@@ -928,7 +941,7 @@ button:disabled {
   }
 
   .report-totals div {
-    min-width: 96px;
+    min-width: 138px;
     padding: 8px;
   }
 

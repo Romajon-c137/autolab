@@ -97,6 +97,7 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
         "plate_number",
         "brand",
         "country",
+        "vehicle_category",
         "branch",
         "created_by",
         "created_at",
@@ -119,7 +120,7 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
         "document_link",
     )
     search_fields = ("title", "plate_number", "brand", "country", "vin")
-    list_filter = ("branch", "created_by", "created_at")
+    list_filter = ("vehicle_category", "branch", "created_by", "created_at")
 
     fieldsets = (
         ("Данные авто", {
@@ -127,6 +128,7 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
                 "plate_number",
                 "brand",
                 "country",
+                "vehicle_category",
                 "vin",
             ),
         }),

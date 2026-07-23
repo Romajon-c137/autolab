@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>Протокол технической экспертизы N1</title>
+<style>
+  :root { --paper-width:210mm; --paper-height:297mm; --line:#222; --ui:#0f172a; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; padding:0; background:#e7e9ed; color:#000; font-family:"Times New Roman", Times, serif; }
+  body { padding:16px 0 48px; }
+  .toolbar { position:sticky; top:0; z-index:50; display:flex; gap:8px; align-items:center; justify-content:center; padding:10px 12px; margin:0 auto 14px; width:min(1100px,calc(100% - 20px)); background:rgba(15,23,42,.94); border-radius:10px; box-shadow:0 5px 20px rgba(0,0,0,.2); font-family:Arial,sans-serif; }
+  .toolbar button,.toolbar label { border:0; border-radius:7px; padding:9px 13px; background:white; color:#111827; cursor:pointer; font-size:14px; font-weight:600; }
+  .toolbar button:hover,.toolbar label:hover { background:#e2e8f0; }
+  .toolbar .danger { background:#fee2e2; }
+  .toolbar-status { color:#cbd5e1; font-size:12px; min-width:120px; }
+  #jsonFile { display:none; }
+  .page { position:relative; width:var(--paper-width); min-height:var(--paper-height); height:var(--paper-height); margin:0 auto 16px; padding:7.5mm 7.5mm 12.5mm 27.5mm; background:#fff; box-shadow:0 4px 22px rgba(0,0,0,.18); overflow:hidden; page-break-after:always; break-after:page; }
+  .page:last-of-type { page-break-after:auto; break-after:auto; }
+  .doc-header { position:relative; min-height:34mm; }
+  .accreditation-mark { position:absolute; left:-22mm; top:0; width:37mm; height:19mm; border:1px solid #111; border-radius:50%; display:flex; align-items:center; justify-content:center; text-align:center; font-size:8.65pt; line-height:1.065; }
+  .header-copy { text-align:center; font-weight:700; font-size:10.4pt; line-height:1.15; }
+  .org-title { margin-top:0; }
+  .place { margin-top:2.2mm; font-size:9.9pt; }
+  .certificate { margin-top:1mm; font-size:10.4pt; }
+  .line-fill { display:inline-block; width:24mm; border-bottom:1px solid #000; transform:translateY(-1px); }
+  .protocol-title { text-align:center; font-weight:700; font-size:11.5pt; margin:2.3mm 0 .7mm; }
+  .protocol-meta { text-align:center; font-size:11.5pt; margin-bottom:1.4mm; white-space:nowrap; }
+  input,textarea,select { font:inherit; color:#000; background:transparent; }
+  .inline-input { border:0; border-bottom:1px solid #111; outline:none; text-align:center; height:5.5mm; padding:0 1mm; }
+  .number-input { width:20mm; }
+  .date-text { width:27mm; }
+  table { border-collapse:collapse; table-layout:fixed; width:100%; }
+  .info-table { font-family:Arial,sans-serif; font-size:10.1pt; line-height:1.12; margin-bottom:1mm; width:calc(100% + 10mm); margin-left:-15mm; }
+  .info-table .label-col { width:61%; }
+  .info-table .value-col { width:39%; }
+  .info-table td { border:.55px solid #333; padding:.42mm .8mm; vertical-align:middle; height:5.8mm; font-weight:400; }
+  .info-table tr { height:auto; }
+  .info-table textarea,.info-table input:not(.short-input) { display:block; width:100%; height:4.55mm; min-height:4.55mm; resize:none; overflow:hidden; border:0; outline:none; padding:.05mm .6mm; line-height:1.08; }
+  .info-table textarea:focus,.info-table input:focus,.notes-area textarea:focus,.expert-input:focus { background:#fffbe6; box-shadow:inset 0 0 0 1px #d8b100; }
+  .fixed-row td:last-child { font-weight:400; text-align:center; }
+  .conditions td { padding-top:.5mm; padding-bottom:.5mm; }
+  .conditions td:last-child { line-height:1.08; }
+  .conditions label { display:flex; align-items:center; gap:1mm; white-space:nowrap; min-height:4.4mm; }
+  .short-input { flex:0 0 14mm; width:14mm; height:4.2mm; border:0; border-bottom:1px solid #666; outline:none; padding:0 .8mm; }
+  .category { width:calc(100% + 10mm); margin:.5mm 0 .6mm -15mm; text-align:left; font-family:"Times New Roman", Times, serif; font-size:8.9pt; font-weight:700; }
+  .main-table { font-family:"Times New Roman", Times, serif; font-size:7.15pt; line-height:1.055; width:calc(100% + 10mm); margin-left:-15mm; }
+  .page:not(.page-1) .main-table { font-size:7.7pt; line-height:1.035; }
+  .main-table .w-n { width:4.2%; }
+  .main-table .w-name { width:33.5%; }
+  .main-table .w-method { width:15.0%; }
+  .main-table .w-norm { width:32.8%; }
+  .main-table .w-actual { width:14.5%; }
+  .main-table th,.main-table td { border:.45px solid var(--line); padding:.28mm .44mm; vertical-align:top; overflow-wrap:anywhere; hyphens:auto; }
+  .page:not(.page-1) .main-table td { padding:.30mm .46mm; }
+  .main-table th { text-align:center; vertical-align:middle; font-size:7.2pt; line-height:1.05; font-weight:700; padding:.62mm .35mm; }
+  .main-table .col-n { text-align:center; white-space:nowrap; }
+  .main-table .col-method { text-align:center; font-size:5.85pt; line-height:1.0; }
+  .page:not(.page-1) .main-table .col-method { font-size:6.25pt; line-height:1.0; }
+  .main-table .col-actual { white-space:pre-line; }
+
+  .page-1 .main-table { font-size:8.7pt; line-height:1.08; }
+  .page-1 .main-table .col-method { font-size:6.8pt; line-height:1.02; }
+  .page.page-2 .main-table { font-size:8.55pt; line-height:1.065; }
+  .page.page-2 .main-table .col-method { font-size:6.75pt; line-height:1.01; }
+  .page.page-3 .main-table { font-size:8.43pt; line-height:1.06; }
+  .page.page-3 .main-table .col-method { font-size:6.65pt; line-height:1.0; }
+  .page.page-4 .main-table { font-size:8.52pt; line-height:1.06; }
+  .page.page-4 .main-table .col-method { font-size:6.7pt; line-height:1.0; }
+  .page.page-5 .main-table { font-size:8.55pt; line-height:1.06; }
+  .page.page-5 .main-table .col-method { font-size:6.65pt; line-height:1.01; }
+  .page.page-6 .main-table { font-size:8.75pt; line-height:1.065; }
+  .page.page-6 .main-table .col-method { font-size:6.75pt; line-height:1.01; }
+  .page.page-7 .main-table { font-size:8.45pt; line-height:1.06; }
+  .page.page-7 .main-table .col-method { font-size:6.65pt; line-height:1.01; }
+  .page.page-8 .main-table { font-size:8.3pt; line-height:1.06; }
+  .page.page-8 .main-table .col-method { font-size:6.6pt; line-height:1.01; }
+
+  .main-table strong { font-weight:700; }
+  .main-table tr.section-row td { border-top-width:1px; }
+  .page-2,.page-3,.page-4,.page-5,.page-6,.page-7,.page-8 { padding-top:8mm; }
+  .note-title { text-align:left; font-family:"Times New Roman", Times, serif; font-size:9.4pt; font-weight:700; margin-top:2mm; }
+  .notes-area { min-height:18mm; border-bottom:0; font-family:"Times New Roman", Times, serif; }
+  .notes-area textarea { width:100%; height:17mm; border:0; resize:none; outline:none; padding:1mm; font-size:8.4pt; }
+  .conclusion { margin-top:7mm; font-family:"Times New Roman", Times, serif; font-size:9.9pt; font-weight:700; line-height:1.25; }
+  .conclusion-result { white-space:nowrap; }
+  .signature-line { display:grid; grid-template-columns:42mm 38mm minmax(0,1fr); column-gap:7mm; align-items:end; margin-top:5mm; font-family:"Times New Roman", Times, serif; font-size:10.4pt; font-weight:700; }
+  .signature-space { border-bottom:1px solid #111; height:5mm; }
+  .expert-input { border:0; border-bottom:1px solid #111; outline:none; text-align:center; height:5mm; width:100%; }
+  .signature-caption { display:grid; grid-template-columns:42mm 38mm minmax(0,1fr); column-gap:7mm; font-family:"Times New Roman", Times, serif; font-size:8.4pt; text-align:center; margin-top:.8mm; }
+  .signature-caption span:first-child { grid-column:2; }
+  .signature-caption span:last-child { grid-column:3; }
+  .page-number { display:none; }
+  @media (max-width:850px) {
+    body { padding-top:8px; }
+    .toolbar { position:relative; flex-wrap:wrap; }
+    .page { transform-origin:top left; margin-left:auto; margin-right:auto; }
+  }
+  @media print {
+    @page { size:A4 portrait; margin:0; }
+    html,body { background:#fff; padding:0; }
+    .toolbar { display:none !important; }
+    .page { margin:0; box-shadow:none; width:210mm; height:297mm; min-height:297mm; transform:none !important; zoom:1; }
+    body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    input,textarea,select { -webkit-appearance:none; appearance:none; }
+    textarea { overflow:hidden; }
+    .info-table textarea:focus,.info-table input:focus,.notes-area textarea:focus,.expert-input:focus { background:transparent; box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+<!--Text source: N1.docx. Wording and source typos are preserved; layout follows the approved M1 v6 HTML style.-->
+<div aria-label="Управление документом" class="toolbar" role="toolbar">
+<button id="printBtn" type="button">Печать / PDF</button>
+<button id="saveBtn" type="button">Скачать данные JSON</button>
+<label for="jsonFile">Загрузить JSON</label><input accept="application/json,.json" id="jsonFile" type="file"/>
+<button class="danger" id="clearBtn" type="button">Очистить поля</button>
+<span class="toolbar-status" id="status">Автосохранение включено</span>
+</div>
+<section class="page page-1" data-page="1">
+<div class="doc-header">
+<div class="accreditation-mark">Знак<br/>аккредитации</div>
+<div class="header-copy">
+<div class="org-title">Органа контроля Государственного Предприятия «Центр технического назначения Главного управления по обеспечению безопасности дорожного движения МВД Кыргызской Республики»</div>
+<div class="place">Место проведения испытаний: Кыргызстан, г. Ош, ул. Навои 2а</div>
+<div class="certificate">АТТЕСТАТ АККРЕДИТАЦИИ № KG<span class="line-fill"></span></div>
+</div>
+</div>
+<div class="protocol-title">ПРОТОКОЛ ТЕХНИЧЕСКОЙ ЭКСПЕРТИЗЫ</div>
+<div class="protocol-meta">№ <input aria-label="Номер протокола" class="inline-input number-input" data-field="protocol_number"/> от <input aria-label="Дата протокола" class="inline-input date-text" data-field="protocol_date" value="20.07.2026"/> г.</div>
+<table class="info-table">
+<colgroup><col class="label-col"/><col class="value-col"/></colgroup>
+<tbody>
+<tr><td>Заказчик</td><td><textarea aria-label="Заказчик" data-field="customer"></textarea></td></tr>
+<tr><td>Наименование объекта испытаний</td><td><textarea aria-label="Наименование объекта испытаний" data-field="object_name"></textarea></td></tr>
+<tr><td>Тип транспортного средства</td><td><textarea aria-label="Тип транспортного средства" data-field="vehicle_type"></textarea></td></tr>
+<tr><td>Изготовитель (страна, фирма)</td><td><textarea aria-label="Изготовитель (страна, фирма)" data-field="manufacturer"></textarea></td></tr>
+<tr class="tall"><td>Идентификационный номер (VIN) или номерных агрегатов и отсутствии VIN</td><td><textarea aria-label="VIN или номер агрегатов" data-field="vin"></textarea></td></tr>
+<tr><td>Основание для испытаний (протокол идентификации ТС №/дата)</td><td><textarea aria-label="Основание для испытаний (протокол идентификации ТС №/дата)" data-field="test_basis"></textarea></td></tr>
+<tr><td>Дата поступления образцов</td><td><input aria-label="Дата поступления образцов" data-field="sample_received"/></td></tr>
+<tr><td>Начало проведения испытаний</td><td><input aria-label="Начало проведения испытаний" data-field="test_started"/></td></tr>
+<tr><td>Окончание проведения  испытаний</td><td><input aria-label="Окончание проведения  испытаний" data-field="test_finished"/></td></tr>
+<tr class="fixed-row"><td>Нормативный док мент</td><td>ТР ТС № 018/2011, ГОСТ 33670-2015, ГОСТ 33997-2016</td></tr>
+<tr class="fixed-row"><td>Вид испытаний</td><td>Контрольные</td></tr>
+<tr class="conditions"><td>Условия проведения испытаний</td><td><label>Температура С, <input aria-label="Температура" class="short-input" data-field="temperature"/></label><br/><label>Относительная влажность&nbsp; % <input aria-label="Относительная влажность" class="short-input" data-field="humidity"/></label></td></tr>
+</tbody>
+</table>
+<div class="category">(категории N1)</div>
+<table class="main-table page-table-1">
+<colgroup><col class="w-n"/><col class="w-name"/><col class="w-method"/><col class="w-norm"/><col class="w-actual"/></colgroup>
+<thead><tr>
+<th>№<br/>п/п</th><th>Наименование показателей</th><th>НД на методы испытаний</th><th>Значение по НД</th><th>Фактическое значение</th>
+</tr></thead><tbody><tr class="" data-row="1">
+<td class="col-n">1.</td>
+<td class="col-name">Обеспечение возможности идентификации транспортных средств</td>
+<td class="col-method">п.4 приложение №7 ТР ТС 018/2011<br/>ГОСТ 33670-2015 А 1.1</td>
+<td class="col-norm">Должен соответствовать</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="2">
+<td class="col-n">2.</td>
+<td class="col-name">Наличие предусмотренных мест установки одного переднего и одного заднего государственного регистрационного знака установленных размеров</td>
+<td class="col-method">п. 4.1 приложение №7 ТР ТС 018/2011<br/>ГОСТ 33670—2015 А 1.2-1.3</td>
+<td class="col-norm">Должны быть На каждом транспортном средстве категорий М и N</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="3">
+<td class="col-n">3.</td>
+<td class="col-name">Элементы  конструкции, выступающие  за линию бампера </td>
+<td class="col-method">п. 11  ТР ТС 018/2011<br/>ГОСТ 33997 – 2016 П 5.11.14</td>
+<td class="col-norm">Запрещается установка на транспортные средства категорий М<sub>1</sub> и N<sub>1</sub> конструкций, выступающих вперед относительно линии бампера</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="4">
+<td class="col-n">4.</td>
+<td class="col-name">Наличие озоноразрушающих веществ и материалов в кондиционерах и холодильных оборудований</td>
+<td class="col-method">п. 12  ТР ТС 018/2011<br/>ГОСТ 33670-2015 А.7.1</td>
+<td class="col-norm">Не допускается в составе кондиционеров, а также холодильного оборудования, применяемых на транспортных средствах, наличие озоноразрушающих веществ и материалов</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="5">
+<td class="col-n">5.</td>
+<td class="col-name">Штатные места установки, крепления, энергопитания для аппаратуры спутниковой навигации (Глонас)  совместно с GPS         (ТС для перевозки опасных грузов и коммерческих перевозки пассажиров)</td>
+<td class="col-method"><br/>приложение №4 п. 13                       ТР ТС 018/2011 ГОСТ 33670—2015 А 3.1, 3.2</td>
+<td class="col-norm">должна обеспечивать возможность оснащения аппаратурой спутниковой навигации. </td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="6">
+<td class="col-n">6.</td>
+<td class="col-name">Наличие и исправность противоугонных устройств<br/>- блокировка рулевого управления<br/>- блокировка передаточный механизм или<br/>- блокировка механизма переключения  передач </td>
+<td class="col-method">ТР ТС 018/2011 п.14<br/>ГОСТ 33670-2015 А.6</td>
+<td class="col-norm">Должны блокироваться <br/><br/><br/>(5,85 ± 0,25) Н·м.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="7">
+<td class="col-n">7.</td>
+<td class="col-name">Оснащённость обитаемого помещения системой отопления (салон, кабина)</td>
+<td class="col-method">приложение №4 п. 1.2 п 1.2.1   ТР ТС 018/2011<br/>ГОСТ 33670-2015 А.7.2</td>
+<td class="col-norm">Обитаемое помещение каждого транспортного средства оснащается системой отопления.</td>
+<td class="col-actual">&nbsp;</td>
+</tr></tbody></table></section><section class="page page-2" data-page="2"><table class="main-table page-table-2">
+<colgroup><col class="w-n"/><col class="w-name"/><col class="w-method"/><col class="w-norm"/><col class="w-actual"/></colgroup>
+<tbody><tr class="" data-row="8">
+<td class="col-n">8.</td>
+<td class="col-name">Система отключения автономного отопления</td>
+<td class="col-method">приложение №4<br/>п. 1.2 п 1.2.2   ТР ТС 018/2011<br/>ГОСТ 33670-2015 А.7.3</td>
+<td class="col-norm">должна отключаться автоматически, и подача топлива должна прекращаться в течение пяти секунд после прекращения работы двигателя</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="9">
+<td class="col-n">9.</td>
+<td class="col-name">Безопасность системы отопления (травма, порчи имущества, чрезмерное нагревание и исключения загрязнения топливом или маслом)</td>
+<td class="col-method">приложение №4<br/>п. 1.2 п.п 1.2.3   ТР ТС 018/2011<br/>ГОСТ 33670-2015 А.7.4</td>
+<td class="col-norm">должны быть размещены таким образом, чтобы была исключена возможность получения травм или порчи имущества при соприкосновении с ними или защищены от чрезмерного нагревания и возможного загрязнения топливом или маслом</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="10">
+<td class="col-n">10.</td>
+<td class="col-name">Безопасность системы выпуска отработавших газов отопителя,  исключающие попадания внутрь обитаемого помещения ТС</td>
+<td class="col-method">приложение №4<br/>п. 1.2 п.п 1.2.4   ТР ТС 018/2011<br/>ГОСТ 33670-2015 А.7.5</td>
+<td class="col-norm">Должна быть исключена возможность попадания выхлопных газов внутрь транспортного средства через вентиляторы, воздухозаборники системы отопления или открытые окна.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="11">
+<td class="col-n">11.</td>
+<td class="col-name">Исключения попадания воздуха в камеры сгорания обогревательного прибора  из пассажирского салона ТС</td>
+<td class="col-method">приложение №4<br/>п. 1.2 п.п 1.2.5   ТР ТС 018/2011<br/>ГОСТ 33670-2015 А.7.6</td>
+<td class="col-norm">не должен поступать из пассажирского салона транспортного средства</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="12">
+<td class="col-n">12.</td>
+<td class="col-name"><strong>Устройство освещения и световой сигнализации </strong></td>
+<td class="col-method">Правила ЕЭК ООН №48 приложение №4 п. 1.3 ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 8</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="13">
+<td class="col-n">13.</td>
+<td class="col-name">- фары дальнего света (кол-во приборов)</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Белый, 2 – 4 шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="14">
+<td class="col-n">14.</td>
+<td class="col-name">- фары ближнего света (кол-во приборов)</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Белый, 2шт </td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="15">
+<td class="col-n">15.</td>
+<td class="col-name">- переднее противотуманные фары (кол-во приборов)</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Факультативно,  2шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="16">
+<td class="col-n">16.</td>
+<td class="col-name">- фонарь заднего хода  (кол-во приборов)</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Белый 1-2шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="17">
+<td class="col-n">17.</td>
+<td class="col-name">- указатель поворота передний (кол-во приборов)</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Автожелтый, 2шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="18">
+<td class="col-n">18.</td>
+<td class="col-name">- указатель поворота задний  (кол-во приборов)</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Автожелтый, 2шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="19">
+<td class="col-n">19.</td>
+<td class="col-name">- указатель поворота боковой  (кол-во приборов)</td>
+<td class="col-method">приложение №4 Таблица 1.3.1ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Автожелтый, 2шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="20">
+<td class="col-n">20.</td>
+<td class="col-name">- аварийная сигнализация</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Автожелтый</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="21">
+<td class="col-n">21.</td>
+<td class="col-name">- сигнал торможения основной</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Красный, 2шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="22">
+<td class="col-n">22.</td>
+<td class="col-name">- дополнительный центральный </td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Красный, 1-2шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="23">
+<td class="col-n">23.</td>
+<td class="col-name">- передний габаритный огонь</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Белый, 2шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="24">
+<td class="col-n">24.</td>
+<td class="col-name">- задний габаритный огонь</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.3</td>
+<td class="col-norm">Красный, 2шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="25">
+<td class="col-n">25.</td>
+<td class="col-name">-задний противотуманный фонарь</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Красный, 1-2 </td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="26">
+<td class="col-n">26.</td>
+<td class="col-name">- стояночный габаритный огонь<br/>Передний<br/>Задний<br/>Боковой</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Факультативно <br/>Белый, 1-2шт<br/>Красный, 1-2шт<br/>Автожелтый1-2</td>
+<td class="col-actual">Передний  ____  шт<br/><br/>Задний       ____  шт<br/><br/>Боковой    _____ шт</td>
+</tr><tr class="" data-row="27">
+<td class="col-n">27.</td>
+<td class="col-name">- боковой габаритный фонарь</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Автожелтый, красный 2х2</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="28">
+<td class="col-n">28.</td>
+<td class="col-name">- контурный огонь <br/>Передний<br/>Задний </td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Факультаивно<br/>Белый, 2шт<br/>Красный, 2 шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="29">
+<td class="col-n">29.</td>
+<td class="col-name">- фонарь освещения заднего государственного регистрационного знака</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Белый </td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="30">
+<td class="col-n">30.</td>
+<td class="col-name">- дневной ходовой огонь</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Факультативно</td>
+<td class="col-actual">&nbsp;</td>
+</tr></tbody></table></section><section class="page page-3" data-page="3"><table class="main-table page-table-3">
+<colgroup><col class="w-n"/><col class="w-name"/><col class="w-method"/><col class="w-norm"/><col class="w-actual"/></colgroup>
+<tbody><tr class="" data-row="31">
+<td class="col-n">31.</td>
+<td class="col-name">- боковое светоотражающее устройство не треугольной формы <br/>Передние<br/>Боковое<br/>Заднее</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">ТС длиной 6м для кат. О,M,N,L<br/><br/>Желтый, 2шт <br/>Желтый,красный<br/>Красный, 1-2 шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="32">
+<td class="col-n">32.</td>
+<td class="col-name">- заднее светоотражающее устройство<br/>не треугольной формы (для кат. М,N,L)</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А.8.1; 8.2; 8.3</td>
+<td class="col-norm">Красный, 2 шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="33">
+<td class="col-n">33.</td>
+<td class="col-name">- адаптивная система переднего освещения</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Факультативно <br/>Белый, 2шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="34">
+<td class="col-n">34.</td>
+<td class="col-name">- контурная маркировка (не ля кат. М1,О1)<br/>боковая<br/>задняя </td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Белая,желтая1шт Факультативно <br/>Красная , желтая</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="35">
+<td class="col-n">35.</td>
+<td class="col-name">Направление излучения белого и красного света, за  исключением света от фонаря заднего хода и внутреннего освещения ТС</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Вперед – белый<br/>Назад - красный</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="36">
+<td class="col-n">36.</td>
+<td class="col-name">Орган управления фонарей, контурных огней (за исключением передних и задних габаритных фонарей, а также боковых габаритных фонарей в качестве стояночных огней</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Общим органом управления</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="37">
+<td class="col-n">37.</td>
+<td class="col-name">Порядок включения фар дальнего, ближнего света и передних противотуманных фар</td>
+<td class="col-method">ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Должно осуществляться<br/>Попарное включение и переключение  </td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="38">
+<td class="col-n">38.</td>
+<td class="col-name">Работоспособность и обзорность освещения панеля приборов и контрольными световыми сигналами</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Обзорность, работоспособность световых сигналов</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="39">
+<td class="col-n">39.</td>
+<td class="col-name">Требования к автоматическим корректирующим устройством регулировки угла наклона фар и наличие устройство  фароочистителя<br/>(Фары ближнего света LED)</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Наличие автоматическим корректирующим устройством при потоке света более 2000 люмен , наличие фароочистителя</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="40">
+<td class="col-n">40.</td>
+<td class="col-name">Маркировка фар освещения (дальнего, ближнего и противотуманого)</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Соответствие </td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="41">
+<td class="col-n">41.</td>
+<td class="col-name">Требования к размещению фар ближнего света</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">над опорной поверхностью - минимум 500 мм, максимум 1200 мм. Для транспортных средств категории N<sub>2</sub>G максимальная высота может быть увеличена до 1500 мм</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="42">
+<td class="col-n">42.</td>
+<td class="col-name"> <strong>Требования к размещению передних противотуманных фар (кроме транспортных средств категорий L</strong><strong><sub>1</sub></strong><strong>-L</strong><strong><sub>4</sub></strong><strong>, L</strong><strong><sub>6</sub></strong><strong>)</strong></td>
+<td class="col-method">приложение №4<br/>п.п. 1.3.10 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.10</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="43">
+<td class="col-n">43.</td>
+<td class="col-name">- по ширине</td>
+<td class="col-method">приложение №4<br/>п.п. 1.3.10 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.10.1</td>
+<td class="col-norm">Не более 400 мм</td>
+<td class="col-actual">        <br/>   </td>
+</tr><tr class="" data-row="44">
+<td class="col-n">44.</td>
+<td class="col-name">- по высоте</td>
+<td class="col-method">приложение №4<br/>п.п. 1.3.10 ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.10.2</td>
+<td class="col-norm">Не менее 250 мм</td>
+<td class="col-actual">       <br/>     <br/>     </td>
+</tr><tr class="" data-row="45">
+<td class="col-n">45.</td>
+<td class="col-name">- высота противотуманных фар по соотношению ближнего света</td>
+<td class="col-method">приложение №4<br/>п.п. 1.3.10 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.10.3</td>
+<td class="col-norm">Ни одна из точек на видимой поверхности не должна находиться выше наиболее высокой точки видимой поверхности фары ближнего света.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="46">
+<td class="col-n">46.</td>
+<td class="col-name"> Требования к размещению указателей поворота и аварийной сигнализации</td>
+<td class="col-method">приложение №4<br/>п.п. 1.3.10 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.11</td>
+<td class="col-norm">факультативные указатели поворота, , долны быть не менее чем 600 мм над обязательными огнями.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="47">
+<td class="col-n">47.</td>
+<td class="col-name"><strong>Требования к размещению сигналов торможения</strong></td>
+<td class="col-method">приложение №4 п. 1.3.10 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.12</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="48">
+<td class="col-n">48.</td>
+<td class="col-name">- По ширине кат.  M<sub>1</sub>, N<sub>1</sub>, L<sub>2</sub>, L<sub>4</sub>-L<sub>7</sub></td>
+<td class="col-method">приложение №4 п. 1.3.10<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.12.1</td>
+<td class="col-norm">Не более 400мм   от края габаритной ширины ТС</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="49">
+<td class="col-n">49.</td>
+<td class="col-name">- габаритная ширина ТС менее 1300 мм.</td>
+<td class="col-method">приложение №4 п. 1.3.10 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.12.1</td>
+<td class="col-norm"> Не менее 400 мм</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="50">
+<td class="col-n">50.</td>
+<td class="col-name">- по высоте над опорной поверхностью </td>
+<td class="col-method"> приложение №4 п. 1.3.10<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.12.2</td>
+<td class="col-norm">в пределах от 350 мм до 1500 мм (максимум 2100 мм, если соблюдение указанного требования невозможно из-за формы кузова, если факультативные огни не установлены)</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="51">
+<td class="col-n">51.</td>
+<td class="col-name">- Если факультативные огни установлены</td>
+<td class="col-method">приложение №4 п. 1.3.10<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.12.2</td>
+<td class="col-norm"> то они должны располагаться симметрично на как можно большем расстоянии по вертикали, которое допускается контуром кузова, но не менее чем 600 мм над обязательными огнями (кроме транспортных средств категорий L</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="52">
+<td class="col-n">52.</td>
+<td class="col-name">Дополнительные сигналы торможения</td>
+<td class="col-method">приложение №4 п. 1.3.10<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.12.3</td>
+<td class="col-norm">не более 150 мм от нижнего края внешней поверхности или покрытия заднего стекла, и не менее 850 мм от уровня опорной поверхности</td>
+<td class="col-actual">&nbsp;</td>
+</tr></tbody></table></section><section class="page page-4" data-page="4"><table class="main-table page-table-4">
+<colgroup><col class="w-n"/><col class="w-name"/><col class="w-method"/><col class="w-norm"/><col class="w-actual"/></colgroup>
+<tbody><tr class="" data-row="53">
+<td class="col-n">53.</td>
+<td class="col-name">- Допуск  смещения оптического центра дополнительного сигнала торможения</td>
+<td class="col-method">приложение №4 п. 1.3.10<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.12.3</td>
+<td class="col-norm"> не более 150 мм, если два сигнала торможения то должны находиться как можно ближе к средней продольной плоскости</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="54">
+<td class="col-n">54.</td>
+<td class="col-name"><strong>Требования к размещению задних противотуманных фонарей</strong></td>
+<td class="col-method">приложение №4 п. 1.3.10 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.13</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="55">
+<td class="col-n">55.</td>
+<td class="col-name">- По ширине если имеется только один задний противотуманный фонарь</td>
+<td class="col-method"> приложение №4 п. 1.3.10<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.13.1</td>
+<td class="col-norm">должен находиться с левой стороны от средней продольной плоскости транспортного средства по отношению к направлению движения, либо на этой плоскости</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="56">
+<td class="col-n">56.</td>
+<td class="col-name">-  По высоте над опорной поверхностью</td>
+<td class="col-method">приложение №4 п. 1.3.10<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.13.2</td>
+<td class="col-norm">минимум 250 мм, максимум - 1000 мм<br/>Для ТС кат.  N<sub>3</sub>G максимальная высота может быть увеличена до 1200 мм</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="57">
+<td class="col-n">57.</td>
+<td class="col-name"><strong>Электрооборудование и электропроводка</strong></td>
+<td class="col-method">приложение №4 п. 1.4.2 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.9.2</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="58">
+<td class="col-n">58.</td>
+<td class="col-name">- требование к электрооборудованию и электропроводке</td>
+<td class="col-method">приложение №4<br/>п. 1.4.2 ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.9.2.1</td>
+<td class="col-norm"> Должны быть надежно изолированы<br/>выдерживать воздействие температуры и влажности защищены и прочно прикреплены</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="59">
+<td class="col-n">59.</td>
+<td class="col-name">- расположение электрических кабелей</td>
+<td class="col-method">приложение №4<br/>п. 1.4.2 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.9.2.2</td>
+<td class="col-norm">исключение соприкосновение с топливо проводом или любой другой деталью системы выпуска, а также  подверганию чрезмерному нагреву</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="60">
+<td class="col-n">60.</td>
+<td class="col-name"><strong>Аккумуляторные батареи</strong></td>
+<td class="col-method">приложение №4<br/>п. 1.4.3 ТР  ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.9.3</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="61">
+<td class="col-n">61.</td>
+<td class="col-name">- крепление и доступность к аккумулятору </td>
+<td class="col-method">приложение №4<br/>п. 1.4.3 ТР  ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.9.3</td>
+<td class="col-norm">Все аккумуляторные батареи должны быть хорошо закреплены и легкодоступны</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="62">
+<td class="col-n">62.</td>
+<td class="col-name">- места расположение аккумуляторной батареи</td>
+<td class="col-method">приложение №4<br/>п. 1.4.3 ТР  ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.9.3.1</td>
+<td class="col-norm">должно быть отделено от пассажирского салона и отделения водителя и надлежащим и  вентилироваться наружным воздухом</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="63">
+<td class="col-n">63.</td>
+<td class="col-name">- защищённость аккумулятора от короткого замыкания </td>
+<td class="col-method">приложение №4<br/>п. 1.4.3 ТР  ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.9.3.2</td>
+<td class="col-norm">Полюса аккумуляторной батареи должны быть защищены от опасности короткого замыкания</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="64">
+<td class="col-n">64.</td>
+<td class="col-name"><strong>Аптечки первой помощи </strong></td>
+<td class="col-method">приложение №4<br/>п. 1.4.4 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.9.4</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="65">
+<td class="col-n">65.</td>
+<td class="col-name">- место установки аптечки первой помощи</td>
+<td class="col-method">приложение №4<br/>п. 1.4.4 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.9.4</td>
+<td class="col-norm">В закрываемом и доступном месте</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="66">
+<td class="col-n">66.</td>
+<td class="col-name"><strong>Требования к тормозным системам</strong></td>
+<td class="col-method">приложение №4<br/>п .2.1.1.  ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.5</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="67">
+<td class="col-n">67.</td>
+<td class="col-name">оснащенность тормозными системами</td>
+<td class="col-method">приложение №4<br/>п .2.1.1. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А 5.1.1</td>
+<td class="col-norm">ТС оснащаются тормозными системами, способными выполнять функции торможения</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="68">
+<td class="col-n">68.</td>
+<td class="col-name"> Рабочая тормозная система</td>
+<td class="col-method">приложение №4<br/>п .2.1.1.1.                              ТР ТС 018/2011<br/>ГОСТ 33670—2015 А 5.1.1.3</td>
+<td class="col-norm">Действует на все колеса от одного органа управления (кроме транспортных средств категорий L<sub>1</sub> - L<sub>4</sub>)</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="69">
+<td class="col-n">69.</td>
+<td class="col-name">Запасная тормозная система</td>
+<td class="col-method">приложение №4<br/>п .2.1.1.2.   п .2.1.1.2.1.                      ТР ТС 018/2011<br/>ГОСТ 33670—2015 А 5.1.2</td>
+<td class="col-norm">Для транспортных средств с четырьмя и более колесами - воздействовать на тормозные механизмы посредством, по крайней мере, половины двухконтурной рабочей тормозной системы, по крайней мере, на два колеса (на каждой из сторон транспортного средства) в случае отказа в рабочей тормозной системы или усилителя тормозной системы;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="70">
+<td class="col-n">70.</td>
+<td class="col-name">Стояночная тормозная система</td>
+<td class="col-method">приложение №4<br/>п .2.1.1.3; п .2.1.1.3.1.                     ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А 5.1.3</td>
+<td class="col-norm">Должен затормаживать все колеса, по крайней мере, одной из осей</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="71">
+<td class="col-n">71.</td>
+<td class="col-name">Тормозные силы на колесах</td>
+<td class="col-method">приложение №4<br/>п .2.1.2. ТР ТС /2011<br/>ГОСТ 33670—2015 А 5.2</td>
+<td class="col-norm">не должны возникать, если органы управления тормозными системами не задействованы</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="72">
+<td class="col-n">72.</td>
+<td class="col-name">Действие рабочей и запасной тормозных систем </td>
+<td class="col-method">приложение №4<br/>п .2.1.3. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А 5.3</td>
+<td class="col-norm">Должен обеспечивает плавное, адекватное уменьшение или увеличение тормозных сил (замедление транспортного средства) при уменьшении или увеличении, соответственно, усилия воздействия на орган управления тормозной системой.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="73">
+<td class="col-n">73.</td>
+<td class="col-name">транспортные средства, имеющие четыре колеса и более, гидравлическим тормозным системой </td>
+<td class="col-method">приложение №4<br/>п .2.1.4.. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.5.4</td>
+<td class="col-norm">оборудуется красным сигнальным индикатором, который включается по сигналу от датчика давления, информирующему о неисправности любой части гидравлической тормозной системы, связанной с утечкой тормозной жидкости.</td>
+<td class="col-actual">&nbsp;</td>
+</tr></tbody></table></section><section class="page page-5" data-page="5"><table class="main-table page-table-5">
+<colgroup><col class="w-n"/><col class="w-name"/><col class="w-method"/><col class="w-norm"/><col class="w-actual"/></colgroup>
+<tbody><tr class="" data-row="74">
+<td class="col-n">74.</td>
+<td class="col-name">Антиблокировочные тормозные системы (АБС).</td>
+<td class="col-method">приложение №4<br/>п .2.1.6; ТР ТС 018 /2011 ГОСТ 33670—2015 А.5.15</td>
+<td class="col-norm">Транспортные средства категорий N<sub>1</sub>, которые оборудуются антиблокировочными тормозными системами (АБС)</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="75">
+<td class="col-n">75.</td>
+<td class="col-name"><strong>Требования к шинам и колесам</strong></td>
+<td class="col-method">приложение №4<br/>п 2.2; п 2.2.1;<br/>п 2.2.1.2   ТР ТС 018/2011<br/>ГОСТ 33670—2015 А.10</td>
+<td class="col-norm">Каждая установленная на транспортном средстве шина<br/>имеет отформованную маркировку хотя бы одним из знаков соответствия «Е», «е» или «DOT».<br/>Имеет отформованную маркировку обозначения размера шины, индекса несущей способности и индекса категории скорости.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="76">
+<td class="col-n">76.</td>
+<td class="col-name"><strong>Требования к средствам обеспечения обзорности</strong></td>
+<td class="col-method">приложение №4<br/>п 2.3.1; п 2.3.2;<br/>п 2.3.4.  ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.11</td>
+<td class="col-norm">-Водитель, должен иметь возможность беспрепятственно видеть дорогу впереди себя, а также иметь обзор справа и слева от транспортного средства.<br/>-Оборудуется встроенной на постоянной основе в конструкцию системой, способной очищать ветровое стекло от обледенения и запотевания.<br/>-Оснащается хотя бы одним стеклоочистителем и хотя бы одной форсункой стеклоомывателя ветрового стекла.<br/>-Каждая из щеток стеклоочистителя после выключения автоматически должен возвращаться в исходную позицию, располагающуюся на границе зоны очистки или ниже ее</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="77">
+<td class="col-n">77.</td>
+<td class="col-name"><strong>Требования к спидометрам</strong><br/><strong> </strong></td>
+<td class="col-method">приложение №4<br/>п 2.4; п 2.4.1; п 2.4.2;<br/>п 2.4.3. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.12</td>
+<td class="col-norm">-На каждом транспортном средстве категории L, M и N должен иметься спидометр<br/>- Показания спидометра должны быть видимы в любое время суток.<br/>-Скорость транспортного средства по показаниям спидометра не должна быть меньше его фактической скорости.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="78">
+<td class="col-n">78.</td>
+<td class="col-name"><strong>Требования к </strong><strong>травмобезопасности</strong><strong> рулевого управления транспортных средств категорий М</strong><strong><sub>1</sub></strong><strong>, N</strong><strong><sub>1</sub></strong><strong>, L</strong><strong><sub>6</sub></strong><strong> и L</strong><strong><sub>7</sub></strong><strong> (с автомобильной компоновкой)</strong></td>
+<td class="col-method">приложение №4<br/>п 3.1; п 3.1.1; п 3.1.2; п 3.1.3.  ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.24</td>
+<td class="col-norm">-Рулевое колесо не должно зацеплять и захватывать часть одежды или ювелирные украшения водителя при обычном воздействии на него<br/>- Болты, используемые для крепления рулевого колеса к ступице, в том случае если они находятся снаружи, должны утапливаться заподлицо с поверхностью<br/>- Непокрытые металлические спицы могут применяться в том случае, если они имеют установленные радиусы закруглений</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="79">
+<td class="col-n">79.</td>
+<td class="col-name"><strong>Требования к ремням безопасности и местам их крепления</strong></td>
+<td class="col-method">приложение №4<br/>п 3.2; 3.2.1. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.13</td>
+<td class="col-norm">Сиденья транспортных средств категорий M<sub>1</sub>, М<sub>2</sub> и М<sub>3</sub> классов II, III и В, категорий N, L<sub>6</sub> и L<sub>7</sub> (с автомобильной компоновкой) за исключением сидений, предназначенных для использования исключительно в неподвижном транспортном средстве оснащаются ремнями безопасности</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="80">
+<td class="col-n">80.</td>
+<td class="col-name"> С ремнями безопасности не допускается использование втягивающих устройств</td>
+<td class="col-method">приложение №4<br/>п 3.2.3; п 3.2.3.1; п 3.2.3.2; п 3.2.4.  ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.13.3</td>
+<td class="col-norm">-Которые не имеют регулятора длины вытянутой лямки<br/>- Которые требуют приведения в действие вручную приспособления для получения желаемой длины лямки и которые автоматически запираются после достижения пользователем желаемой длины.<br/>- Ремни с креплением в трех точках и втягивающими устройствами имеют, по крайней мере, одно втягивающее устройство для диагональной лямки.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="81">
+<td class="col-n">81.</td>
+<td class="col-name">Наличие знака предупреждения  каждого пассажирского сиденья, оснащенного подушкой безопасности, за исключением если транспортное средство оборудовано сенсорным механизмом, который автоматически определяет наличие детского удерживающего устройства, установленного против направления движения,</td>
+<td class="col-method">приложение №4<br/>п 3.2.5; п 3.2.6. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.13.6</td>
+<td class="col-norm">для каждого пассажирского сиденья, оснащенного подушкой безопасности, предусматривается знак предупреждения против использования на нем детского удерживающего устройства, установленного против направления движения. Предупреждающая этикетка в виде пиктограммы, которая может содержать пояснительный текст, надежно прикрепляется и размещается таким образом, чтобы ее могло видеть лицо, намеревающееся установить на данном сиденье детское удерживающее устройство, расположенное против направления движения предупреждающий знак должен быть виден во всех случаях, в том числе, при закрытой двери.</td>
+<td class="col-actual">&nbsp;</td>
+</tr></tbody></table></section><section class="page page-6" data-page="6"><table class="main-table page-table-6">
+<colgroup><col class="w-n"/><col class="w-name"/><col class="w-method"/><col class="w-norm"/><col class="w-actual"/></colgroup>
+<tbody><tr class="" data-row="82">
+<td class="col-n">82.</td>
+<td class="col-name">Установка ремней безопасности </td>
+<td class="col-method">приложение №4<br/>п 3.2.7; п 3.2.7.1; п 3.2.7.2.                               ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.13.7</td>
+<td class="col-norm">-Должен отсутствовать возможность соскальзывания с плеча правильно надетого ремня в результате смещения водителя или пассажира вперед<br/>- возможность повреждения лямки ремня при соприкосновении с острыми твердыми элементами конструкции транспортного средства или сиденья детских удерживающих систем и детских удерживающих систем ISOFIX.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="83">
+<td class="col-n">83.</td>
+<td class="col-name">Конструкция и установка ремней безопасности</td>
+<td class="col-method">приложение №4<br/>п 3.2.8. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.13.8</td>
+<td class="col-norm">должны быть доступными или легко извлекаться из-под сиденья, либо из-за него пользователем без посторонней помощи.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="84">
+<td class="col-n">84.</td>
+<td class="col-name">Устройство, служащее для открывания пряжки</td>
+<td class="col-method">приложение №4<br/>п 3.2.9.  ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.13.9</td>
+<td class="col-norm">Должен является хорошо заметным и легкодоступным для пользователя и конструируется таким образом, чтобы исключалась возможность его неожиданного или случайного открытия</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="85">
+<td class="col-n">85.</td>
+<td class="col-name">Расположение пряжки</td>
+<td class="col-method">приложение №4<br/>п 3.2.10. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.13.10</td>
+<td class="col-norm">Должна быть легкодоступной для спасателя в том случае, если необходимо срочно высвободить из транспортного средства водителя или пассажира</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="86">
+<td class="col-n">86.</td>
+<td class="col-name">Установка пряжки </td>
+<td class="col-method">приложение №4<br/>п 3.2.11. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.13.11</td>
+<td class="col-norm">Устанавливается таким образом, чтобы, как в открытом состоянии, так и под нагрузкой веса пользователя, он мог ее открыть простым движением как левой, так и правой руки в одном направлении.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="87">
+<td class="col-n">87.</td>
+<td class="col-name">места крепления ремней безопасности, соответствующими типу применяемых ремней.</td>
+<td class="col-method">приложение №4<br/>п 3.2.13. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.13.13</td>
+<td class="col-norm">Каждое место для сидения оборудуется местами крепления ремней безопасности</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="88">
+<td class="col-n">88.</td>
+<td class="col-name">Если используется двустворчатая дверная конструкция</td>
+<td class="col-method">приложение №4 п 3.2.14.                               ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.13.14</td>
+<td class="col-norm">конструкция системы крепления ремня не должна препятствовать свободному входу в транспортное средство и выходу из него.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="89">
+<td class="col-n">89.</td>
+<td class="col-name">Места крепления ремней безопасности</td>
+<td class="col-method">приложение №4 п 3.2.15.<br/>п 3.2.16.  ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.13.15</td>
+<td class="col-norm">Не должен располагаться на тонких и/или плоских панелях с недостаточной жесткостью и усилением или в тонкостенных трубах<br/>- не должен наблюдается пропусков в сварном шве, видимых непроваров</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="90">
+<td class="col-n">90.</td>
+<td class="col-name">Болты, используемые в конструкции мест крепления ремней безопасности</td>
+<td class="col-method">приложение №4<br/>п 3.2.17.  ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.13.17</td>
+<td class="col-norm">должны быть класса 8.8 или более прочные. Такие болты маркируются обозначением 8.8 или 12.9 на шестигранной головке, однако болты 7/16″ UNF для крепления ремней безопасности (с анодированным покрытием), не маркированные указанными обозначениями, могут рассматриваться в качестве болтов эквивалентной прочности.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="91">
+<td class="col-n">91.</td>
+<td class="col-name"><strong>Требования к сидениям и их креплениям</strong><br/><strong> </strong></td>
+<td class="col-method">приложение №4 п 3.3 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А 14</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="92">
+<td class="col-n">92.</td>
+<td class="col-name">Сиденья надежно прикрепляются к шасси или иным частям транспортного средства</td>
+<td class="col-method">приложение №4<br/>п 3.3.1. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 Таблица А 14.1</td>
+<td class="col-norm">Сиденья должны быть закреплены жестко. При приложении незначительных усилий сиденья должны перемещатся относительно мест крепления</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="93">
+<td class="col-n">93.</td>
+<td class="col-name">На транспортных средствах, оборудованных механизмами продольной регулировки положения подушки и угла наклона спинки сиденья или механизмом перемещения сиденья (для посадки и высадки пассажиров), указанные механизмы должны быть работоспособны. После прекращения регулирования или пользования эти механизмы автоматически блокируются. </td>
+<td class="col-method">приложение №4<br/>п 3.3.2. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 Таблица А 14.2</td>
+<td class="col-norm">Указанные механизмы должны быть работоспособны</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="94">
+<td class="col-n">94.</td>
+<td class="col-name">Подголовники устанавливаются на каждом переднем боковом сиденье транспортных средств категорий M1, M2 (технически допустимой максимальной массой не выше 3,5 тонн) и N1</td>
+<td class="col-method">приложение №4<br/>п 3.4.3. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 Таблица А 14.3</td>
+<td class="col-norm">Подголовники должны быть установлены для категорий M1, M2 и N1</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="95">
+<td class="col-n">95.</td>
+<td class="col-name"><strong>Требования к дверям, замкам и петлям дверей транспортных средств категорий М</strong><strong><sub>1</sub></strong><strong>, N, L</strong><strong><sub>6</sub></strong><strong> и L</strong><strong><sub>7</sub></strong><strong> (с кузовом закрытого типа)</strong></td>
+<td class="col-method">приложение №4<br/>п 3.5. ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 15</td>
+<td class="col-norm">Все двери должны надежно фиксироваться замками в закрытом состоянии.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="96">
+<td class="col-n">96.</td>
+<td class="col-name">Все двери, открывающие доступ в транспортное средство</td>
+<td class="col-method">приложение №4<br/>п 3.5.1. ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 15.1</td>
+<td class="col-norm">Должны иметь возможность надежно фиксироваться замками в закрытом состоянии.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="97">
+<td class="col-n">97.</td>
+<td class="col-name">Механизмы замков дверей для входа и выхода водителя и пассажиров</td>
+<td class="col-method">приложение №4<br/>п 3.5.2.  ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 15.2</td>
+<td class="col-norm">Должны иметь два положения запирания: промежуточное и окончательное. </td>
+<td class="col-actual">&nbsp;</td>
+</tr></tbody></table></section><section class="page page-7" data-page="7"><table class="main-table page-table-7">
+<colgroup><col class="w-n"/><col class="w-name"/><col class="w-method"/><col class="w-norm"/><col class="w-actual"/></colgroup>
+<tbody><tr class="" data-row="98">
+<td class="col-n">98.</td>
+<td class="col-name">Механизмы замков дверей, закрепленных на петлях</td>
+<td class="col-method">приложение №4<br/>п 3.5.3.  ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 15.3</td>
+<td class="col-norm">не должны открываться ни в промежуточном, ни в окончательном положениях запирания при приложении силы, равной 300 Н</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="99">
+<td class="col-n">99.</td>
+<td class="col-name"><strong>Требования к </strong><strong>травмобезопасности</strong><strong> наружных выступов</strong><br/><strong>транспортных средств категорий М</strong><strong><sub>1</sub></strong><strong>, N, L</strong><strong><sub>6</sub></strong><strong> и L</strong><strong><sub>7</sub></strong></td>
+<td class="col-method">приложение №4<br/>п 3.6 ТР ТС 018/2011 ГОСТ 33670—2015 Таблица А 16</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="100">
+<td class="col-n">100.</td>
+<td class="col-name">зона наружного поверхности кузова, расположенной между линией пола и высотой 2 м от дорожной поверхности, </td>
+<td class="col-method">приложение №4<br/>п 3.6.1. ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.1</td>
+<td class="col-norm">Не должны иметься элементов конструкции, которые могли бы захватить (зацепить) или увеличивали бы риск или степень тяжести травмирования любого лица, которое может соприкоснуться с транспортным средством.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="101">
+<td class="col-n">101.</td>
+<td class="col-name">Эмблемы и другие декоративные объекты, выступающие более чем на 10 мм, включая любую подложку, над поверхностью, к которой они крепятся</td>
+<td class="col-method">приложение №4<br/>п 3.6.2. ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.2</td>
+<td class="col-norm">имеют возможность отклоняться или отламываться при приложении к ним усилия 100 Н, а в отклоненном или отломанном состоянии не выступают над поверхностью, к которой они крепятся, более чем на 10 мм.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="102">
+<td class="col-n">102.</td>
+<td class="col-name">Колеса, гайки или болты крепления колес, колпаки ступиц и колесные колпаки</td>
+<td class="col-method">приложение №4<br/>п 3.6.3; п 3.6.4.                                                                                             ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.3</td>
+<td class="col-norm">Не должны иметь остроконечных или режущих кромок, выступающих за поверхность обода колеса.<br/>Колеса не имеют барашковых гаек</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="103">
+<td class="col-n">103.</td>
+<td class="col-name">пределы наружного выступления колес</td>
+<td class="col-method">приложение №4<br/>п 3.6.5.ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.5</td>
+<td class="col-norm"> Колеса не выступают за пределы наружного контура кузова в плане, за исключением шин, колпаков колес и гаек крепления колес</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="104">
+<td class="col-n">104.</td>
+<td class="col-name">Боковые воздушные дефлекторы или водосточные желоба в том случае, если они не загнуты по направлению к кузову, если их края не могут соприкоснуться с шаром диаметром 100 мм</td>
+<td class="col-method">приложение №4<br/>п 3.6.6. ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.6</td>
+<td class="col-norm">Должны иметь радиус закругления кромок не менее 1 мм.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="105">
+<td class="col-n">105.</td>
+<td class="col-name">Загибы концов бамперов в направлении к кузову</td>
+<td class="col-method">приложение №4<br/>п 3.6.7. ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.7</td>
+<td class="col-norm">Загибаются в направлении к кузову, так чтобы с ними не мог соприкоснуться шар диаметром 100 мм, и расстояние между краем бампера и кузовом не превышает 20 мм. В качестве альтернативы концы бампера могут быть утоплены в углублениях кузова или иметь с кузовом общую поверхность.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="106">
+<td class="col-n">106.</td>
+<td class="col-name">Буксирные сцепки и лебедки (при наличии)</td>
+<td class="col-method">приложение №4<br/>п 3.6.8.  ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.8</td>
+<td class="col-norm">не выступают за переднюю поверхность бампера.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="107">
+<td class="col-n">107.</td>
+<td class="col-name">выступы за наружную поверхность кузова ручки дверей и багажника</td>
+<td class="col-method">приложение №4<br/>п 3.6.9.                                                                                             ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.9</td>
+<td class="col-norm"> категории М<sub>1</sub>, N<sub>1</sub>, L<sub>6</sub> и L<sub>7</sub> не выступают более чем на 40 мм, остальные выступающие элементы - более чем на 30 мм.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="108">
+<td class="col-n">108.</td>
+<td class="col-name">Открытые концы поворотных ручек, вращающихся параллельно плоскости двери,</td>
+<td class="col-method">приложение №4<br/>п 3.6.11. ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.11</td>
+<td class="col-norm">должны быть загнуты по направлению к поверхности кузова</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="109">
+<td class="col-n">109.</td>
+<td class="col-name">Поворотные ручки, которые вращаются наружу в любом направлении, но не параллельно плоскости двери</td>
+<td class="col-method">приложение №4<br/>п 3.6.12.                                                                                             ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.12</td>
+<td class="col-norm">в закрытом положении ограждаются предохранительной рамкой или заглубляются. Конец ручки направляется либо назад, либо вниз.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="110">
+<td class="col-n">110.</td>
+<td class="col-name">Стекла окон, открывающиеся наружу по отношению к внешней поверхности транспортного средства</td>
+<td class="col-method">приложение №4<br/>п 3.6.13.                                                                                             ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.13</td>
+<td class="col-norm">при открытии не должны иметь кромок, направленных вперед, а также не выступают за край габаритной ширины транспортного средства.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="111">
+<td class="col-n">111.</td>
+<td class="col-name">Ободки и козырьки фар </td>
+<td class="col-method">приложение №4<br/>п 3.6.14. ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.14</td>
+<td class="col-norm">не выступают по отношению к наиболее выступающей точке поверхности стекла фары более чем на 30 мм (при горизонтальном измерении от точки контакта сферы диаметром 100 мм одновременно со стеклом фары и с ободком (козырьком) фары).</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="112">
+<td class="col-n">112.</td>
+<td class="col-name">Кронштейны для домкрата </td>
+<td class="col-method">приложение №4<br/>п 3.6.15. ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.15</td>
+<td class="col-norm">не должны выступать за вертикальную проекцию линии пола, расположенную непосредственно над ними, более чем на 10 мм.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="113">
+<td class="col-n">113.</td>
+<td class="col-name">Выпускные трубы, выступающие за расположенную непосредственно над ними вертикальную проекцию линии пола более чем на 10 мм</td>
+<td class="col-method">приложение №4<br/>п 3.6.16. ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.16</td>
+<td class="col-norm">Должны иметь насадку или закругленную кромку с радиусом закругления не менее 2,5 мм.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="114">
+<td class="col-n">114.</td>
+<td class="col-name">Кромки подножек и ступенек</td>
+<td class="col-method">приложение №4<br/>п 3.6.17.                                                                                             ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.17</td>
+<td class="col-norm">должны закругляться.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="115">
+<td class="col-n">115.</td>
+<td class="col-name">Радиус кривизны выступающих наружу краев боковых воздушных обтекателей, дождевых щитков и противогрязевыхдефлектров окон</td>
+<td class="col-method">приложение №4<br/>п 3.6.18.                                                                                             ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.18</td>
+<td class="col-norm">Должны выполняться не менее 1 мм</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="116">
+<td class="col-n">116.</td>
+<td class="col-name"><strong>Требования к пожарной безопасности</strong></td>
+<td class="col-method">приложение №4 п 3.8.<br/>ГОСТ 33670—2015 Таблица А 20</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="117">
+<td class="col-n">117.</td>
+<td class="col-name">наполнение топливного бака (баков)</td>
+<td class="col-method">приложение №4<br/>п 3.8.1. ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 20.1</td>
+<td class="col-norm">не должен попадать на систему выпуска выхлопных газов</td>
+<td class="col-actual">&nbsp;</td>
+</tr></tbody></table></section><section class="page page-8" data-page="8"><table class="main-table page-table-8">
+<colgroup><col class="w-n"/><col class="w-name"/><col class="w-method"/><col class="w-norm"/><col class="w-actual"/></colgroup>
+<tbody><tr class="" data-row="118">
+<td class="col-n">118.</td>
+<td class="col-name">Расположение топливного бака</td>
+<td class="col-method">приложение №4<br/>п 3.8.2.                                                                                          ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 20.2</td>
+<td class="col-norm">не должен располагаться в пассажирском помещении или другом отделении, являющемся его составной частью, и не составляет какую-либо его поверхность (пол, стенка, перегородка). Пассажирское помещение отделяется от топливного бака (баков) перегородкой. </td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="119">
+<td class="col-n">119.</td>
+<td class="col-name"> Наливная горловина топливного бака </td>
+<td class="col-method">приложение №4<br/>п 3.8.3.                                                                                          ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 20.3</td>
+<td class="col-norm">не должен находится в салоне, в багажном отделении и в моторном отсеке и снабжается крышкой для предотвращения выливания топлива</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="120">
+<td class="col-n">120.</td>
+<td class="col-name">Крышка наливной горловины </td>
+<td class="col-method">приложение №4<br/>п 3.8.4; п 3.8.5; п 3.8.5.1;<br/>п 3.8.5.2; п 3.8.5.3.<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 20.5</td>
+<td class="col-norm">прикрепляется к наливной трубе<br/>- Использования несъемной крышки наливной горловины топливного бака, открывающейся и закрывающейся автоматически<br/>- Использования элементов конструкции, не допускающих утечки избыточных паров и топлива в случае отсутствия крышки наливной горловины<br/>-  для открытия которой используется тот же ключ, что и для замка зажигания транспортного средства. В последнем случае ключ должен выниматься из замка крышки наливной горловины только в запертом положении.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="121">
+<td class="col-n">121.</td>
+<td class="col-name">выступающие части</td>
+<td class="col-method">приложение №4<br/>п 3.8.7. ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 20.7</td>
+<td class="col-norm">Рядом с топливным баком (баками) не имеется никаких выступающих частей, острых краев </td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="122">
+<td class="col-n">122.</td>
+<td class="col-name">Зашита компонентов топливной системы </td>
+<td class="col-method">приложение №4<br/>п 3.8.8. ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 20.8</td>
+<td class="col-norm">Компоненты топливной системы защищаются частями шасси или кузова от соприкосновения с возможными препятствиями на грунте. Такая защита не требуется, если компоненты, находящиеся в нижней части транспортного средства, располагаются по отношению к грунту выше части шасси или кузова, расположенной перед ними.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="123">
+<td class="col-n">123.</td>
+<td class="col-name"><strong> Требования к экологической безопасности.</strong><br/><strong>Требования к выбросам транспортных средств категорий М и N</strong></td>
+<td class="col-method">приложение №4<br/>п 4. п 4.1. п 4.1.1.<br/>п 4.1.2. п 4.1.3.<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 21</td>
+<td class="col-norm">Должен быть соответствующим экологическому классу 4<br/>- Год выпуска (модельный год) транспортного средства - не ранее 2007 г<br/>N<sub>1</sub> - обязательное наличие системы бортовой диагностики</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="124">
+<td class="col-n">124.</td>
+<td class="col-name">Оснащение устройствами и системами снижения токсичности</td>
+<td class="col-method">приложение №4<br/>п 4.1.4.<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 21.4</td>
+<td class="col-norm">- категорий М<sub>1</sub> полной массой до 3,5 т и N<sub>1</sub> c дизелями - системой рециркуляции отработавших газов и (или) каталитическим нейтрализатором и (или) фильтром частиц</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="125">
+<td class="col-n">125.</td>
+<td class="col-name">комплектность и работоспособность систем, обеспечивающих уровень выбросов</td>
+<td class="col-method">приложение №4<br/>п 4.1.5.<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 21.5</td>
+<td class="col-norm">Система бортовой диагностики (при наличии) </td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="126">
+<td class="col-n">126.</td>
+<td class="col-name">конструкция системы питания, системы выпуска и систем, обеспечивающих соответствующий уровень выбросов</td>
+<td class="col-method">приложение №4<br/>п 4.1.6.<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 21.6</td>
+<td class="col-norm">не должны быть внесены изменения</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="127">
+<td class="col-n">127.</td>
+<td class="col-name"><strong>Требования к размерам транспортных средств</strong></td>
+<td class="col-method">приложение №5 п 1.<br/>ТР ТС 018/2011</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="128">
+<td class="col-n">128.</td>
+<td class="col-name">Максимальная длина</td>
+<td class="col-method">приложение №5 п 1.1.<br/>ТР ТС 018/2011</td>
+<td class="col-norm">-категорий М<sub>1</sub>, N и О (прицепа) - 12 м<br/>- одиночного двухосного категорий М<sub>2</sub> и М<sub>3</sub> - 13,5 м</td>
+<td class="col-actual">мм</td>
+</tr><tr class="" data-row="129">
+<td class="col-n">129.</td>
+<td class="col-name">Максимальная ширина</td>
+<td class="col-method">приложение №5 п 1.2.<br/>ТР ТС 018/2011</td>
+<td class="col-norm">категорий М, N, О не должна превышать 2,55 м. Для изотермических кузовов транспортных средств допускается максимальная ширина 2,6 м</td>
+<td class="col-actual">мм</td>
+</tr><tr class="" data-row="130">
+<td class="col-n">130.</td>
+<td class="col-name">Максимальная высота</td>
+<td class="col-method">приложение №5 п 1.3.<br/>ТР ТС 018/2011</td>
+<td class="col-norm">категорий М, N, О не должна превышать 4 м</td>
+<td class="col-actual"><br/>           мм</td>
+</tr></tbody></table>
+<div class="note-title">Примечание</div>
+<div class="notes-area"><textarea aria-label="Примечание" data-field="notes"></textarea></div>
+<div class="conclusion"><span class="conclusion-result">Соответствует&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;не соответствует</span>&nbsp;&nbsp;&nbsp;&nbsp;требованиям Технического Регламента Таможенного Союза «О безопасности колесных транспортных средств» ТР ТС 018/2011.</div>
+<div class="signature-line"><span>Технический эксперт</span><span class="signature-space"></span><input aria-label="ФИО технического эксперта" class="expert-input" data-field="expert_name"/></div>
+<div class="signature-caption"><span>Подпись</span><span>Ф.И.О.</span></div></section>
+<script>
+(() => {
+  'use strict';
+  const STORAGE_KEY = 'n1-protocol-form-v1';
+  const fields = [...document.querySelectorAll('[data-field]')];
+  const status = document.getElementById('status');
+
+  function getData() {
+    const data = {};
+    for (const el of fields) data[el.dataset.field] = el.value;
+    return data;
+  }
+
+  function setData(data = {}) {
+    for (const el of fields) {
+      if (Object.prototype.hasOwnProperty.call(data, el.dataset.field)) el.value = data[el.dataset.field] ?? '';
+    }
+    autoResizeAll();
+  }
+
+  function saveLocal() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(getData()));
+    status.textContent = 'Сохранено ' + new Date().toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
+  }
+
+  function autoResize(el) {
+    if (el.tagName !== 'TEXTAREA') return;
+    el.style.height = 'auto';
+    el.style.height = Math.max(el.parentElement.clientHeight - 2, el.scrollHeight) + 'px';
+  }
+  function autoResizeAll() { fields.forEach(autoResize); }
+
+  let timer;
+  fields.forEach(el => {
+    el.addEventListener('input', () => {
+      autoResize(el);
+      clearTimeout(timer);
+      status.textContent = 'Сохранение…';
+      timer = setTimeout(saveLocal, 250);
+    });
+  });
+
+  document.getElementById('printBtn').addEventListener('click', () => { saveLocal(); window.print(); });
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(getData(), null, 2)], {type:'application/json;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'N1_protocol_data.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  document.getElementById('jsonFile').addEventListener('change', async event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try { setData(JSON.parse(await file.text())); saveLocal(); status.textContent = 'JSON загружен'; }
+    catch (e) { alert('Не удалось прочитать JSON: ' + e.message); }
+    event.target.value = '';
+  });
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    if (!confirm('Очистить все введённые данные?')) return;
+    const keep = { protocol_date: '20.07.2026' };
+    setData(keep); saveLocal();
+  });
+
+  window.getProtocolData = getData;
+  window.setProtocolData = data => { setData(data); saveLocal(); };
+
+  try { const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); if (saved) setData(saved); } catch (_) {}
+  requestAnimationFrame(autoResizeAll);
+  window.addEventListener('resize', autoResizeAll);
+})();
+</script>
+</body>
+</html>

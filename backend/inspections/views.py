@@ -129,6 +129,7 @@ def _serialize_inspection(request, inspection):
         "plate_number": inspection.plate_number,
         "brand": inspection.brand,
         "country": inspection.country,
+        "vehicle_category": inspection.vehicle_category,
         "vin": inspection.vin,
         "created_at": inspection.created_at.isoformat(),
         "branch": None if inspection.branch is None else {
@@ -180,6 +181,7 @@ def _notify_telegram_inspection_created(request, inspection):
         "<b>Новый осмотр</b>",
         f"<b>ID:</b> {inspection.id}",
         f"<b>Филиал:</b> {html.escape(branch)}",
+        f"<b>Категория:</b> {html.escape(inspection.vehicle_category or '-')}",
         f"<b>Марка:</b> {html.escape(inspection.brand or '-')}",
         f"<b>VIN:</b> {html.escape(inspection.vin or '-')}",
         f"<b>Оператор:</b> {html.escape(operator)}",
@@ -531,11 +533,18 @@ def create_inspection(request):
     plate_number = request.POST.get("plate_number", "").strip().upper()
     brand = request.POST.get("brand", "").strip()
     country = request.POST.get("country", "").strip()
+    vehicle_category = request.POST.get("vehicle_category", VehicleInspection.CATEGORY_M1).strip().upper()
     profile = getattr(user, "profile", None)
     branch = None if profile is None else profile.branch
 
     if not brand:
         return JsonResponse({"ok": False, "error": "Field 'brand' is required"}, status=400)
+
+    if vehicle_category not in dict(VehicleInspection.CATEGORY_CHOICES):
+        return JsonResponse({
+            "ok": False,
+            "error": "Field 'vehicle_category' must be M1 or N1",
+        }, status=400)
 
     if not title:
         title = f"{brand} {plate_number}".strip() or "Осмотр авто"
@@ -584,6 +593,7 @@ def create_inspection(request):
         plate_number=plate_number,
         brand=brand,
         country=country,
+        vehicle_category=vehicle_category,
         branch=branch,
         created_by=user,
         vin=request.POST.get("vin", "").strip().upper(),
@@ -610,6 +620,7 @@ def create_inspection(request):
         "plate_number": inspection.plate_number,
         "brand": inspection.brand,
         "country": inspection.country,
+        "vehicle_category": inspection.vehicle_category,
         "vin": inspection.vin,
         "document_pdf": _file_url(request, inspection.document_pdf),
         "branch": {

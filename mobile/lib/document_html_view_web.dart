@@ -6,6 +6,7 @@ import 'package:web/web.dart' as web;
 class DocumentHtmlView extends StatefulWidget {
   const DocumentHtmlView({
     super.key,
+    required this.vehicleCategory,
     required this.brand,
     required this.country,
     required this.vin,
@@ -16,6 +17,7 @@ class DocumentHtmlView extends StatefulWidget {
     required this.onSignRequested,
   });
 
+  final String vehicleCategory;
   final String brand;
   final String country;
   final String vin;
@@ -36,10 +38,11 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
 
   String get _documentUrl {
     return Uri(
-      path: '/M1_document_clean.html',
+      path: '/${widget.vehicleCategory}_document_clean.html',
       queryParameters: {
         'brand': widget.brand,
         'country': widget.country,
+        'vehicle_category': widget.vehicleCategory,
         'vin': widget.vin,
         'expert_name': widget.expertName,
         if (widget.signatureSvg != null) 'signature': widget.signatureSvg!,
@@ -52,7 +55,7 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
   @override
   void initState() {
     super.initState();
-    _viewType = 'm1-document-html-${_nextId++}';
+    _viewType = 'inspection-document-html-${_nextId++}';
     ui_web.platformViewRegistry.registerViewFactory(_viewType, (int viewId) {
       final iframe = web.HTMLIFrameElement()..src = _documentUrl;
       iframe.style
@@ -68,7 +71,8 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
   @override
   void didUpdateWidget(covariant DocumentHtmlView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.brand != widget.brand ||
+    if (oldWidget.vehicleCategory != widget.vehicleCategory ||
+        oldWidget.brand != widget.brand ||
         oldWidget.country != widget.country ||
         oldWidget.vin != widget.vin ||
         oldWidget.expertName != widget.expertName ||

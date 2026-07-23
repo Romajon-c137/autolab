@@ -7,6 +7,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 class DocumentHtmlView extends StatefulWidget {
   const DocumentHtmlView({
     super.key,
+    required this.vehicleCategory,
     required this.brand,
     required this.country,
     required this.vin,
@@ -17,6 +18,7 @@ class DocumentHtmlView extends StatefulWidget {
     required this.onSignRequested,
   });
 
+  final String vehicleCategory;
   final String brand;
   final String country;
   final String vin;
@@ -58,7 +60,8 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
   @override
   void didUpdateWidget(covariant DocumentHtmlView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.brand != widget.brand ||
+    if (oldWidget.vehicleCategory != widget.vehicleCategory ||
+        oldWidget.brand != widget.brand ||
         oldWidget.country != widget.country ||
         oldWidget.vin != widget.vin ||
         oldWidget.expertName != widget.expertName ||
@@ -68,11 +71,14 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
   }
 
   Future<void> _loadDocument() async {
-    final source = await rootBundle.loadString('assets/M1_document_clean.html');
+    final source = await rootBundle.loadString(
+      'assets/${widget.vehicleCategory}_document_clean.html',
+    );
     final params = Uri(
       queryParameters: {
         'brand': widget.brand,
         'country': widget.country,
+        'vehicle_category': widget.vehicleCategory,
         'vin': widget.vin,
         'expert_name': widget.expertName,
         if (widget.signatureSvg != null) 'signature': widget.signatureSvg!,

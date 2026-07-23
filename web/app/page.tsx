@@ -33,6 +33,7 @@ type Inspection = {
   title: string;
   plate_number: string;
   brand: string;
+  vehicle_category: string;
   vin: string;
   created_at: string;
   branch: null | { id: number; name: string };
@@ -461,6 +462,10 @@ function InspectionDetail({
               <td>{inspection.brand || "-"}</td>
             </tr>
             <tr>
+              <th>Категория</th>
+              <td>{inspection.vehicle_category || "M1"}</td>
+            </tr>
+            <tr>
               <th>VIN</th>
               <td>{inspection.vin || "-"}</td>
             </tr>
@@ -556,9 +561,9 @@ function ReportsPage({
   serverUrl: string;
   sessionKey: string;
 }) {
-  const today = new Date();
-  const [dateFrom, setDateFrom] = useState(isoDate(new Date(today.getFullYear(), today.getMonth(), 1)));
-  const [dateTo, setDateTo] = useState(isoDate(today));
+  const today = isoDate(new Date());
+  const [dateFrom, setDateFrom] = useState(today);
+  const [dateTo, setDateTo] = useState(today);
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [selected, setSelected] = useState<Inspection | null>(null);
@@ -585,6 +590,10 @@ function ReportsPage({
   }, []);
 
   const totals = summary?.totals;
+  const isTodayPeriod = dateFrom === today && dateTo === today;
+  const periodLabel = dateFrom === dateTo
+    ? formatDateOnly(dateFrom)
+    : `${formatDateOnly(dateFrom)} - ${formatDateOnly(dateTo)}`;
 
   return (
     <>
@@ -618,21 +627,15 @@ function ReportsPage({
       ) : summary && (
         <>
           <div className="report-totals">
-            <div>
-              <span>За период</span>
+            <div className="primary-total">
+              <span>{isTodayPeriod ? "Сегодня" : "За выбранный период"}</span>
               <strong>{totals?.period ?? 0}</strong>
+              <small>{periodLabel}</small>
             </div>
             <div>
               <span>Сегодня</span>
               <strong>{totals?.today ?? 0}</strong>
-            </div>
-            <div>
-              <span>7 дней</span>
-              <strong>{totals?.week ?? 0}</strong>
-            </div>
-            <div>
-              <span>Месяц</span>
-              <strong>{totals?.month ?? 0}</strong>
+              <small>{formatDateOnly(today)}</small>
             </div>
           </div>
           <div className="inspection-list report-inspection-list">
@@ -727,6 +730,12 @@ function formatDate(value: string) {
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function formatDateOnly(value: string) {
+  return new Intl.DateTimeFormat("ru-RU", {
+    dateStyle: "short",
+  }).format(new Date(`${value}T00:00:00`));
 }
 
 function formatPhotoDate(inspection: Inspection, photoKey: string) {

@@ -85,10 +85,23 @@ class AiApiKey(models.Model):
 
 
 class VehicleInspection(models.Model):
+    CATEGORY_M1 = "M1"
+    CATEGORY_N1 = "N1"
+    CATEGORY_CHOICES = (
+        (CATEGORY_M1, "M1"),
+        (CATEGORY_N1, "N1"),
+    )
+
     title = models.CharField("Название", max_length=120, blank=True)
     plate_number = models.CharField("Гос номер", max_length=20, blank=True)
     brand = models.CharField("Марка авто", max_length=80, blank=True)
     country = models.CharField("Страна", max_length=80, blank=True)
+    vehicle_category = models.CharField(
+        "Категория авто",
+        max_length=2,
+        choices=CATEGORY_CHOICES,
+        default=CATEGORY_M1,
+    )
     mileage = models.PositiveIntegerField("Пробег", null=True, blank=True)
     vin = models.CharField("VIN номер", max_length=17, blank=True)
     branch = models.ForeignKey(

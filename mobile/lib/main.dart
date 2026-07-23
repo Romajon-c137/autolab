@@ -528,6 +528,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   final _picker = ImagePicker();
   final Map<_PhotoKind, String> _photos = {};
   final Map<_PhotoKind, DateTime> _photoTakenAt = {};
+  _VehicleCategory _vehicleCategory = _VehicleCategory.m1;
   bool _isSaving = false;
   bool _isRecognizingVin = false;
   bool _showDocument = false;
@@ -549,6 +550,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       _brandController.text = draft.brand;
       _countryController.text = draft.country;
       _vinController.text = draft.vin;
+      _vehicleCategory = draft.vehicleCategory;
       _photos.addAll(draft.photos);
       _photoTakenAt.addAll(draft.photoTakenAt);
     }
@@ -781,6 +783,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       plateNumber: '',
       brand: _brandController.text.trim(),
       country: _countryController.text.trim(),
+      vehicleCategory: _vehicleCategory,
       vin: _vinController.text.trim().toUpperCase(),
       photos: Map<_PhotoKind, String>.from(_photos),
       photoTakenAt: Map<_PhotoKind, DateTime>.from(_photoTakenAt),
@@ -859,6 +862,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       plateNumber: '',
       brand: brand,
       country: country,
+      vehicleCategory: _vehicleCategory,
       vin: vin,
       photos: Map<_PhotoKind, String>.from(_photos),
       photoTakenAt: Map<_PhotoKind, DateTime>.from(_photoTakenAt),
@@ -1039,6 +1043,25 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     final gap = compact ? 8.0 : 12.0;
     return Column(
       children: [
+        SegmentedButton<_VehicleCategory>(
+          segments: const [
+            ButtonSegment(value: _VehicleCategory.m1, label: Text('M1')),
+            ButtonSegment(value: _VehicleCategory.n1, label: Text('N1')),
+          ],
+          selected: {_vehicleCategory},
+          onSelectionChanged: (selection) {
+            final next = selection.first;
+            if (next == _vehicleCategory) {
+              return;
+            }
+            setState(() {
+              _vehicleCategory = next;
+              _documentStateJson = '';
+            });
+            _scheduleAutoSave();
+          },
+        ),
+        SizedBox(height: gap),
         TextField(
           controller: _brandController,
           textInputAction: TextInputAction.done,
@@ -1709,6 +1732,7 @@ class _DocumentHtmlPanel extends StatelessWidget {
     return ColoredBox(
       color: Colors.white,
       child: DocumentHtmlView(
+        vehicleCategory: draft.vehicleCategory.apiValue,
         brand: draft.brand,
         country: draft.country,
         vin: draft.vin,
@@ -1965,12 +1989,28 @@ enum _PhotoKind {
   String get key => apiField;
 }
 
+enum _VehicleCategory {
+  m1('M1'),
+  n1('N1');
+
+  const _VehicleCategory(this.apiValue);
+
+  final String apiValue;
+
+  static _VehicleCategory fromApi(String? value) {
+    return value?.toUpperCase() == _VehicleCategory.n1.apiValue
+        ? _VehicleCategory.n1
+        : _VehicleCategory.m1;
+  }
+}
+
 class _InspectionDraft {
   const _InspectionDraft({
     required this.id,
     required this.plateNumber,
     required this.brand,
     required this.country,
+    required this.vehicleCategory,
     required this.vin,
     required this.photos,
     required this.photoTakenAt,
@@ -1982,6 +2022,7 @@ class _InspectionDraft {
   final String plateNumber;
   final String brand;
   final String country;
+  final _VehicleCategory vehicleCategory;
   final String vin;
   final Map<_PhotoKind, String> photos;
   final Map<_PhotoKind, DateTime> photoTakenAt;
@@ -1994,6 +2035,7 @@ class _InspectionDraft {
       'plate_number': plateNumber,
       'brand': brand,
       'country': country,
+      'vehicle_category': vehicleCategory.apiValue,
       'vin': vin,
       'photos': photos.map((key, value) => MapEntry(key.apiField, value)),
       'photo_taken_at': photoTakenAt.map(
@@ -2031,6 +2073,9 @@ class _InspectionDraft {
       plateNumber: json['plate_number'] as String? ?? '',
       brand: json['brand'] as String? ?? '',
       country: json['country'] as String? ?? '',
+      vehicleCategory: _VehicleCategory.fromApi(
+        json['vehicle_category'] as String?,
+      ),
       vin: json['vin'] as String? ?? '',
       photos: photos,
       photoTakenAt: photoTakenAt,
@@ -2050,6 +2095,7 @@ class _SentInspection {
     required this.plateNumber,
     required this.brand,
     required this.country,
+    required this.vehicleCategory,
     required this.vin,
     required this.photos,
     required this.sentAt,
@@ -2059,6 +2105,7 @@ class _SentInspection {
   final String plateNumber;
   final String brand;
   final String country;
+  final _VehicleCategory vehicleCategory;
   final String vin;
   final Map<_PhotoKind, String> photos;
   final DateTime sentAt;
@@ -2069,6 +2116,7 @@ class _SentInspection {
       plateNumber: plateNumber,
       brand: brand,
       country: country,
+      vehicleCategory: vehicleCategory,
       vin: vin,
       photos: Map<_PhotoKind, String>.from(photos),
       sentAt: sentAt,
@@ -2081,6 +2129,7 @@ class _SentInspection {
       'plate_number': plateNumber,
       'brand': brand,
       'country': country,
+      'vehicle_category': vehicleCategory.apiValue,
       'vin': vin,
       'photos': photos.map((key, value) => MapEntry(key.apiField, value)),
       'sent_at': sentAt.toIso8601String(),
@@ -2102,6 +2151,9 @@ class _SentInspection {
       plateNumber: json['plate_number'] as String? ?? '',
       brand: json['brand'] as String? ?? '',
       country: json['country'] as String? ?? '',
+      vehicleCategory: _VehicleCategory.fromApi(
+        json['vehicle_category'] as String?,
+      ),
       vin: json['vin'] as String? ?? '',
       photos: photos,
       sentAt:
@@ -2165,11 +2217,14 @@ Future<String> _buildInspectionDocumentHtml({
   required String? signatureSvg,
   required String documentStateJson,
 }) async {
-  final source = await rootBundle.loadString('assets/M1_document_clean.html');
+  final source = await rootBundle.loadString(
+    'assets/${draft.vehicleCategory.apiValue}_document_clean.html',
+  );
   final params = Uri(
     queryParameters: {
       'brand': draft.brand,
       'country': draft.country,
+      'vehicle_category': draft.vehicleCategory.apiValue,
       'vin': draft.vin,
       'expert_name': expertName,
       // ignore: use_null_aware_elements
@@ -2305,6 +2360,7 @@ class _ApiClient {
       'plate_number': draft.plateNumber,
       'brand': draft.brand,
       'country': draft.country,
+      'vehicle_category': draft.vehicleCategory.apiValue,
       'vin': draft.vin,
     });
 
@@ -2346,6 +2402,9 @@ class _ApiClient {
       plateNumber: data['plate_number'] as String? ?? draft.plateNumber,
       brand: data['brand'] as String? ?? draft.brand,
       country: data['country'] as String? ?? draft.country,
+      vehicleCategory: _VehicleCategory.fromApi(
+        data['vehicle_category'] as String? ?? draft.vehicleCategory.apiValue,
+      ),
       vin: data['vin'] as String? ?? draft.vin,
       photos: const {},
       sentAt: DateTime.now(),
