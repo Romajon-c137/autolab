@@ -1,6 +1,7 @@
 [Unit]
 Description=Auto Laboratory Django backend
-After=network.target
+After=network.target autolab-ocr.service
+Wants=autolab-ocr.service
 
 [Service]
 Type=simple

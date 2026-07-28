@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 import requests
 
-from .models import AiApiKey, Branch, DailyInspectionReport, UserProfile, VehicleInspection
+from .models import Branch, DailyInspectionReport, UserProfile, VehicleInspection
 
 REQUIRED_PHOTO_FIELDS = (
     "front_photo",
@@ -26,7 +26,12 @@ REQUIRED_PHOTO_FIELDS = (
     "vin_photo",
 )
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif"}
-VIN_PATTERN = re.compile(r"\b[A-HJ-NPR-Z0-9]{17}\b")
+VIN_EXACT_PATTERN = re.compile(r"^[A-HJ-NPR-Z0-9]{17}$")
+OCR_SERVICE_URL = os.environ.get(
+    "VIN_OCR_SERVICE_URL",
+    "http://127.0.0.1:8765/recognize-vin",
+)
+OCR_SERVICE_TIMEOUT = int(os.environ.get("VIN_OCR_SERVICE_TIMEOUT", "45"))
 
 
 def _json_body(request):
@@ -610,79 +615,60 @@ def recognize_vin(request):
             "filename": image.name,
         }, status=400)
 
-    ai_key = AiApiKey.objects.filter(is_active=True).first()
-    api_key = ai_key.api_key if ai_key is not None else os.environ.get("OPENAI_API_KEY")
-    model = (
-        ai_key.model
-        if ai_key is not None and ai_key.model
-        else os.environ.get("OPENAI_VIN_MODEL", "gpt-5.6")
-    )
-
-    if not api_key:
-        return JsonResponse({
-            "ok": False,
-            "error": "OpenAI API key is not configured. Add active AI API key in admin.",
-        }, status=503)
-
     image.seek(0)
-    mime_type = _image_mime_type(image)
     image_data = base64.b64encode(image.read()).decode("ascii")
 
     try:
         response = requests.post(
-            "https://api.openai.com/v1/responses",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
+            OCR_SERVICE_URL,
             json={
-                "model": model,
-                "input": [{
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": (
-                                "Read the vehicle VIN from this image. "
-                                "Return only JSON: {\"vin\":\"...\"}. "
-                                "VIN must be exactly 17 characters, uppercase, "
-                                "and must not contain I, O, or Q. If unreadable, "
-                                "return {\"vin\":\"\"}."
-                            ),
-                        },
-                        {
-                            "type": "input_image",
-                            "image_url": f"data:{mime_type};base64,{image_data}",
-                        },
-                    ],
-                }],
+                "image_base64": image_data,
+                "filename": image.name,
+                "content_type": image.content_type,
             },
-            timeout=30,
+            timeout=OCR_SERVICE_TIMEOUT,
         )
     except requests.RequestException as error:
         return JsonResponse({
             "ok": False,
-            "error": "OpenAI request failed",
+            "error": "VIN OCR service request failed",
             "details": str(error),
         }, status=502)
 
     if response.status_code < 200 or response.status_code >= 300:
         return JsonResponse({
             "ok": False,
-            "error": "OpenAI returned an error",
+            "error": "VIN OCR service returned an error",
             "status_code": response.status_code,
             "details": response.text,
         }, status=502)
 
-    data = response.json()
-    output_text = _extract_openai_output_text(data)
-    vin = _extract_vin(output_text)
+    try:
+        data = response.json()
+    except ValueError:
+        return JsonResponse({
+            "ok": False,
+            "error": "VIN OCR service returned invalid JSON",
+            "details": response.text,
+        }, status=502)
+
+    if data.get("ok") is False:
+        return JsonResponse({
+            "ok": False,
+            "error": data.get("error", "VIN OCR failed"),
+            "details": data.get("details", ""),
+        }, status=502)
+
+    vin = _extract_vin_from_lines(data.get("lines", []))
+    if not vin:
+        vin = _extract_vin(str(data.get("vin", "")))
 
     return JsonResponse({
         "ok": True,
         "vin": vin,
-        "raw": output_text,
-        "model": model,
+        "raw": data.get("lines", []),
+        "candidates": data.get("candidates", []),
+        "engine": data.get("engine", "paddleocr"),
     })
 
 
@@ -821,42 +807,24 @@ def _parse_photo_taken_at(raw_value):
     return value
 
 
-def _image_mime_type(uploaded_file):
-    if uploaded_file.content_type.startswith("image/"):
-        return uploaded_file.content_type
-
-    suffix = uploaded_file.name.rsplit(".", 1)[-1].lower() if "." in uploaded_file.name else ""
-    return {
-        "jpg": "image/jpeg",
-        "jpeg": "image/jpeg",
-        "png": "image/png",
-        "gif": "image/gif",
-        "webp": "image/webp",
-        "heic": "image/heic",
-        "heif": "image/heif",
-    }.get(suffix, "image/jpeg")
-
-
-def _extract_openai_output_text(data):
-    if isinstance(data.get("output_text"), str):
-        return data["output_text"]
-
-    chunks = []
-    for output in data.get("output", []):
-        for content in output.get("content", []):
-            text = content.get("text")
-            if isinstance(text, str):
-                chunks.append(text)
-    return "\n".join(chunks)
-
-
 def _extract_vin(text):
-    try:
-        parsed = json.loads(text)
-        value = str(parsed.get("vin", "")).upper()
-    except (json.JSONDecodeError, AttributeError):
-        value = text.upper()
+    value = re.sub(r"[^A-Z0-9]", "", text.upper())
+    return value if VIN_EXACT_PATTERN.match(value) else ""
 
-    value = value.replace(" ", "").replace("-", "")
-    match = VIN_PATTERN.search(value)
-    return "" if match is None else match.group(0)
+
+def _extract_vin_from_lines(lines):
+    if not isinstance(lines, list):
+        return ""
+
+    for line in lines:
+        if isinstance(line, dict):
+            vin = _extract_vin(str(line.get("text", "")))
+            if vin:
+                return vin
+
+        if isinstance(line, str):
+            vin = _extract_vin(line)
+            if vin:
+                return vin
+
+    return ""
