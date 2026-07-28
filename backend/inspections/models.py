@@ -86,10 +86,18 @@ class AiApiKey(models.Model):
 
 class VehicleInspection(models.Model):
     CATEGORY_M1 = "M1"
+    CATEGORY_M2 = "M2"
+    CATEGORY_M3 = "M3"
     CATEGORY_N1 = "N1"
+    CATEGORY_N2 = "N2"
+    CATEGORY_N3 = "N3"
     CATEGORY_CHOICES = (
         (CATEGORY_M1, "M1"),
+        (CATEGORY_M2, "M2"),
+        (CATEGORY_M3, "M3"),
         (CATEGORY_N1, "N1"),
+        (CATEGORY_N2, "N2"),
+        (CATEGORY_N3, "N3"),
     )
 
     title = models.CharField("Название", max_length=120, blank=True)

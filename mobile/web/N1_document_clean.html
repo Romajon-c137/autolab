@@ -997,6 +997,14 @@
     return element;
   }
 
+  function setAutoField(name, fieldValue) {
+    var element = setValue(name, fieldValue);
+    if (element) {
+      element.classList.toggle('needs-fill', !String(element.value || '').trim());
+    }
+    return element;
+  }
+
   function markIfEmpty(element) {
     if (!element) return;
     element.classList.toggle('needs-fill', !element.value.trim());
@@ -1027,6 +1035,8 @@
     };
   }
 
+  window.AutolabCollectDocumentState = collectDocumentState;
+
   function applyDocumentState(raw) {
     if (!raw) return;
     try {
@@ -1044,7 +1054,7 @@
         var button = cell.querySelector('.actual-toggle');
         if (button) {
           button.dataset.state = actualState.state || '';
-          button.textContent = button.dataset.state === 'check' ? '✓' : (button.dataset.state === 'dash' ? '-' : '');
+          button.textContent = button.dataset.state === 'check' ? '✓' : (button.dataset.state === 'dash' ? '-' : (button.dataset.state === 'cross' ? '✕' : ''));
         }
         var input = cell.querySelector('.actual-mm input');
         if (input && actualState.value !== null && actualState.value !== undefined) {
@@ -1120,6 +1130,9 @@
       } else if (button.dataset.state === 'check') {
         button.dataset.state = 'dash';
         button.textContent = '-';
+      } else if (button.dataset.state === 'dash') {
+        button.dataset.state = 'cross';
+        button.textContent = '✕';
       } else {
         button.dataset.state = '';
         button.textContent = '';
@@ -1130,6 +1143,14 @@
   });
 
   applyDocumentState(params.get('state'));
+  setAutoField('protocol_date', value);
+  setAutoField('sample_received', value);
+  setAutoField('test_started', value);
+  setAutoField('test_finished', value);
+  setAutoField('object_name', params.get('brand') || '');
+  setAutoField('manufacturer', params.get('country') || '');
+  setAutoField('vin', params.get('vin') || '');
+  setAutoField('expert_name', params.get('expert_name') || '');
   if (field('expert_name') && !field('expert_name').value.trim() && params.get('expert_name')) {
     field('expert_name').value = params.get('expert_name');
     field('expert_name').classList.remove('needs-fill');

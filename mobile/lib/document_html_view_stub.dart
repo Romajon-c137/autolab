@@ -66,11 +66,46 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
         oldWidget.vin != widget.vin ||
         oldWidget.expertName != widget.expertName ||
         oldWidget.signatureSvg != widget.signatureSvg) {
-      _loadDocument();
+      _captureCurrentState().then((state) {
+        if (mounted) {
+          _loadDocument(stateOverride: state);
+        }
+      });
     }
   }
 
-  Future<void> _loadDocument() async {
+  @override
+  void dispose() {
+    _captureCurrentState();
+    super.dispose();
+  }
+
+  Future<String?> _captureCurrentState() async {
+    try {
+      final result = await _controller.runJavaScriptReturningResult(
+        "window.AutolabCollectDocumentState ? JSON.stringify(window.AutolabCollectDocumentState()) : ''",
+      );
+      final state = _normalizeJavaScriptString(result);
+      if (state.isNotEmpty && state != '{}' && state != 'null') {
+        widget.onDocumentStateChanged(state);
+        return state;
+      }
+    } catch (_) {
+      // The WebView may already be gone during rotation/dispose.
+    }
+    return null;
+  }
+
+  String _normalizeJavaScriptString(Object result) {
+    final raw = result.toString();
+    if (raw.length >= 2 && raw.startsWith('"') && raw.endsWith('"')) {
+      final decoded = jsonDecode(raw);
+      return decoded is String ? decoded : raw;
+    }
+    return raw;
+  }
+
+  Future<void> _loadDocument({String? stateOverride}) async {
     final source = await rootBundle.loadString(
       'assets/${widget.vehicleCategory}_document_clean.html',
     );
@@ -82,8 +117,8 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
         'vin': widget.vin,
         'expert_name': widget.expertName,
         if (widget.signatureSvg != null) 'signature': widget.signatureSvg!,
-        if (widget.documentStateJson.isNotEmpty)
-          'state': widget.documentStateJson,
+        if ((stateOverride ?? widget.documentStateJson).isNotEmpty)
+          'state': stateOverride ?? widget.documentStateJson,
       },
     ).query;
     final html = source.replaceFirst(

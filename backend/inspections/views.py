@@ -543,7 +543,7 @@ def create_inspection(request):
     if vehicle_category not in dict(VehicleInspection.CATEGORY_CHOICES):
         return JsonResponse({
             "ok": False,
-            "error": "Field 'vehicle_category' must be M1 or N1",
+            "error": "Field 'vehicle_category' must be M1, M2, M3, N1, N2 or N3",
         }, status=400)
 
     if not title:

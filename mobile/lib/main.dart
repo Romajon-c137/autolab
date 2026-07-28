@@ -526,6 +526,9 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   final _countryController = TextEditingController();
   final _vinController = TextEditingController();
   final _picker = ImagePicker();
+  final GlobalKey _documentViewKey = GlobalKey(
+    debugLabel: 'inspection-document-view',
+  );
   final Map<_PhotoKind, String> _photos = {};
   final Map<_PhotoKind, DateTime> _photoTakenAt = {};
   _VehicleCategory _vehicleCategory = _VehicleCategory.m1;
@@ -551,6 +554,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       _countryController.text = draft.country;
       _vinController.text = draft.vin;
       _vehicleCategory = draft.vehicleCategory;
+      _documentStateJson = draft.documentStateJson;
       _photos.addAll(draft.photos);
       _photoTakenAt.addAll(draft.photoTakenAt);
     }
@@ -610,7 +614,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
         return;
       }
 
-      final savedPath = await _persistPhoto(image, kind);
+      final savedPath = await _persistPhoto(image, kind, _photos[kind]);
       setState(() {
         _photos[kind] = savedPath;
         _photoTakenAt[kind] = DateTime.now();
@@ -665,7 +669,11 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     }
   }
 
-  Future<String> _persistPhoto(XFile image, _PhotoKind kind) async {
+  Future<String> _persistPhoto(
+    XFile image,
+    _PhotoKind kind,
+    String? previousPath,
+  ) async {
     final directory = await getApplicationDocumentsDirectory();
     final inspectionsDir = Directory('${directory.path}/inspection_photos');
     if (!await inspectionsDir.exists()) {
@@ -673,10 +681,20 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     }
 
     final extension = _extensionForPath(image.path);
+    final stamp = DateTime.now().microsecondsSinceEpoch;
     final target = File(
-      '${inspectionsDir.path}/${_draftId}_${kind.key}$extension',
+      '${inspectionsDir.path}/${_draftId}_${kind.key}_$stamp$extension',
     );
-    return File(image.path).copy(target.path).then((file) => file.path);
+    final saved = await File(image.path).copy(target.path);
+
+    if (previousPath != null && previousPath != saved.path) {
+      final previous = File(previousPath);
+      if (await previous.exists()) {
+        await previous.delete();
+      }
+    }
+
+    return saved.path;
   }
 
   Future<void> _continueToDocument() async {
@@ -785,6 +803,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       country: _countryController.text.trim(),
       vehicleCategory: _vehicleCategory,
       vin: _vinController.text.trim().toUpperCase(),
+      documentStateJson: _documentStateJson,
       photos: Map<_PhotoKind, String>.from(_photos),
       photoTakenAt: Map<_PhotoKind, DateTime>.from(_photoTakenAt),
       createdAt: widget.initialDraft?.createdAt ?? DateTime.now(),
@@ -864,6 +883,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       country: country,
       vehicleCategory: _vehicleCategory,
       vin: vin,
+      documentStateJson: _documentStateJson,
       photos: Map<_PhotoKind, String>.from(_photos),
       photoTakenAt: Map<_PhotoKind, DateTime>.from(_photoTakenAt),
       createdAt: widget.initialDraft?.createdAt ?? DateTime.now(),
@@ -936,7 +956,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildFields(compact: true),
+                _buildFields(compact: true, showCategory: false),
                 if (_status != null) ...[
                   const SizedBox(height: 10),
                   Flexible(
@@ -1005,7 +1025,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
             title: const Text('Данные авто'),
             childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             children: [
-              _buildFields(compact: true),
+              _buildFields(compact: true, showCategory: false),
               if (_status != null) ...[
                 const SizedBox(height: 10),
                 _StatusBox(text: _status!, isError: _statusIsError),
@@ -1033,35 +1053,51 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       signatureSvg: _documentSigned ? widget.storage.signatureSvg() : null,
       documentStateJson: _documentStateJson,
       onDocumentStateChanged: (state) {
+        if (!mounted) {
+          return;
+        }
         _documentStateJson = state;
+        _scheduleAutoSave();
       },
       onSign: _signDocument,
+      documentViewKey: _documentViewKey,
     );
   }
 
-  Widget _buildFields({bool compact = false}) {
+  Widget _buildFields({bool compact = false, bool showCategory = true}) {
     final gap = compact ? 8.0 : 12.0;
     return Column(
       children: [
-        SegmentedButton<_VehicleCategory>(
-          segments: const [
-            ButtonSegment(value: _VehicleCategory.m1, label: Text('M1')),
-            ButtonSegment(value: _VehicleCategory.n1, label: Text('N1')),
-          ],
-          selected: {_vehicleCategory},
-          onSelectionChanged: (selection) {
-            final next = selection.first;
-            if (next == _vehicleCategory) {
-              return;
-            }
-            setState(() {
-              _vehicleCategory = next;
-              _documentStateJson = '';
-            });
-            _scheduleAutoSave();
-          },
-        ),
-        SizedBox(height: gap),
+        if (showCategory) ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SegmentedButton<_VehicleCategory>(
+                segments: const [
+                  ButtonSegment(value: _VehicleCategory.m1, label: Text('M1')),
+                  ButtonSegment(value: _VehicleCategory.m2, label: Text('M2')),
+                  ButtonSegment(value: _VehicleCategory.m3, label: Text('M3')),
+                  ButtonSegment(value: _VehicleCategory.n1, label: Text('N1')),
+                  ButtonSegment(value: _VehicleCategory.n2, label: Text('N2')),
+                  ButtonSegment(value: _VehicleCategory.n3, label: Text('N3')),
+                ],
+                selected: {_vehicleCategory},
+                onSelectionChanged: (selection) {
+                  final next = selection.first;
+                  if (next == _vehicleCategory) {
+                    return;
+                  }
+                  setState(() {
+                    _vehicleCategory = next;
+                  });
+                  _scheduleAutoSave();
+                },
+              ),
+            ),
+          ),
+          SizedBox(height: gap),
+        ],
         TextField(
           controller: _brandController,
           textInputAction: TextInputAction.done,
@@ -1208,7 +1244,8 @@ class _DraftsPageState extends State<_DraftsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final drafts = widget.storage.drafts;
+    final drafts = widget.storage.drafts.toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
     return Scaffold(
       appBar: AppBar(
@@ -1679,6 +1716,7 @@ class _EmbeddedInspectionDocument extends StatelessWidget {
     required this.documentStateJson,
     required this.onDocumentStateChanged,
     required this.onSign,
+    required this.documentViewKey,
   });
 
   final _InspectionDraft draft;
@@ -1687,6 +1725,7 @@ class _EmbeddedInspectionDocument extends StatelessWidget {
   final String documentStateJson;
   final ValueChanged<String> onDocumentStateChanged;
   final VoidCallback onSign;
+  final GlobalKey documentViewKey;
 
   @override
   Widget build(BuildContext context) {
@@ -1704,6 +1743,7 @@ class _EmbeddedInspectionDocument extends StatelessWidget {
           documentStateJson: documentStateJson,
           onDocumentStateChanged: onDocumentStateChanged,
           onSignRequested: onSign,
+          documentViewKey: documentViewKey,
         ),
       ),
     );
@@ -1718,6 +1758,7 @@ class _DocumentHtmlPanel extends StatelessWidget {
     required this.documentStateJson,
     required this.onDocumentStateChanged,
     required this.onSignRequested,
+    required this.documentViewKey,
   });
 
   final _InspectionDraft draft;
@@ -1726,12 +1767,14 @@ class _DocumentHtmlPanel extends StatelessWidget {
   final String documentStateJson;
   final ValueChanged<String> onDocumentStateChanged;
   final VoidCallback onSignRequested;
+  final GlobalKey documentViewKey;
 
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
       color: Colors.white,
       child: DocumentHtmlView(
+        key: documentViewKey,
         vehicleCategory: draft.vehicleCategory.apiValue,
         brand: draft.brand,
         country: draft.country,
@@ -1991,16 +2034,25 @@ enum _PhotoKind {
 
 enum _VehicleCategory {
   m1('M1'),
-  n1('N1');
+  m2('M2'),
+  m3('M3'),
+  n1('N1'),
+  n2('N2'),
+  n3('N3');
 
   const _VehicleCategory(this.apiValue);
 
   final String apiValue;
 
   static _VehicleCategory fromApi(String? value) {
-    return value?.toUpperCase() == _VehicleCategory.n1.apiValue
-        ? _VehicleCategory.n1
-        : _VehicleCategory.m1;
+    return switch (value?.toUpperCase()) {
+      'M2' => _VehicleCategory.m2,
+      'M3' => _VehicleCategory.m3,
+      'N1' => _VehicleCategory.n1,
+      'N2' => _VehicleCategory.n2,
+      'N3' => _VehicleCategory.n3,
+      _ => _VehicleCategory.m1,
+    };
   }
 }
 
@@ -2012,6 +2064,7 @@ class _InspectionDraft {
     required this.country,
     required this.vehicleCategory,
     required this.vin,
+    required this.documentStateJson,
     required this.photos,
     required this.photoTakenAt,
     required this.createdAt,
@@ -2024,6 +2077,7 @@ class _InspectionDraft {
   final String country;
   final _VehicleCategory vehicleCategory;
   final String vin;
+  final String documentStateJson;
   final Map<_PhotoKind, String> photos;
   final Map<_PhotoKind, DateTime> photoTakenAt;
   final DateTime createdAt;
@@ -2037,6 +2091,7 @@ class _InspectionDraft {
       'country': country,
       'vehicle_category': vehicleCategory.apiValue,
       'vin': vin,
+      'document_state': documentStateJson,
       'photos': photos.map((key, value) => MapEntry(key.apiField, value)),
       'photo_taken_at': photoTakenAt.map(
         (key, value) => MapEntry(key.apiField, value.toIso8601String()),
@@ -2077,6 +2132,7 @@ class _InspectionDraft {
         json['vehicle_category'] as String?,
       ),
       vin: json['vin'] as String? ?? '',
+      documentStateJson: json['document_state'] as String? ?? '',
       photos: photos,
       photoTakenAt: photoTakenAt,
       createdAt:
@@ -2605,8 +2661,12 @@ class _AppStorage {
   }
 
   Future<void> upsertDraft(_InspectionDraft draft) async {
-    drafts.removeWhere((item) => item.id == draft.id);
-    drafts.insert(0, draft);
+    final index = drafts.indexWhere((item) => item.id == draft.id);
+    if (index == -1) {
+      drafts.add(draft);
+    } else {
+      drafts[index] = draft;
+    }
     await _saveDrafts();
   }
 
