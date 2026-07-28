@@ -1,9 +1,7 @@
-import base64
 from datetime import datetime, timedelta
 import html
 import json
 import os
-import re
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import get_user_model
@@ -26,12 +24,6 @@ REQUIRED_PHOTO_FIELDS = (
     "vin_photo",
 )
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif"}
-VIN_EXACT_PATTERN = re.compile(r"^[A-HJ-NPR-Z0-9]{17}$")
-OCR_SERVICE_URL = os.environ.get(
-    "VIN_OCR_SERVICE_URL",
-    "http://127.0.0.1:8765/recognize-vin",
-)
-OCR_SERVICE_TIMEOUT = int(os.environ.get("VIN_OCR_SERVICE_TIMEOUT", "45"))
 
 
 def _json_body(request):
@@ -589,90 +581,6 @@ def create_daily_report(request, user):
 
 
 @csrf_exempt
-def recognize_vin(request):
-    auth_error, _user = _require_auth(request)
-    if auth_error is not None:
-        return auth_error
-
-    if request.method != "POST":
-        return JsonResponse({
-            "ok": False,
-            "error": "Only POST is allowed",
-        }, status=405)
-
-    image = request.FILES.get("vin_photo")
-    if image is None:
-        return JsonResponse({
-            "ok": False,
-            "error": "Field 'vin_photo' is required",
-        }, status=400)
-
-    if not _is_image_file(image):
-        return JsonResponse({
-            "ok": False,
-            "error": "Uploaded file must be an image",
-            "content_type": image.content_type,
-            "filename": image.name,
-        }, status=400)
-
-    image.seek(0)
-    image_data = base64.b64encode(image.read()).decode("ascii")
-
-    try:
-        response = requests.post(
-            OCR_SERVICE_URL,
-            json={
-                "image_base64": image_data,
-                "filename": image.name,
-                "content_type": image.content_type,
-            },
-            timeout=OCR_SERVICE_TIMEOUT,
-        )
-    except requests.RequestException as error:
-        return JsonResponse({
-            "ok": False,
-            "error": "VIN OCR service request failed",
-            "details": str(error),
-        }, status=502)
-
-    if response.status_code < 200 or response.status_code >= 300:
-        return JsonResponse({
-            "ok": False,
-            "error": "VIN OCR service returned an error",
-            "status_code": response.status_code,
-            "details": response.text,
-        }, status=502)
-
-    try:
-        data = response.json()
-    except ValueError:
-        return JsonResponse({
-            "ok": False,
-            "error": "VIN OCR service returned invalid JSON",
-            "details": response.text,
-        }, status=502)
-
-    if data.get("ok") is False:
-        return JsonResponse({
-            "ok": False,
-            "error": data.get("error", "VIN OCR failed"),
-            "details": data.get("details", ""),
-        }, status=502)
-
-    vin = _extract_vin_from_lines(data.get("lines", []))
-    if not vin:
-        vin = _extract_vin(str(data.get("vin", "")))
-
-    return JsonResponse({
-        "ok": True,
-        "vin": vin,
-        "raw": data.get("lines", []),
-        "candidates": data.get("candidates", []),
-        "engine": data.get("engine", "paddleocr"),
-    })
-
-
-@csrf_exempt
 def create_inspection(request):
     auth_error, user = _require_auth(request)
     if auth_error is not None:
@@ -806,25 +714,3 @@ def _parse_photo_taken_at(raw_value):
 
     return value
 
-
-def _extract_vin(text):
-    value = re.sub(r"[^A-Z0-9]", "", text.upper())
-    return value if VIN_EXACT_PATTERN.match(value) else ""
-
-
-def _extract_vin_from_lines(lines):
-    if not isinstance(lines, list):
-        return ""
-
-    for line in lines:
-        if isinstance(line, dict):
-            vin = _extract_vin(str(line.get("text", "")))
-            if vin:
-                return vin
-
-        if isinstance(line, str):
-            vin = _extract_vin(line)
-            if vin:
-                return vin
-
-    return ""

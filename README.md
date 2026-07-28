@@ -100,7 +100,6 @@ POST /api/auth/login/
 POST /api/auth/logout/
 GET  /api/auth/me/
 GET  /api/branches/
-POST /api/recognize-vin/
 POST /api/inspections/
 ```
 
@@ -120,35 +119,6 @@ rear_photo
 left_photo
 right_photo
 mileage_photo
-vin_photo
-```
-
-## Распознавание VIN
-
-Backend отправляет фото VIN в OpenAI Responses API. API ключ можно добавить через админку:
-
-```text
-Админка -> AI API keys -> Add AI API key
-```
-
-Нужно заполнить:
-
-- `Название`
-- `API key`
-- `Модель`, например `gpt-5.6`
-- `Активен`
-
-Если активного ключа в админке нет, backend попробует взять переменные окружения `OPENAI_API_KEY` и `OPENAI_VIN_MODEL`.
-
-Endpoint:
-
-```text
-POST /api/recognize-vin/
-```
-
-Он принимает `multipart/form-data` с полем:
-
-```text
 vin_photo
 ```
 

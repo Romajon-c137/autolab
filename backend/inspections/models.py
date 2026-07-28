@@ -60,30 +60,6 @@ class UserProfile(models.Model):
         return self.user.get_username()
 
 
-class AiApiKey(models.Model):
-    name = models.CharField("Название", max_length=120, default="OpenAI")
-    api_key = models.CharField("API key", max_length=255)
-    model = models.CharField("Модель", max_length=80, default="gpt-5.6")
-    is_active = models.BooleanField("Активен", default=True)
-    created_at = models.DateTimeField("Дата создания", auto_now_add=True)
-    updated_at = models.DateTimeField("Дата обновления", auto_now=True)
-
-    class Meta:
-        ordering = ["-is_active", "-updated_at"]
-        verbose_name = "AI API key"
-        verbose_name_plural = "AI API keys"
-
-    def __str__(self):
-        return self.name
-
-    @property
-    def masked_key(self):
-        if len(self.api_key) <= 10:
-            return "*****"
-
-        return f"{self.api_key[:6]}...{self.api_key[-4:]}"
-
-
 class VehicleInspection(models.Model):
     CATEGORY_M1 = "M1"
     CATEGORY_M2 = "M2"

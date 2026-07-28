@@ -7,7 +7,7 @@ from django.urls import path
 from django.utils.crypto import get_random_string
 from django.utils.html import format_html
 
-from .models import AiApiKey, Branch, DailyInspectionReport, UserProfile, VehicleInspection
+from .models import Branch, DailyInspectionReport, UserProfile, VehicleInspection
 
 
 class UserProfileInline(admin.StackedInline):
@@ -66,27 +66,6 @@ class BranchAdmin(admin.ModelAdmin):
     list_display = ("id", "name", "is_active", "created_at")
     list_filter = ("is_active",)
     search_fields = ("name",)
-
-
-@admin.register(AiApiKey)
-class AiApiKeyAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "model", "is_active", "masked_key_display", "updated_at")
-    list_filter = ("is_active", "model")
-    search_fields = ("name", "model")
-    readonly_fields = ("created_at", "updated_at", "masked_key_display")
-    fields = (
-        "name",
-        "api_key",
-        "model",
-        "is_active",
-        "masked_key_display",
-        "created_at",
-        "updated_at",
-    )
-
-    @admin.display(description="Ключ")
-    def masked_key_display(self, obj):
-        return obj.masked_key
 
 
 @admin.register(VehicleInspection)

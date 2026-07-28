@@ -533,7 +533,6 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   final Map<_PhotoKind, DateTime> _photoTakenAt = {};
   _VehicleCategory _vehicleCategory = _VehicleCategory.m1;
   bool _isSaving = false;
-  bool _isRecognizingVin = false;
   bool _showDocument = false;
   bool _documentSigned = false;
   String _documentStateJson = '';
@@ -623,49 +622,11 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       });
       await _autoSaveDraft();
 
-      if (kind == _PhotoKind.vin) {
-        await _recognizeVin(savedPath);
-      }
     } catch (error) {
       setState(() {
         _status = _humanError(error);
         _statusIsError = true;
       });
-    }
-  }
-
-  Future<void> _recognizeVin(String path) async {
-    setState(() {
-      _isRecognizingVin = true;
-      _status = 'Распознаю VIN...';
-      _statusIsError = false;
-    });
-
-    try {
-      final api = _ApiClient(
-        serverUrl: widget.storage.serverUrl,
-        sessionKey: widget.storage.sessionKey,
-      );
-      final vin = await api.recognizeVin(path);
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _vinController.text = vin;
-        _status = vin.isEmpty
-            ? 'VIN не распознан. Можно ввести вручную.'
-            : 'VIN распознан: $vin';
-        _statusIsError = vin.isEmpty;
-      });
-      await _autoSaveDraft();
-    } catch (error) {
-      await _handleActionError(error);
-    } finally {
-      if (mounted) {
-        setState(() => _isRecognizingVin = false);
-      }
     }
   }
 
@@ -1127,17 +1088,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
             border: const OutlineInputBorder(),
             isDense: compact,
             labelText: 'VIN номер',
-            hintText: 'Распознается после фото VIN',
-            suffixIcon: _isRecognizingVin
-                ? const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  )
-                : null,
+            hintText: 'Введите VIN вручную',
           ),
         ),
       ],
@@ -1164,7 +1115,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
             label: kind.label,
             asset: kind.asset,
             path: _photos[kind],
-            onTap: _isRecognizingVin ? null : () => _takePhoto(kind),
+            onTap: () => _takePhoto(kind),
           ),
       ],
     );
@@ -1184,9 +1135,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
           const SizedBox(width: 10),
           Expanded(
             child: FilledButton.icon(
-              onPressed: _isSaving || _isRecognizingVin
-                  ? null
-                  : _sendInspection,
+              onPressed: _isSaving ? null : _sendInspection,
               icon: _isSaving
                   ? const SizedBox(
                       width: 18,
@@ -2465,27 +2414,6 @@ class _ApiClient {
       photos: const {},
       sentAt: DateTime.now(),
     );
-  }
-
-  Future<String> recognizeVin(String vinPhotoPath) async {
-    final request = http.MultipartRequest('POST', _uri('/api/recognize-vin/'));
-    request.headers.addAll(_authHeaders());
-    request.files.add(await _multipartPhoto('vin_photo', vinPhotoPath));
-
-    final streamedResponse = await request.send().timeout(
-      const Duration(seconds: 45),
-    );
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      if (response.statusCode == 401) {
-        throw _AuthException(response.body);
-      }
-      throw Exception('HTTP ${response.statusCode}: ${response.body}');
-    }
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    return (data['vin'] as String? ?? '').trim().toUpperCase();
   }
 
   Future<http.MultipartFile> _multipartPhoto(String field, String path) async {
