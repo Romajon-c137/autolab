@@ -26,6 +26,7 @@ from django.views.decorators.csrf import csrf_exempt
 from inspections.views import (
     branches_view,
     create_inspection,
+    daily_reports_collection,
     inspection_detail,
     inspections_collection,
     login_view,
@@ -95,6 +96,7 @@ urlpatterns = [
     path('api/inspections/', inspections_collection, name='inspections-collection'),
     path('api/inspections/<int:inspection_id>/', inspection_detail, name='inspection-detail'),
     path('api/reports/summary/', reports_summary, name='reports-summary'),
+    path('api/daily-reports/', daily_reports_collection, name='daily-reports'),
     path('api/recognize-vin/', recognize_vin, name='recognize-vin'),
     path('api/upload-image/', upload_image, name='upload-image'),
     path('api/inspections/create/', create_inspection, name='create-inspection'),

@@ -2,7 +2,9 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
+  Archive,
   ChartColumn,
+  ClipboardList,
   ExternalLink,
   ListChecks,
   LogOut,
@@ -14,18 +16,13 @@ import {
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 type Role = "operator" | "manager" | "admin";
-type Section = "inspections" | "reports";
+type Section = "inspections" | "dailyReport" | "dailyReportsArchive" | "reports";
 
 type User = {
   id: number;
   login: string;
   role: Role;
   branch: null | { id: number; name: string };
-};
-
-type BranchOption = {
-  id: number;
-  name: string;
 };
 
 type Inspection = {
@@ -49,6 +46,27 @@ type ReportSummary = {
   branches: Array<{ id: number | null; name: string; inspections_count: number }>;
 };
 
+type DailyReportRow = {
+  inspection_id: number;
+  brand: string;
+  vehicle_category: string;
+  vin: string;
+  number: string;
+  talon_number: string;
+};
+
+type DailyReport = {
+  id: number;
+  report_date: string;
+  branch: null | { id: number; name: string };
+  created_by: null | { id: number; login: string };
+  rows: DailyReportRow[];
+  total_count: number;
+  category_counts: Record<string, number>;
+  created_at: string;
+  updated_at: string;
+};
+
 const photoLabels: Record<string, string> = {
   front_photo: "Спереди",
   rear_photo: "Сзади",
@@ -58,6 +76,8 @@ const photoLabels: Record<string, string> = {
   vin_photo: "VIN",
 };
 
+const vehicleCategories = ["M1", "M2", "M3", "N1", "N2", "N3"];
+
 export default function Page() {
   const [serverUrl, setServerUrl] = useState(API_URL);
   const [sessionKey, setSessionKey] = useState("");
@@ -66,7 +86,6 @@ export default function Page() {
   const [error, setError] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [branches, setBranches] = useState<BranchOption[]>([]);
 
   useEffect(() => {
     setSessionKey(localStorage.getItem("session_key") ?? "");
@@ -83,13 +102,6 @@ export default function Page() {
         setUser(null);
       });
   }, [serverUrl, sessionKey]);
-
-  useEffect(() => {
-    if (!sessionKey || !canViewReports(user)) return;
-    apiFetch<{ branches: BranchOption[] }>(serverUrl, sessionKey, "/api/branches/")
-      .then((data) => setBranches(data.branches))
-      .catch(() => setBranches([]));
-  }, [serverUrl, sessionKey, user]);
 
   if (!sessionKey || !user) {
     return (
@@ -182,19 +194,18 @@ export default function Page() {
                 <span className="nav-label">Отчеты</span>
               </summary>
               <div className="submenu">
-                {branches.length === 0 ? (
-                  <span>Филиалы не найдены</span>
-                ) : (
-                  branches.map((branch) => (
-                    <button
-                      key={branch.id}
-                      onClick={() => goToSection("reports")}
-                      title={branch.name}
-                    >
-                      {branch.name}
-                    </button>
-                  ))
-                )}
+                <button onClick={() => goToSection("dailyReport")} title="Отчет дня">
+                  <ClipboardList className="nav-item-icon" aria-hidden="true" />
+                  Отчет дня
+                </button>
+                <button onClick={() => goToSection("dailyReportsArchive")} title="Архив отчетов">
+                  <Archive className="nav-item-icon" aria-hidden="true" />
+                  Архив отчетов
+                </button>
+                <button onClick={() => goToSection("reports")} title="Статистика">
+                  <ChartColumn className="nav-item-icon" aria-hidden="true" />
+                  Статистика
+                </button>
               </div>
             </details>
           )}
@@ -217,7 +228,11 @@ export default function Page() {
         </button>
       </aside>
       <main className="main">
-        {section === "reports" && canReports ? (
+        {section === "dailyReport" && canReports ? (
+          <DailyReportPage serverUrl={serverUrl} sessionKey={sessionKey} />
+        ) : section === "dailyReportsArchive" && canReports ? (
+          <DailyReportsArchivePage serverUrl={serverUrl} sessionKey={sessionKey} />
+        ) : section === "reports" && canReports ? (
           <ReportsPage serverUrl={serverUrl} sessionKey={sessionKey} />
         ) : (
           <InspectionsPage serverUrl={serverUrl} sessionKey={sessionKey} />
@@ -554,6 +569,296 @@ function InspectionDetail({
   );
 }
 
+function DailyReportPage({
+  serverUrl,
+  sessionKey,
+}: {
+  serverUrl: string;
+  sessionKey: string;
+}) {
+  const today = isoDate(new Date());
+  const [reportDate, setReportDate] = useState(today);
+  const [inspections, setInspections] = useState<Inspection[]>([]);
+  const [rows, setRows] = useState<Record<number, { number: string; talon_number: string }>>({});
+  const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    setError("");
+    setStatus("");
+    try {
+      const params = new URLSearchParams({ date_from: reportDate, date_to: reportDate });
+      const data = await apiFetch<{ inspections: Inspection[] }>(
+        serverUrl,
+        sessionKey,
+        `/api/inspections/?${params}`
+      );
+      setInspections(data.inspections);
+      setRows((current) => {
+        const next = { ...current };
+        data.inspections.forEach((inspection, index) => {
+          if (!next[inspection.id]) {
+            next[inspection.id] = {
+              number: String(index + 1),
+              talon_number: "",
+            };
+          }
+        });
+        return next;
+      });
+    } catch (err) {
+      setError(humanError(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function submitReport() {
+    setSending(true);
+    setError("");
+    setStatus("");
+    try {
+      const payloadRows: DailyReportRow[] = inspections.map((inspection, index) => ({
+        inspection_id: inspection.id,
+        brand: inspection.brand,
+        vehicle_category: inspection.vehicle_category || "M1",
+        vin: inspection.vin,
+        number: rows[inspection.id]?.number || String(index + 1),
+        talon_number: rows[inspection.id]?.talon_number || "",
+      }));
+
+      const data = await apiFetch<{ report: DailyReport }>(
+        serverUrl,
+        sessionKey,
+        "/api/daily-reports/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            report_date: reportDate,
+            rows: payloadRows,
+          }),
+        }
+      );
+      setStatus(
+        `Отчет за ${formatDateOnly(data.report.report_date)} отправлен. Всего: ${data.report.total_count}`
+      );
+    } catch (err) {
+      setError(humanError(err));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const categoryCounts = countCategories(inspections);
+
+  return (
+    <>
+      <div className="topbar">
+        <div className="page-title">
+          <h1>Отчет дня</h1>
+          <p>Сегодняшние осмотры и поля для отправки дневного отчета</p>
+        </div>
+      </div>
+      <div className="filters daily-report-filters">
+        <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} />
+        <button className="btn secondary" onClick={load} disabled={loading}>
+          {loading ? "Загрузка..." : "Показать"}
+        </button>
+        <button className="btn" onClick={submitReport} disabled={sending || loading}>
+          {sending ? "Отправка..." : "Отправить отчет дня"}
+        </button>
+      </div>
+      {error && <div className="error">{error}</div>}
+      {status && <div className="success">{status}</div>}
+      <div className="report-totals category-total-grid">
+        <div className="primary-total">
+          <span>Всего за день</span>
+          <strong>{inspections.length}</strong>
+          <small>{formatDateOnly(reportDate)}</small>
+        </div>
+        {vehicleCategories.map((category) => (
+          <div key={category}>
+            <span>{category}</span>
+            <strong>{categoryCounts[category] ?? 0}</strong>
+            <small>категория</small>
+          </div>
+        ))}
+      </div>
+      <div className="inspection-list daily-report-table">
+        {inspections.length === 0 ? (
+          <div className="card empty">Осмотры за день не найдены</div>
+        ) : (
+          <>
+            <div className="inspection-header" aria-hidden="true">
+              <span>Марка / модель</span>
+              <span>Тип</span>
+              <span>VIN</span>
+              <span>№</span>
+              <span>№ талона</span>
+            </div>
+            {inspections.map((inspection, index) => (
+              <article className="inspection-row" key={inspection.id}>
+                <div className="inspection-cell">
+                  <span>Марка / модель</span>
+                  <strong>{inspection.brand || "-"}</strong>
+                </div>
+                <div className="inspection-cell">
+                  <span>Тип</span>
+                  <strong>{inspection.vehicle_category || "M1"}</strong>
+                </div>
+                <div className="inspection-cell vin-cell">
+                  <span>VIN</span>
+                  <strong>{inspection.vin || "-"}</strong>
+                </div>
+                <div className="inspection-cell editable-cell">
+                  <span>№</span>
+                  <input
+                    value={rows[inspection.id]?.number ?? String(index + 1)}
+                    onChange={(event) =>
+                      setRows((current) => ({
+                        ...current,
+                        [inspection.id]: {
+                          number: event.target.value,
+                          talon_number: current[inspection.id]?.talon_number ?? "",
+                        },
+                      }))
+                    }
+                  />
+                </div>
+                <div className="inspection-cell editable-cell">
+                  <span>№ талона</span>
+                  <input
+                    value={rows[inspection.id]?.talon_number ?? ""}
+                    onChange={(event) =>
+                      setRows((current) => ({
+                        ...current,
+                        [inspection.id]: {
+                          number: current[inspection.id]?.number ?? String(index + 1),
+                          talon_number: event.target.value,
+                        },
+                      }))
+                    }
+                  />
+                </div>
+              </article>
+            ))}
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
+function DailyReportsArchivePage({
+  serverUrl,
+  sessionKey,
+}: {
+  serverUrl: string;
+  sessionKey: string;
+}) {
+  const today = isoDate(new Date());
+  const monthStart = today.slice(0, 8) + "01";
+  const [dateFrom, setDateFrom] = useState(monthStart);
+  const [dateTo, setDateTo] = useState(today);
+  const [reports, setReports] = useState<DailyReport[]>([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+      const data = await apiFetch<{ reports: DailyReport[] }>(
+        serverUrl,
+        sessionKey,
+        `/api/daily-reports/?${params}`
+      );
+      setReports(data.reports);
+    } catch (err) {
+      setError(humanError(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <>
+      <div className="topbar">
+        <div className="page-title">
+          <h1>Архив отчетов</h1>
+          <p>Отправленные дневные отчеты и суммы по категориям</p>
+        </div>
+      </div>
+      <div className="filters">
+        <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+        <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+        <button className="btn" onClick={load} disabled={loading}>
+          {loading ? "Загрузка..." : "Найти"}
+        </button>
+      </div>
+      {error && <div className="error">{error}</div>}
+      <div className="inspection-list daily-report-archive-table">
+        {reports.length === 0 ? (
+          <div className="card empty">Отчеты за период не найдены</div>
+        ) : (
+          <>
+            <div className="inspection-header" aria-hidden="true">
+              <span>Дата</span>
+              <span>Филиал</span>
+              <span>Всего</span>
+              {vehicleCategories.map((category) => (
+                <span key={category}>{category}</span>
+              ))}
+              <span>Создал</span>
+            </div>
+            {reports.map((report) => (
+              <article className="inspection-row" key={report.id}>
+                <div className="inspection-cell">
+                  <span>Дата</span>
+                  <strong>{formatDateOnly(report.report_date)}</strong>
+                </div>
+                <div className="inspection-cell">
+                  <span>Филиал</span>
+                  <strong>{report.branch?.name ?? "Все филиалы"}</strong>
+                </div>
+                <div className="inspection-cell">
+                  <span>Всего</span>
+                  <strong>{report.total_count}</strong>
+                </div>
+                {vehicleCategories.map((category) => (
+                  <div className="inspection-cell" key={category}>
+                    <span>{category}</span>
+                    <strong>{report.category_counts[category] ?? 0}</strong>
+                  </div>
+                ))}
+                <div className="inspection-cell">
+                  <span>Создал</span>
+                  <strong>{report.created_by?.login ?? "-"}</strong>
+                </div>
+              </article>
+            ))}
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
 function ReportsPage({
   serverUrl,
   sessionKey,
@@ -740,6 +1045,14 @@ function formatDateOnly(value: string) {
 
 function formatPhotoDate(inspection: Inspection, photoKey: string) {
   return formatDate(inspection.photo_taken_at?.[photoKey] || inspection.created_at);
+}
+
+function countCategories(inspections: Inspection[]) {
+  return inspections.reduce<Record<string, number>>((acc, inspection) => {
+    const category = inspection.vehicle_category || "M1";
+    acc[category] = (acc[category] ?? 0) + 1;
+    return acc;
+  }, {});
 }
 
 function pdfFileName(inspection: Inspection) {

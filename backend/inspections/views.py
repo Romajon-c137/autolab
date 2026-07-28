@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 import requests
 
-from .models import AiApiKey, Branch, UserProfile, VehicleInspection
+from .models import AiApiKey, Branch, DailyInspectionReport, UserProfile, VehicleInspection
 
 REQUIRED_PHOTO_FIELDS = (
     "front_photo",
@@ -158,6 +158,36 @@ def _serialize_inspection(request, inspection):
             "vin_photo": _serialize_datetime(inspection.vin_photo_taken_at),
         },
     }
+
+
+def _serialize_daily_report(report):
+    return {
+        "id": report.id,
+        "report_date": report.report_date.isoformat(),
+        "branch": None if report.branch is None else {
+            "id": report.branch.id,
+            "name": report.branch.name,
+        },
+        "created_by": None if report.created_by is None else {
+            "id": report.created_by.id,
+            "login": report.created_by.get_username(),
+        },
+        "rows": report.rows,
+        "total_count": report.total_count,
+        "category_counts": report.category_counts,
+        "created_at": report.created_at.isoformat(),
+        "updated_at": report.updated_at.isoformat(),
+    }
+
+
+def _category_counts_from_rows(rows):
+    counts = {}
+    for row in rows:
+        category = str(row.get("vehicle_category", "")).strip().upper()
+        if not category:
+            category = "-"
+        counts[category] = counts.get(category, 0) + 1
+    return counts
 
 
 def _notify_telegram_inspection_created(request, inspection):
@@ -412,6 +442,145 @@ def reports_summary(request):
             for item in branch_counts
         ],
     })
+
+
+@csrf_exempt
+def daily_reports_collection(request):
+    auth_error, user = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    if not _is_report_user(user):
+        return JsonResponse({
+            "ok": False,
+            "error": "Reports access denied",
+        }, status=403)
+
+    if request.method == "GET":
+        return daily_reports_list(request, user)
+
+    if request.method == "POST":
+        return create_daily_report(request, user)
+
+    return JsonResponse({
+        "ok": False,
+        "error": "Only GET or POST is allowed",
+    }, status=405)
+
+
+def daily_reports_list(request, user):
+    start, end, error = _date_range(request)
+    if error is not None:
+        return error
+
+    reports = DailyInspectionReport.objects.select_related("branch", "created_by").filter(
+        report_date__gte=start.date(),
+        report_date__lt=end.date(),
+    )
+
+    profile = _profile_for(user)
+    if not user.is_superuser and profile.role != UserProfile.ROLE_ADMIN:
+        if profile.branch_id is None:
+            reports = reports.filter(branch__isnull=True)
+        else:
+            reports = reports.filter(branch_id=profile.branch_id)
+
+    return JsonResponse({
+        "ok": True,
+        "reports": [
+            _serialize_daily_report(report)
+            for report in reports.order_by("-report_date", "branch__name")[:300]
+        ],
+    })
+
+
+def create_daily_report(request, user):
+    body = _json_body(request)
+    if body is None:
+        return JsonResponse({
+            "ok": False,
+            "error": "Invalid JSON body",
+        }, status=400)
+
+    report_date_raw = str(body.get("report_date", "")).strip()
+    try:
+        report_date = (
+            datetime.strptime(report_date_raw, "%Y-%m-%d").date()
+            if report_date_raw
+            else timezone.localdate()
+        )
+    except ValueError:
+        return JsonResponse({
+            "ok": False,
+            "error": "Field 'report_date' must be YYYY-MM-DD",
+        }, status=400)
+
+    profile = _profile_for(user)
+    branch = profile.branch
+    branch_id = body.get("branch_id")
+    if branch_id and (user.is_superuser or profile.role == UserProfile.ROLE_ADMIN):
+        branch = Branch.objects.filter(id=branch_id, is_active=True).first()
+        if branch is None:
+            return JsonResponse({
+                "ok": False,
+                "error": "Branch not found",
+            }, status=404)
+
+    raw_rows = body.get("rows")
+    if not isinstance(raw_rows, list):
+        return JsonResponse({
+            "ok": False,
+            "error": "Field 'rows' must be a list",
+        }, status=400)
+
+    allowed_ids = set(
+        _allowed_inspections(user)
+        .filter(created_at__date=report_date)
+        .values_list("id", flat=True)
+    )
+    rows = []
+    for raw_row in raw_rows:
+        if not isinstance(raw_row, dict):
+            continue
+
+        inspection_id = raw_row.get("inspection_id")
+        try:
+            inspection_id = int(inspection_id)
+        except (TypeError, ValueError):
+            continue
+
+        if inspection_id not in allowed_ids:
+            continue
+
+        category = str(raw_row.get("vehicle_category", "")).strip().upper()
+        if category not in dict(VehicleInspection.CATEGORY_CHOICES):
+            category = ""
+
+        rows.append({
+            "inspection_id": inspection_id,
+            "brand": str(raw_row.get("brand", "")).strip()[:160],
+            "vehicle_category": category,
+            "vin": str(raw_row.get("vin", "")).strip().upper()[:17],
+            "number": str(raw_row.get("number", "")).strip()[:80],
+            "talon_number": str(raw_row.get("talon_number", "")).strip()[:80],
+        })
+
+    category_counts = _category_counts_from_rows(rows)
+    report, _created = DailyInspectionReport.objects.update_or_create(
+        report_date=report_date,
+        branch=branch,
+        defaults={
+            "created_by": user,
+            "rows": rows,
+            "total_count": len(rows),
+            "category_counts": category_counts,
+        },
+    )
+
+    return JsonResponse({
+        "ok": True,
+        "report": _serialize_daily_report(report),
+    }, status=201)
 
 
 @csrf_exempt

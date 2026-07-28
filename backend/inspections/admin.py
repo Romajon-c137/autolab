@@ -7,7 +7,7 @@ from django.urls import path
 from django.utils.crypto import get_random_string
 from django.utils.html import format_html
 
-from .models import AiApiKey, Branch, UserProfile, VehicleInspection
+from .models import AiApiKey, Branch, DailyInspectionReport, UserProfile, VehicleInspection
 
 
 class UserProfileInline(admin.StackedInline):
@@ -201,4 +201,41 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
             '<img src="{url}" style="height:80px; width:110px; object-fit:cover;" />'
             '</a>',
             url=image.url,
+        )
+
+
+@admin.register(DailyInspectionReport)
+class DailyInspectionReportAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "report_date",
+        "branch",
+        "total_count",
+        "category_counts_display",
+        "created_by",
+        "updated_at",
+    )
+    list_filter = ("report_date", "branch", "created_by")
+    search_fields = ("branch__name", "created_by__username")
+    readonly_fields = ("created_at", "updated_at", "category_counts_display")
+    fields = (
+        "report_date",
+        "branch",
+        "created_by",
+        "total_count",
+        "category_counts_display",
+        "rows",
+        "category_counts",
+        "created_at",
+        "updated_at",
+    )
+
+    @admin.display(description="Категории")
+    def category_counts_display(self, obj):
+        if not obj.category_counts:
+            return "-"
+
+        return ", ".join(
+            f"{category}: {count}"
+            for category, count in sorted(obj.category_counts.items())
         )

@@ -185,3 +185,43 @@ class VehicleInspection(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.vin})"
+
+
+class DailyInspectionReport(models.Model):
+    report_date = models.DateField("Дата отчета")
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name="daily_reports",
+        null=True,
+        blank=True,
+        verbose_name="Филиал",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="daily_inspection_reports",
+        null=True,
+        blank=True,
+        verbose_name="Создал",
+    )
+    rows = models.JSONField("Строки отчета", default=list, blank=True)
+    total_count = models.PositiveIntegerField("Всего", default=0)
+    category_counts = models.JSONField("Итоги по категориям", default=dict, blank=True)
+    created_at = models.DateTimeField("Дата создания", auto_now_add=True)
+    updated_at = models.DateTimeField("Дата обновления", auto_now=True)
+
+    class Meta:
+        ordering = ["-report_date", "branch__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["report_date", "branch"],
+                name="unique_daily_inspection_report_per_branch",
+            ),
+        ]
+        verbose_name = "Дневной отчет осмотров"
+        verbose_name_plural = "Дневные отчеты осмотров"
+
+    def __str__(self):
+        branch_name = self.branch.name if self.branch else "Без филиала"
+        return f"{self.report_date} - {branch_name}"
