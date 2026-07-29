@@ -440,7 +440,7 @@ function InspectionCard({
         <span>VIN</span>
         <strong>{inspection.vin || "-"}</strong>
       </div>
-      <div className="inspection-cell">
+      <div className="inspection-cell date-cell">
         <span>Дата</span>
         <strong>{formatDate(inspection.created_at)}</strong>
       </div>
@@ -484,11 +484,11 @@ function InspectionDetail({
             </tr>
             <tr>
               <th>VIN</th>
-              <td>{inspection.vin || "-"}</td>
+              <td className="detail-vin-value">{inspection.vin || "-"}</td>
             </tr>
             <tr>
               <th>Дата</th>
-              <td>{formatDate(inspection.created_at)}</td>
+              <td className="detail-date-value">{formatDate(inspection.created_at)}</td>
             </tr>
             <tr>
               <th>Оператор</th>
@@ -830,7 +830,7 @@ function DailyReportsArchivePage({
             </div>
             {reports.map((report) => (
               <article className="inspection-row" key={report.id}>
-                <div className="inspection-cell">
+                <div className="inspection-cell date-cell">
                   <span>Дата</span>
                   <strong>{formatDateOnly(report.report_date)}</strong>
                 </div>
@@ -967,7 +967,7 @@ function ReportsPage({
                       <span>VIN</span>
                       <strong>{inspection.vin || "-"}</strong>
                     </div>
-                    <div className="inspection-cell">
+                    <div className="inspection-cell date-cell">
                       <span>Дата</span>
                       <strong>{formatDate(inspection.created_at)}</strong>
                     </div>
