@@ -713,4 +713,3 @@ def _parse_photo_taken_at(raw_value):
         value = timezone.make_aware(value, timezone.get_current_timezone())
 
     return value
-

@@ -621,7 +621,6 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
         _statusIsError = false;
       });
       await _autoSaveDraft();
-
     } catch (error) {
       setState(() {
         _status = _humanError(error);
@@ -1153,7 +1152,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     return SizedBox(
       height: 48,
       child: FilledButton.icon(
-        onPressed: _isRecognizingVin ? null : _continueToDocument,
+        onPressed: _continueToDocument,
         iconAlignment: IconAlignment.end,
         label: const Text('Далее'),
         icon: const Icon(Icons.arrow_forward),

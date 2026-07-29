@@ -10,7 +10,6 @@ backend/uploads/
 backend/staticfiles/
 backend/**/__pycache__/
 backend/.venv/
-.venv-paddleocr/
 
 web/.env
 !web/.env.example
