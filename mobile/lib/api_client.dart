@@ -125,6 +125,14 @@ class _ApiClient {
           (draft.photoTakenAt[kind] ?? draft.createdAt).toIso8601String();
     }
 
+    for (final path in draft.conversionPhotos) {
+      request.files.add(await _multipartPhoto('conversion_photos', path));
+    }
+    if (draft.conversionPhotos.isNotEmpty) {
+      request.fields['conversion_photos_taken_at'] = DateTime.now()
+          .toIso8601String();
+    }
+
     if (documentPdfBytes != null) {
       request.files.add(
         http.MultipartFile.fromBytes(
@@ -162,6 +170,7 @@ class _ApiClient {
       ),
       vin: data['vin'] as String? ?? draft.vin,
       photos: const {},
+      conversionPhotos: const [],
       sentAt: DateTime.now(),
     );
   }

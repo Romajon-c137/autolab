@@ -13,7 +13,13 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 import requests
 
-from .models import Branch, DailyInspectionReport, UserProfile, VehicleInspection
+from .models import (
+    Branch,
+    DailyInspectionReport,
+    UserProfile,
+    VehicleInspection,
+    VehicleInspectionExtraPhoto,
+)
 
 REQUIRED_PHOTO_FIELDS = (
     "front_photo",
@@ -70,7 +76,10 @@ def _is_report_user(user):
 
 def _allowed_inspections(user):
     profile = _profile_for(user)
-    queryset = VehicleInspection.objects.select_related("branch", "created_by")
+    queryset = VehicleInspection.objects.select_related(
+        "branch",
+        "created_by",
+    ).prefetch_related("extra_photos")
 
     if user.is_superuser or profile.role == UserProfile.ROLE_ADMIN:
         return queryset
@@ -147,6 +156,14 @@ def _serialize_inspection(request, inspection):
             "mileage_photo": _file_url(request, inspection.mileage_photo),
             "vin_photo": _file_url(request, inspection.vin_photo),
         },
+        "extra_photos": [
+            {
+                "id": photo.id,
+                "image": _file_url(request, photo.image),
+                "taken_at": _serialize_datetime(photo.taken_at),
+            }
+            for photo in inspection.extra_photos.all()
+        ],
         "document_pdf": _file_url(request, inspection.document_pdf),
         "photo_taken_at": {
             "front_photo": _serialize_datetime(inspection.front_photo_taken_at),
@@ -644,6 +661,22 @@ def create_inspection(request):
                 "content_type": uploaded_file.content_type,
             })
 
+    conversion_photos = request.FILES.getlist("conversion_photos")
+    if len(conversion_photos) > 12:
+        return JsonResponse({
+            "ok": False,
+            "error": "No more than 12 conversion photos are allowed",
+        }, status=400)
+
+    for index, uploaded_file in enumerate(conversion_photos):
+        if not _is_image_file(uploaded_file):
+            invalid_photos.append({
+                "field": "conversion_photos",
+                "index": index,
+                "filename": uploaded_file.name,
+                "content_type": uploaded_file.content_type,
+            })
+
     if invalid_photos:
         return JsonResponse({
             "ok": False,
@@ -689,6 +722,16 @@ def create_inspection(request):
         vin_photo_taken_at=photo_taken_at["vin_photo"],
     )
     _notify_telegram_inspection_created(request, inspection)
+
+    conversion_photo_taken_at = _parse_photo_taken_at(
+        request.POST.get("conversion_photos_taken_at", "")
+    )
+    for uploaded_file in conversion_photos:
+        VehicleInspectionExtraPhoto.objects.create(
+            inspection=inspection,
+            image=uploaded_file,
+            taken_at=conversion_photo_taken_at,
+        )
 
     return JsonResponse({
         "ok": True,

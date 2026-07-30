@@ -7,7 +7,13 @@ from django.urls import path
 from django.utils.crypto import get_random_string
 from django.utils.html import format_html
 
-from .models import Branch, DailyInspectionReport, UserProfile, VehicleInspection
+from .models import (
+    Branch,
+    DailyInspectionReport,
+    UserProfile,
+    VehicleInspection,
+    VehicleInspectionExtraPhoto,
+)
 
 
 class UserProfileInline(admin.StackedInline):
@@ -68,8 +74,26 @@ class BranchAdmin(admin.ModelAdmin):
     search_fields = ("name",)
 
 
+class VehicleInspectionExtraPhotoInline(admin.TabularInline):
+    model = VehicleInspectionExtraPhoto
+    extra = 0
+    readonly_fields = ("created_at", "preview")
+    fields = ("image", "preview", "taken_at", "created_at")
+
+    @admin.display(description="Превью")
+    def preview(self, obj):
+        if not obj.image:
+            return "-"
+        return format_html(
+            '<a href="{}" target="_blank"><img src="{}" style="max-height:120px;max-width:180px;object-fit:cover;border-radius:6px;" /></a>',
+            obj.image.url,
+            obj.image.url,
+        )
+
+
 @admin.register(VehicleInspection)
 class VehicleInspectionAdmin(admin.ModelAdmin):
+    inlines = (VehicleInspectionExtraPhotoInline,)
     list_display = (
         "id",
         "title",

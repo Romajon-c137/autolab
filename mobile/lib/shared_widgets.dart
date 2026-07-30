@@ -49,13 +49,13 @@ class _HomeSummary extends StatelessWidget {
 class _MenuButton extends StatelessWidget {
   const _MenuButton({
     required this.title,
-    required this.subtitle,
     required this.onTap,
+    this.subtitle,
     this.primary = false,
   });
 
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final VoidCallback onTap;
   final bool primary;
 
@@ -100,8 +100,10 @@ class _MenuButton extends StatelessWidget {
                               : Theme.of(context).textTheme.titleMedium)
                           ?.copyWith(fontWeight: FontWeight.w800),
                 ),
-                const SizedBox(height: 2),
-                Text(subtitle),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(subtitle!),
+                ],
               ],
             ),
           ),
@@ -191,6 +193,69 @@ class _PhotoTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DocumentJumpButton extends StatelessWidget {
+  const _DocumentJumpButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 42,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        label: Text(label),
+      ),
+    );
+  }
+}
+
+class _ConversionPhotoTile extends StatelessWidget {
+  const _ConversionPhotoTile({required this.path, required this.onDelete});
+
+  final String path;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.file(
+            File(path),
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return ColoredBox(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: const Icon(Icons.broken_image_outlined),
+              );
+            },
+          ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: IconButton.filledTonal(
+              tooltip: 'Удалить фото',
+              onPressed: onDelete,
+              icon: const Icon(Icons.close),
+            ),
+          ),
+        ],
       ),
     );
   }

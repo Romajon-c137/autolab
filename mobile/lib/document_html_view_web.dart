@@ -1,3 +1,5 @@
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/widgets.dart';
@@ -15,6 +17,8 @@ class DocumentHtmlView extends StatefulWidget {
     required this.documentStateJson,
     required this.onDocumentStateChanged,
     required this.onSignRequested,
+    required this.scrollToBottomSignal,
+    required this.scrollToTopSignal,
   });
 
   final String vehicleCategory;
@@ -26,6 +30,8 @@ class DocumentHtmlView extends StatefulWidget {
   final String documentStateJson;
   final ValueChanged<String> onDocumentStateChanged;
   final VoidCallback onSignRequested;
+  final int scrollToBottomSignal;
+  final int scrollToTopSignal;
 
   @override
   State<DocumentHtmlView> createState() => _DocumentHtmlViewState();
@@ -79,6 +85,30 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
         oldWidget.signatureSvg != widget.signatureSvg) {
       _iframe?.src = _documentUrl;
     }
+    if (oldWidget.scrollToBottomSignal != widget.scrollToBottomSignal) {
+      _scrollToBottom();
+    }
+    if (oldWidget.scrollToTopSignal != widget.scrollToTopSignal) {
+      _scrollToTop();
+    }
+  }
+
+  void _scrollToBottom() {
+    _iframe?.contentWindow?.postMessage('autolab-scroll-bottom'.toJS, '*'.toJS);
+    (_iframe?.contentWindow as JSObject?)?.callMethod(
+      'scrollTo'.toJS,
+      0.toJS,
+      1000000.toJS,
+    );
+  }
+
+  void _scrollToTop() {
+    _iframe?.contentWindow?.postMessage('autolab-scroll-top'.toJS, '*'.toJS);
+    (_iframe?.contentWindow as JSObject?)?.callMethod(
+      'scrollTo'.toJS,
+      0.toJS,
+      0.toJS,
+    );
   }
 
   @override

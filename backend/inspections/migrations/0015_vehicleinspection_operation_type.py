@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='vehicleinspection',
             name='operation_type',
-            field=models.CharField(choices=[('tech_inspection', 'Техосмотр'), ('sbgts', 'СБГТС'), ('legalization', 'Легализация'), ('conversion', 'Переоборудование')], default='sbgts', max_length=32, verbose_name='Категория операции'),
+            field=models.CharField(choices=[('tech_inspection', 'Техосмотр'), ('sbgts', 'СБКТС'), ('legalization', 'Легализация'), ('conversion', 'Переоборудование')], default='sbgts', max_length=32, verbose_name='Категория операции'),
         ),
     ]

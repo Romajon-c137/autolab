@@ -43,7 +43,7 @@ enum _VehicleCategory {
 
 enum _OperationCategory {
   techInspection('tech_inspection', 'Техосмотр', false),
-  sbgts('sbgts', 'СБГТС', true),
+  sbgts('sbgts', 'СБКТС', true),
   legalization('legalization', 'Легализация', false),
   conversion('conversion', 'Переоборудование', false);
 
@@ -75,6 +75,7 @@ class _InspectionDraft {
     required this.documentStateJson,
     required this.photos,
     required this.photoTakenAt,
+    required this.conversionPhotos,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -89,6 +90,7 @@ class _InspectionDraft {
   final String documentStateJson;
   final Map<_PhotoKind, String> photos;
   final Map<_PhotoKind, DateTime> photoTakenAt;
+  final List<String> conversionPhotos;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -106,6 +108,7 @@ class _InspectionDraft {
       'photo_taken_at': photoTakenAt.map(
         (key, value) => MapEntry(key.apiField, value.toIso8601String()),
       ),
+      'conversion_photos': conversionPhotos,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -116,6 +119,7 @@ class _InspectionDraft {
     final rawPhotoTakenAt = Map<String, dynamic>.from(
       json['photo_taken_at'] as Map? ?? {},
     );
+    final rawConversionPhotos = json['conversion_photos'] as List? ?? [];
     final photos = <_PhotoKind, String>{};
     final photoTakenAt = <_PhotoKind, DateTime>{};
     for (final kind in _PhotoKind.values) {
@@ -148,6 +152,7 @@ class _InspectionDraft {
       documentStateJson: json['document_state'] as String? ?? '',
       photos: photos,
       photoTakenAt: photoTakenAt,
+      conversionPhotos: rawConversionPhotos.whereType<String>().toList(),
       createdAt:
           DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.now(),
@@ -168,6 +173,7 @@ class _SentInspection {
     required this.vehicleCategory,
     required this.vin,
     required this.photos,
+    required this.conversionPhotos,
     required this.sentAt,
   });
 
@@ -179,9 +185,13 @@ class _SentInspection {
   final _VehicleCategory vehicleCategory;
   final String vin;
   final Map<_PhotoKind, String> photos;
+  final List<String> conversionPhotos;
   final DateTime sentAt;
 
-  _SentInspection copyWithPhotos(Map<_PhotoKind, String> photos) {
+  _SentInspection copyWithPhotos({
+    required Map<_PhotoKind, String> photos,
+    required List<String> conversionPhotos,
+  }) {
     return _SentInspection(
       remoteId: remoteId,
       operationCategory: operationCategory,
@@ -191,6 +201,7 @@ class _SentInspection {
       vehicleCategory: vehicleCategory,
       vin: vin,
       photos: Map<_PhotoKind, String>.from(photos),
+      conversionPhotos: List<String>.from(conversionPhotos),
       sentAt: sentAt,
     );
   }
@@ -205,12 +216,14 @@ class _SentInspection {
       'vehicle_category': vehicleCategory.apiValue,
       'vin': vin,
       'photos': photos.map((key, value) => MapEntry(key.apiField, value)),
+      'conversion_photos': conversionPhotos,
       'sent_at': sentAt.toIso8601String(),
     };
   }
 
   static _SentInspection fromJson(Map<String, dynamic> json) {
     final rawPhotos = Map<String, dynamic>.from(json['photos'] as Map? ?? {});
+    final rawConversionPhotos = json['conversion_photos'] as List? ?? [];
     final photos = <_PhotoKind, String>{};
     for (final kind in _PhotoKind.values) {
       final path = rawPhotos[kind.apiField];
@@ -232,6 +245,7 @@ class _SentInspection {
       ),
       vin: json['vin'] as String? ?? '',
       photos: photos,
+      conversionPhotos: rawConversionPhotos.whereType<String>().toList(),
       sentAt:
           DateTime.tryParse(json['sent_at'] as String? ?? '') ?? DateTime.now(),
     );

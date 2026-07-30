@@ -30,9 +30,6 @@ class _OperationSelectionPage extends StatelessWidget {
                 final operation = _OperationCategory.values[index];
                 return _MenuButton(
                   title: operation.label,
-                  subtitle: operation.hasDocument
-                      ? 'Фото авто и документ'
-                      : 'Фото авто, документ добавим позже',
                   onTap: () => _openOperation(context, operation),
                 );
               },

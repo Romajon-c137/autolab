@@ -9,6 +9,8 @@ class _EmbeddedInspectionDocument extends StatelessWidget {
     required this.onDocumentStateChanged,
     required this.onSign,
     required this.documentViewKey,
+    required this.scrollToBottomSignal,
+    required this.scrollToTopSignal,
   });
 
   final _InspectionDraft draft;
@@ -18,6 +20,8 @@ class _EmbeddedInspectionDocument extends StatelessWidget {
   final ValueChanged<String> onDocumentStateChanged;
   final VoidCallback onSign;
   final GlobalKey documentViewKey;
+  final int scrollToBottomSignal;
+  final int scrollToTopSignal;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +40,8 @@ class _EmbeddedInspectionDocument extends StatelessWidget {
           onDocumentStateChanged: onDocumentStateChanged,
           onSignRequested: onSign,
           documentViewKey: documentViewKey,
+          scrollToBottomSignal: scrollToBottomSignal,
+          scrollToTopSignal: scrollToTopSignal,
         ),
       ),
     );
@@ -51,6 +57,8 @@ class _DocumentHtmlPanel extends StatelessWidget {
     required this.onDocumentStateChanged,
     required this.onSignRequested,
     required this.documentViewKey,
+    required this.scrollToBottomSignal,
+    required this.scrollToTopSignal,
   });
 
   final _InspectionDraft draft;
@@ -60,6 +68,8 @@ class _DocumentHtmlPanel extends StatelessWidget {
   final ValueChanged<String> onDocumentStateChanged;
   final VoidCallback onSignRequested;
   final GlobalKey documentViewKey;
+  final int scrollToBottomSignal;
+  final int scrollToTopSignal;
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +86,8 @@ class _DocumentHtmlPanel extends StatelessWidget {
         documentStateJson: documentStateJson,
         onDocumentStateChanged: onDocumentStateChanged,
         onSignRequested: onSignRequested,
+        scrollToBottomSignal: scrollToBottomSignal,
+        scrollToTopSignal: scrollToTopSignal,
       ),
     );
   }

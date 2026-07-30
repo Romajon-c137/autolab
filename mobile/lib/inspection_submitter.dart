@@ -23,7 +23,10 @@ Future<_SentInspection> _sendInspectionDraft({
     draft,
     documentPdfBytes: documentPdfBytes,
   );
-  final sentWithPhotos = sent.copyWithPhotos(draft.photos);
+  final sentWithPhotos = sent.copyWithPhotos(
+    photos: draft.photos,
+    conversionPhotos: draft.conversionPhotos,
+  );
 
   await storage.removeDraft(draft.id);
   await storage.addSent(sentWithPhotos);

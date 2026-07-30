@@ -67,7 +67,7 @@ class VehicleInspection(models.Model):
     OPERATION_CONVERSION = "conversion"
     OPERATION_CHOICES = (
         (OPERATION_TECH_INSPECTION, "Техосмотр"),
-        (OPERATION_SBGTS, "СБГТС"),
+        (OPERATION_SBGTS, "СБКТС"),
         (OPERATION_LEGALIZATION, "Легализация"),
         (OPERATION_CONVERSION, "Переоборудование"),
     )
@@ -178,6 +178,29 @@ class VehicleInspection(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.vin})"
+
+
+class VehicleInspectionExtraPhoto(models.Model):
+    inspection = models.ForeignKey(
+        VehicleInspection,
+        on_delete=models.CASCADE,
+        related_name="extra_photos",
+        verbose_name="Осмотр",
+    )
+    image = models.ImageField(
+        "Фото переоборудованной части",
+        upload_to="inspections/conversion/",
+    )
+    taken_at = models.DateTimeField("Дата фото", null=True, blank=True)
+    created_at = models.DateTimeField("Дата создания", auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = "Дополнительное фото"
+        verbose_name_plural = "Дополнительные фото"
+
+    def __str__(self):
+        return f"Фото #{self.id} осмотра #{self.inspection_id}"
 
 
 class DailyInspectionReport(models.Model):

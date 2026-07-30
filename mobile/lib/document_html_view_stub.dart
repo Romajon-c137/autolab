@@ -16,6 +16,8 @@ class DocumentHtmlView extends StatefulWidget {
     required this.documentStateJson,
     required this.onDocumentStateChanged,
     required this.onSignRequested,
+    required this.scrollToBottomSignal,
+    required this.scrollToTopSignal,
   });
 
   final String vehicleCategory;
@@ -27,6 +29,8 @@ class DocumentHtmlView extends StatefulWidget {
   final String documentStateJson;
   final ValueChanged<String> onDocumentStateChanged;
   final VoidCallback onSignRequested;
+  final int scrollToBottomSignal;
+  final int scrollToTopSignal;
 
   @override
   State<DocumentHtmlView> createState() => _DocumentHtmlViewState();
@@ -71,6 +75,12 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
           _loadDocument(stateOverride: state);
         }
       });
+    }
+    if (oldWidget.scrollToBottomSignal != widget.scrollToBottomSignal) {
+      _scrollToBottom();
+    }
+    if (oldWidget.scrollToTopSignal != widget.scrollToTopSignal) {
+      _scrollToTop();
     }
   }
 
@@ -141,6 +151,22 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
         "document.querySelector('.signature-line')?.scrollIntoView({block:'center'});",
       );
     }
+  }
+
+  Future<void> _scrollToBottom() async {
+    try {
+      await _controller.runJavaScript(
+        'window.scrollTo({top: document.documentElement.scrollHeight, behavior: "smooth"});',
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _scrollToTop() async {
+    try {
+      await _controller.runJavaScript(
+        'window.scrollTo({top: 0, behavior: "smooth"});',
+      );
+    } catch (_) {}
   }
 
   @override

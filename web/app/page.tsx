@@ -28,6 +28,8 @@ type User = {
 type Inspection = {
   id: number;
   title: string;
+  operation_type?: string;
+  operation_type_label?: string;
   plate_number: string;
   brand: string;
   vehicle_category: string;
@@ -403,6 +405,7 @@ function InspectionsPage({
             <>
               <div className="inspection-header" aria-hidden="true">
                 <span>Марка / модель</span>
+                <span>Тип операции</span>
                 <span>VIN</span>
                 <span>Дата</span>
                 <span>Оператор</span>
@@ -435,6 +438,10 @@ function InspectionCard({
       <div className="inspection-cell">
         <span>Марка / модель</span>
         <strong>{inspection.brand || "-"}</strong>
+      </div>
+      <div className="inspection-cell">
+        <span>Тип операции</span>
+        <strong>{operationLabel(inspection)}</strong>
       </div>
       <div className="inspection-cell vin-cell">
         <span>VIN</span>
@@ -473,6 +480,10 @@ function InspectionDetail({
             <tr>
               <th>Название</th>
               <td>{inspection.title || "-"}</td>
+            </tr>
+            <tr>
+              <th>Тип операции</th>
+              <td>{operationLabel(inspection)}</td>
             </tr>
             <tr>
               <th>Марка / модель</th>
@@ -702,6 +713,7 @@ function DailyReportPage({
           <>
             <div className="inspection-header" aria-hidden="true">
               <span>Марка / модель</span>
+              <span>Тип операции</span>
               <span>Тип</span>
               <span>VIN</span>
               <span>№</span>
@@ -712,6 +724,10 @@ function DailyReportPage({
                 <div className="inspection-cell">
                   <span>Марка / модель</span>
                   <strong>{inspection.brand || "-"}</strong>
+                </div>
+                <div className="inspection-cell">
+                  <span>Тип операции</span>
+                  <strong>{operationLabel(inspection)}</strong>
                 </div>
                 <div className="inspection-cell">
                   <span>Тип</span>
@@ -952,6 +968,7 @@ function ReportsPage({
               <>
                 <div className="inspection-header" aria-hidden="true">
                   <span>Марка / модель</span>
+                  <span>Тип операции</span>
                   <span>VIN</span>
                   <span>Дата</span>
                   <span>Оператор</span>
@@ -962,6 +979,10 @@ function ReportsPage({
                     <div className="inspection-cell">
                       <span>Марка / модель</span>
                       <strong>{inspection.brand || "-"}</strong>
+                    </div>
+                    <div className="inspection-cell">
+                      <span>Тип операции</span>
+                      <strong>{operationLabel(inspection)}</strong>
                     </div>
                     <div className="inspection-cell vin-cell">
                       <span>VIN</span>
@@ -1033,6 +1054,14 @@ function roleLabel(role: Role) {
   if (role === "admin") return "Администратор";
   if (role === "manager") return "Руководитель";
   return "Оператор";
+}
+
+function operationLabel(inspection: Inspection) {
+  if (inspection.operation_type_label) return inspection.operation_type_label;
+  if (inspection.operation_type === "tech_inspection") return "Техосмотр";
+  if (inspection.operation_type === "legalization") return "Легализация";
+  if (inspection.operation_type === "conversion") return "Переоборудование";
+  return "СБКТС";
 }
 
 function canViewReports(user: User | null) {

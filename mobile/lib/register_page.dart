@@ -185,6 +185,8 @@ class _InspectionRegisterCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text('Операция: ${item.operationCategory.label}'),
+                    if (item.conversionPhotos.isNotEmpty)
+                      Text('Доп. фото: ${item.conversionPhotos.length}'),
                     Text('VIN: ${item.vin.isEmpty ? '-' : item.vin}'),
                     Text('ID: ${item.remoteId} • ${_formatDate(item.sentAt)}'),
                   ],
@@ -223,6 +225,7 @@ class _InspectionDetailsPage extends StatelessWidget {
     );
     final photos = _ReadonlyPhotoGrid(
       photos: item.photos,
+      conversionPhotos: item.conversionPhotos,
       columns: isTablet ? 3 : 2,
     );
 
@@ -269,9 +272,14 @@ class _InspectionDetailsPage extends StatelessWidget {
 }
 
 class _ReadonlyPhotoGrid extends StatelessWidget {
-  const _ReadonlyPhotoGrid({required this.photos, required this.columns});
+  const _ReadonlyPhotoGrid({
+    required this.photos,
+    required this.conversionPhotos,
+    required this.columns,
+  });
 
   final Map<_PhotoKind, String> photos;
+  final List<String> conversionPhotos;
   final int columns;
 
   @override
@@ -288,6 +296,11 @@ class _ReadonlyPhotoGrid extends StatelessWidget {
       children: [
         for (final kind in _PhotoKind.values)
           _ReadonlyPhotoTile(label: kind.label, path: photos[kind]),
+        for (var index = 0; index < conversionPhotos.length; index++)
+          _ReadonlyPhotoTile(
+            label: 'Переоборудование ${index + 1}',
+            path: conversionPhotos[index],
+          ),
       ],
     );
   }

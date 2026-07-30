@@ -25,6 +25,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   );
   final Map<_PhotoKind, String> _photos = {};
   final Map<_PhotoKind, DateTime> _photoTakenAt = {};
+  final List<String> _conversionPhotos = [];
   _OperationCategory _operationCategory = _OperationCategory.sbgts;
   _VehicleCategory _vehicleCategory = _VehicleCategory.m1;
   bool _isSaving = false;
@@ -33,10 +34,21 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   String _documentStateJson = '';
   String? _status;
   bool _statusIsError = false;
+  int _documentScrollToBottomSignal = 0;
+  int _documentScrollToTopSignal = 0;
   late String _draftId;
   Timer? _autoSaveTimer;
 
   bool get _isEditingDraft => widget.initialDraft != null;
+  bool get _isConversion => _operationCategory == _OperationCategory.conversion;
+  List<_PhotoKind> get _visiblePhotoKinds {
+    if (_isConversion) {
+      return _PhotoKind.values
+          .where((kind) => kind != _PhotoKind.mileage)
+          .toList();
+    }
+    return _PhotoKind.values;
+  }
 
   @override
   void initState() {
@@ -52,6 +64,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       _documentStateJson = draft.documentStateJson;
       _photos.addAll(draft.photos);
       _photoTakenAt.addAll(draft.photoTakenAt);
+      _conversionPhotos.addAll(draft.conversionPhotos);
     } else {
       _operationCategory = widget.operationCategory ?? _OperationCategory.sbgts;
     }
@@ -155,6 +168,71 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     return saved.path;
   }
 
+  Future<void> _addConversionPhoto() async {
+    if (_conversionPhotos.length >= 12) {
+      setState(() {
+        _status = 'Можно добавить максимум 12 фото переоборудованной части.';
+        _statusIsError = true;
+      });
+      return;
+    }
+
+    try {
+      final image = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+        maxWidth: 1600,
+      );
+      if (image == null) {
+        setState(() {
+          _status = 'Съемка отменена.';
+          _statusIsError = false;
+        });
+        return;
+      }
+
+      final savedPath = await _persistConversionPhoto(image);
+      setState(() {
+        _conversionPhotos.add(savedPath);
+        _status = 'Фото переоборудованной части добавлено.';
+        _statusIsError = false;
+      });
+      await _autoSaveDraft();
+    } catch (error) {
+      setState(() {
+        _status = _humanError(error);
+        _statusIsError = true;
+      });
+    }
+  }
+
+  Future<String> _persistConversionPhoto(XFile image) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final inspectionsDir = Directory('${directory.path}/inspection_photos');
+    if (!await inspectionsDir.exists()) {
+      await inspectionsDir.create(recursive: true);
+    }
+
+    final extension = _extensionForPath(image.path);
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    final target = File(
+      '${inspectionsDir.path}/${_draftId}_conversion_$stamp$extension',
+    );
+    final saved = await File(image.path).copy(target.path);
+    return saved.path;
+  }
+
+  Future<void> _removeConversionPhoto(String path) async {
+    setState(() {
+      _conversionPhotos.remove(path);
+    });
+    final file = File(path);
+    if (await file.exists()) {
+      await file.delete();
+    }
+    await _autoSaveDraft();
+  }
+
   Future<void> _continueToDocument() async {
     final draft = _buildDraft(requireBrand: true);
     if (draft == null) {
@@ -202,6 +280,14 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       _status = null;
       _statusIsError = false;
     });
+  }
+
+  void _scrollDocumentToBottom() {
+    setState(() => _documentScrollToBottomSignal++);
+  }
+
+  void _scrollDocumentToTop() {
+    setState(() => _documentScrollToTopSignal++);
   }
 
   String get _expertName {
@@ -270,6 +356,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       documentStateJson: _documentStateJson,
       photos: Map<_PhotoKind, String>.from(_photos),
       photoTakenAt: Map<_PhotoKind, DateTime>.from(_photoTakenAt),
+      conversionPhotos: List<String>.from(_conversionPhotos),
       createdAt: widget.initialDraft?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
@@ -325,7 +412,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       return null;
     }
 
-    final missing = _PhotoKind.values
+    final missing = _visiblePhotoKinds
         .where((kind) => !_photos.containsKey(kind))
         .map((kind) => kind.label)
         .toList();
@@ -351,6 +438,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       documentStateJson: _documentStateJson,
       photos: Map<_PhotoKind, String>.from(_photos),
       photoTakenAt: Map<_PhotoKind, DateTime>.from(_photoTakenAt),
+      conversionPhotos: List<String>.from(_conversionPhotos),
       createdAt: widget.initialDraft?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
@@ -360,17 +448,19 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditingDraft ? 'Черновик' : 'Новый осмотр'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(28),
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              _operationCategory.label,
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-          ),
-        ),
+        title: Text(_operationCategory.label),
+        bottom: _isEditingDraft
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(24),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Черновик',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+              )
+            : null,
         actions: [
           TextButton.icon(
             onPressed: _goHome,
@@ -414,6 +504,10 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
           const SizedBox(height: 16),
         ],
         _buildPhotoGrid(columns: 2),
+        if (_isConversion) ...[
+          const SizedBox(height: 16),
+          _buildConversionPhotosSection(),
+        ],
         const SizedBox(height: 16),
         _buildFormActions(),
       ],
@@ -450,10 +544,18 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
           Expanded(
             child: _showDocument
                 ? _buildEmbeddedDocument()
-                : _buildPhotoGrid(
-                    columns: 3,
-                    childAspectRatio: 1.22,
-                    spacing: 8,
+                : ListView(
+                    children: [
+                      _buildPhotoGrid(
+                        columns: 3,
+                        childAspectRatio: 1.22,
+                        spacing: 8,
+                      ),
+                      if (_isConversion) ...[
+                        const SizedBox(height: 10),
+                        _buildConversionPhotosSection(compact: true),
+                      ],
+                    ],
                   ),
           ),
         ],
@@ -484,7 +586,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
           const SizedBox(width: 12),
           const VerticalDivider(width: 1),
           const SizedBox(width: 12),
-          Expanded(child: _buildEmbeddedDocument()),
+          Expanded(child: _buildDocumentWithScrollControls()),
         ],
       ),
     );
@@ -511,11 +613,47 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
           ),
         ),
         const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+          child: _DocumentJumpButton(
+            label: 'В самый низ',
+            icon: Icons.keyboard_double_arrow_down,
+            onPressed: _scrollDocumentToBottom,
+          ),
+        ),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: _buildEmbeddedDocument(),
           ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+          child: _DocumentJumpButton(
+            label: 'Вверх',
+            icon: Icons.keyboard_double_arrow_up,
+            onPressed: _scrollDocumentToTop,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDocumentWithScrollControls() {
+    return Column(
+      children: [
+        _DocumentJumpButton(
+          label: 'В самый низ',
+          icon: Icons.keyboard_double_arrow_down,
+          onPressed: _scrollDocumentToBottom,
+        ),
+        const SizedBox(height: 8),
+        Expanded(child: _buildEmbeddedDocument()),
+        const SizedBox(height: 8),
+        _DocumentJumpButton(
+          label: 'Вверх',
+          icon: Icons.keyboard_double_arrow_up,
+          onPressed: _scrollDocumentToTop,
         ),
       ],
     );
@@ -536,6 +674,8 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       },
       onSign: _signDocument,
       documentViewKey: _documentViewKey,
+      scrollToBottomSignal: _documentScrollToBottomSignal,
+      scrollToTopSignal: _documentScrollToTopSignal,
     );
   }
 
@@ -624,7 +764,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
         childAspectRatio: childAspectRatio,
       ),
       children: [
-        for (final kind in _PhotoKind.values)
+        for (final kind in _visiblePhotoKinds)
           _PhotoTile(
             label: kind.label,
             asset: kind.asset,
@@ -632,6 +772,66 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
             onTap: () => _takePhoto(kind),
           ),
       ],
+    );
+  }
+
+  Widget _buildConversionPhotosSection({bool compact = false}) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final columns = compact ? 4 : 3;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(compact ? 8 : 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Фото переоборудованной части',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                Text('${_conversionPhotos.length}/12'),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  tooltip: 'Добавить фото',
+                  onPressed: _conversionPhotos.length >= 12
+                      ? null
+                      : _addConversionPhoto,
+                  icon: const Icon(Icons.add),
+                ),
+              ],
+            ),
+            if (_conversionPhotos.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _conversionPhotos.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 1,
+                ),
+                itemBuilder: (context, index) {
+                  final path = _conversionPhotos[index];
+                  return _ConversionPhotoTile(
+                    path: path,
+                    onDelete: () => _removeConversionPhoto(path),
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 

@@ -88,6 +88,9 @@ class _DraftCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final photoCount = draft.photos.length;
+    final expectedPhotoCount =
+        draft.operationCategory == _OperationCategory.conversion ? 5 : 6;
+    final totalPhotoCount = photoCount + draft.conversionPhotos.length;
     final title = [
       if (draft.brand.isNotEmpty) draft.brand else 'Без марки',
       if (draft.country.isNotEmpty) draft.country,
@@ -137,11 +140,11 @@ class _DraftCard extends StatelessWidget {
                     ),
                     Text('VIN: ${draft.vin.isEmpty ? '-' : draft.vin}'),
                     Text(
-                      'Фото: $photoCount/6 • ${_formatDate(draft.updatedAt)}',
+                      'Фото: $totalPhotoCount • основные $photoCount/$expectedPhotoCount • ${_formatDate(draft.updatedAt)}',
                     ),
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
-                      value: photoCount / _PhotoKind.values.length,
+                      value: (photoCount / expectedPhotoCount).clamp(0, 1),
                       minHeight: 6,
                       borderRadius: BorderRadius.circular(8),
                     ),
