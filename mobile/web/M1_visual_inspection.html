@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Протокол визуального осмотра</title>
+<style>
+:root { --paper-w:210mm; --paper-h:297mm; --ink:#000; --line:#222; }
+* { box-sizing:border-box; }
+html, body { margin:0; padding:0; background:#e6e8ec; color:var(--ink); font-family:"Times New Roman", Times, serif; }
+body { padding:14px 0 44px; }
+.page { width:var(--paper-w); height:var(--paper-h); min-height:var(--paper-h); margin:0 auto 16px; padding:10.5mm 10mm 10mm; background:#fff; overflow:hidden; box-shadow:0 4px 22px rgba(0,0,0,.18); page-break-after:always; break-after:page; }
+.page:last-of-type { page-break-after:auto; break-after:auto; }
+.document-header { text-align:center; margin-bottom:4.5mm; }
+.document-header h1 { margin:0 0 1.1mm; font-size:14.4pt; line-height:1.05; font-weight:700; }
+.header-field { display:flex; justify-content:center; align-items:flex-end; gap:1.8mm; margin:.5mm 0; font-size:13.3pt; line-height:1; font-weight:700; }
+.header-field input { width:45mm; height:5.7mm; border:0; border-bottom:1px solid #000; outline:0; padding:0 1mm; text-align:center; font:12.5pt "Times New Roman", Times, serif; background:transparent; }
+.header-field.reg-field input { width:49mm; }
+.inspection-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.15pt; line-height:1.04; }
+.inspection-table th, .inspection-table td { border:.55px solid var(--line); padding:.45mm 1.2mm; vertical-align:middle; overflow-wrap:anywhere; }
+.inspection-table th { height:11mm; text-align:center; font-size:10.7pt; line-height:1.06; font-weight:700; }
+.inspection-table th:first-child, .inspection-table td:first-child { width:6%; }
+.inspection-table th:nth-child(2), .inspection-table td:nth-child(2) { width:57%; }
+.inspection-table th:nth-child(3), .inspection-table td:nth-child(3) { width:17.25%; }
+.inspection-table th:nth-child(4), .inspection-table td:nth-child(4) { width:19.75%; }
+.col-number { text-align:center; vertical-align:top !important; font-weight:700; white-space:nowrap; }
+.inspection-text { white-space:normal; }
+.result-cell { position:relative; text-align:center; cursor:pointer; user-select:none; outline:none; }
+.result-cell:focus { box-shadow:inset 0 0 0 1.5px #b89500; background:#fffbe6; }
+.result-mark { display:inline-block; min-width:7mm; min-height:4.5mm; font-size:17pt; line-height:1; font-family:Arial,sans-serif; font-weight:700; }
+.result-cell[data-state="check"] .result-mark::before { content:"✓"; }
+.result-cell[data-state="dash"] .result-mark::before { content:"-"; }
+.result-cell[data-state="cross"] .result-mark::before { content:"✕"; }
+.measurement-cell { padding:.35mm 1.7mm !important; }
+.measure-line { display:flex; align-items:center; min-height:4.2mm; white-space:nowrap; }
+.measure-line span { flex:0 0 8mm; }
+.measure-line input { min-width:0; width:100%; height:4.2mm; padding:0 .5mm; border:0; border-bottom:1px solid transparent; outline:0; font:9.6pt "Times New Roman", Times, serif; background:transparent; }
+.measure-line input:focus { border-bottom-color:#9a7b00; background:#fffbe6; }
+.extra-row .inspection-text { font-size:9.7pt; }
+.blank-row td { height:6mm; }
+.signature-footer { display:flex; align-items:flex-start; justify-content:space-between; margin-top:5.4mm; padding:0 2mm; font-size:11.6pt; line-height:1.05; font-weight:700; }
+.date-block { display:flex; align-items:flex-end; gap:1mm; white-space:nowrap; }
+.date-block input { height:5.3mm; padding:0 .5mm; border:0; border-bottom:1px solid #000; outline:0; text-align:center; font:11pt "Times New Roman", Times, serif; background:transparent; }
+.day-input { width:9mm; }
+.month-input { width:27mm; }
+.expert-block { display:flex; align-items:flex-start; gap:3mm; white-space:nowrap; }
+.signature-input-wrap { display:flex; flex-direction:column; align-items:center; width:37mm; }
+.signature-input-wrap input { width:100%; height:5.3mm; border:0; border-bottom:1px solid #000; outline:0; text-align:center; font:10.5pt "Times New Roman", Times, serif; background:transparent; }
+.signature-input-wrap span { margin-top:1.2mm; font-size:9.5pt; }
+.page-2 { padding-top:9.5mm; }
+.page-2 .document-header { margin-bottom:3.8mm; }
+.page-2 .document-header h1 { font-size:12.4pt; }
+.page-2 .header-field { font-size:11.6pt; }
+.page-2 .header-field input { font-size:10.8pt; height:5mm; }
+.page-2 .inspection-table { font-size:9.2pt; line-height:1.0; }
+.page-2 .inspection-table th, .page-2 .inspection-table td { padding:.31mm 1.05mm; }
+.page-2 .inspection-table th { height:9mm; font-size:9.8pt; }
+.page-2 .signature-footer { margin-top:4.3mm; font-size:10.5pt; }
+.page-2 .result-mark { font-size:15pt; }
+@media (max-width:850px) {
+  body { padding-top:8px; }
+  .page { transform-origin:top center; }
+}
+@media print {
+  @page { size:A4 portrait; margin:0; }
+  html, body { background:#fff; padding:0; }
+  .page { margin:0; width:210mm; height:297mm; min-height:297mm; box-shadow:none; transform:none !important; zoom:1; }
+  input { -webkit-appearance:none; appearance:none; }
+  .result-cell:focus, input:focus { box-shadow:none; background:transparent; }
+}
+</style>
+</head>
+<body>
+<section class="page page-1" data-page="1">
+      <header class="document-header">
+        <h1>Протокол визуального осмотра ГП «ЦТН ГУОБДД МВД КР»</h1>
+        <label class="header-field"><span>Марка АТС</span><input data-field="p1_vehicle_mark" aria-label="Марка АТС"/></label>
+        <label class="header-field reg-field"><span>Государственный регистрационный номер</span><input data-field="p1_registration_number" aria-label="Государственный регистрационный номер"/></label>
+      </header>
+      <table class="inspection-table"><thead><tr><th class="col-number">№<br/>п/п</th><th><br/>Визуальный осмотр</th><th>Соответствует</th><th>Не соответствует</th></tr></thead><tbody><tr data-source-row="1"><td class="col-number">1.</td><td class="inspection-text">Соответствие регистрационных знаков</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r1_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r1_no"><span class="result-mark"></span></td></tr><tr data-source-row="2"><td class="col-number">2.</td><td class="inspection-text">Работоспособность рулевого управления </td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r2_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r2_no"><span class="result-mark"></span></td></tr><tr data-source-row="3"><td class="col-number">3.</td><td class="inspection-text">Работоспособность световых приборов.</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r3_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r3_no"><span class="result-mark"></span></td></tr><tr data-source-row="4"><td class="col-number">4.</td><td class="inspection-text">Работоспособность поворотников.</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r4_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r4_no"><span class="result-mark"></span></td></tr><tr data-source-row="5"><td class="col-number">5.</td><td class="inspection-text">Работоспособность аварийной сигнализации.</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r5_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r5_no"><span class="result-mark"></span></td></tr><tr data-source-row="6"><td class="col-number">6.</td><td class="inspection-text">Работоспособность (дворников) стеклоочистителей. </td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r6_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r6_no"><span class="result-mark"></span></td></tr><tr data-source-row="7"><td class="col-number">7.</td><td class="inspection-text">Высота  протектора шин, мм.:    передние<br/>                                                      задние</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r7_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r7_no"><span class="result-mark"></span></td></tr><tr data-source-row="8"><td class="col-number">8.</td><td class="inspection-text">Давление шин, Па:                         передние<br/>                                                             задние</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r8_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r8_no"><span class="result-mark"></span></td></tr><tr data-source-row="9"><td class="col-number">9.</td><td class="inspection-text">Наличие всех болтов и гаек крепления колеса.</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r9_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r9_no"><span class="result-mark"></span></td></tr><tr data-source-row="10"><td class="col-number">10.</td><td class="inspection-text">Двигатель и его состояния. </td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r10_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r10_no"><span class="result-mark"></span></td></tr><tr data-source-row="11"><td class="col-number">11.</td><td class="inspection-text">Утечка тормозной системы</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r11_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r11_no"><span class="result-mark"></span></td></tr><tr data-source-row="12"><td class="col-number">12.</td><td class="inspection-text">Работоспособность аварийного выхода.</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r12_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r12_no"><span class="result-mark"></span></td></tr><tr data-source-row="13"><td class="col-number">13.</td><td class="inspection-text">Наличие зеркал заднего вида.</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r13_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r13_no"><span class="result-mark"></span></td></tr><tr data-source-row="14"><td class="col-number">14.</td><td class="inspection-text">Работоспособность звуковой сигнализации.</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r14_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r14_no"><span class="result-mark"></span></td></tr><tr data-source-row="15"><td class="col-number">15.</td><td class="inspection-text">Наличие аварийного знака.</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r15_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r15_no"><span class="result-mark"></span></td></tr><tr data-source-row="16"><td class="col-number">16.</td><td class="inspection-text">Работоспособность ремней безопасности</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r16_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r16_no"><span class="result-mark"></span></td></tr><tr data-source-row="17"><td class="col-number">17.</td><td class="inspection-text">Наличие огнетушителя.</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r17_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r17_no"><span class="result-mark"></span></td></tr><tr data-source-row="18"><td class="col-number">18.</td><td class="inspection-text">Наличие аптечки. </td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r18_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r18_no"><span class="result-mark"></span></td></tr><tr data-source-row="19"><td class="col-number">19.</td><td class="inspection-text">Наличие дoмкрата, запасного колеса, ключа.</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r19_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r19_no"><span class="result-mark"></span></td></tr><tr data-source-row="20"><td class="col-number">20.</td><td class="inspection-text">Светопропускание ветрового стекла и передних боковых стекол8</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r20_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r20_no"><span class="result-mark"></span></td></tr><tr data-source-row="21"><td class="col-number">21.</td><td class="inspection-text">Уровень шума в дБ</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r21_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r21_no"><span class="result-mark"></span></td></tr><tr data-source-row="22"><td class="col-number">22.</td><td class="inspection-text">Изменение цвета огней, установка дополнит. ,<br/>Демонтаж внешних световых приборов</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r22_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r22_no"><span class="result-mark"></span></td></tr><tr data-source-row="23"><td class="col-number">23.</td><td class="inspection-text">Наличие дополнит предметов или покрытий , ограничив. обзорность<br/> с места водителя</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r23_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r23_no"><span class="result-mark"></span></td></tr><tr data-source-row="24"><td class="col-number">24.</td><td class="inspection-text">Наличие трещин на ветровых стеклах</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r24_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r24_no"><span class="result-mark"></span></td></tr><tr data-source-row="25"><td class="col-number">25.</td><td class="inspection-text">Деформация сцепной петли или дышла прицепа</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r25_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r25_no"><span class="result-mark"></span></td></tr><tr data-source-row="26"><td class="col-number">26.</td><td class="inspection-text">Наличие предупреждающих знаков</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r26_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r26_no"><span class="result-mark"></span></td></tr><tr data-source-row="27"><td class="col-number">27.</td><td class="inspection-text">Противооткатные упоры</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r27_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r27_no"><span class="result-mark"></span></td></tr><tr data-source-row="28"><td class="col-number">28.</td><td class="inspection-text">Демонтаж или изменение места размещения предусмотренных изготовителем заднего и боковых защитных устройств</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r28_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r28_no"><span class="result-mark"></span></td></tr><tr data-source-row="29"><td class="col-number">29.</td><td class="inspection-text">Опорные устройства и фиксаторы крепления опор</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r29_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r29_no"><span class="result-mark"></span></td></tr><tr data-source-row="30"><td class="col-number">30.</td><td class="inspection-text">Демонтаж или повреждения съемных и стационарных перегородок</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r30_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r30_no"><span class="result-mark"></span></td></tr><tr data-source-row="31"><td class="col-number">31.</td><td class="inspection-text">Отсутствие заземляющих устройств на цистернах для перевозки пищевых жидкостей</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r31_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r31_no"><span class="result-mark"></span></td></tr><tr data-source-row="32"><td class="col-number">32.</td><td class="inspection-text">Демонтаж ремней безопасности</td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r32_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r32_no"><span class="result-mark"></span></td></tr><tr data-source-row="33"><td class="col-number">33.</td><td class="inspection-text">Пробег </td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Соответствует" data-result="p1_r33_ok"><span class="result-mark"></span></td><td class="result-cell" tabindex="0" role="checkbox" aria-checked="false" aria-label="Не соответствует" data-result="p1_r33_no"><span class="result-mark"></span></td></tr></tbody></table>
+      <footer class="signature-footer">
+        <div class="date-block"><span>«</span><input class="day-input" data-field="p1_day" aria-label="День"/><span>»</span><input class="month-input" data-field="p1_month" aria-label="Месяц"/><strong data-year>2026 года</strong></div>
+        <div class="expert-block"><strong>Технический эксперт</strong><div class="signature-input-wrap"><input data-field="p1_signature" aria-label="Технический эксперт"/><span>подпись</span></div></div>
+      </footer>
+    </section>
+
+<script>
+(() => {
+  'use strict';
+  const params = new URLSearchParams(window.location.search);
+  const inputFields = [...document.querySelectorAll('[data-field]')];
+  const resultCells = [...document.querySelectorAll('[data-result]')];
+  let notifyTimer;
+
+  function field(name) {
+    return document.querySelector('[data-field="' + name + '"]');
+  }
+
+  function prefix() {
+    const first = inputFields[0]?.dataset.field || 'p1_vehicle_mark';
+    return first.startsWith('p2_') ? 'p2' : 'p1';
+  }
+
+  function setValue(name, value, overwrite = true) {
+    const element = field(name);
+    if (!element) return null;
+    if (overwrite || !String(element.value || '').trim()) {
+      element.value = value || '';
+    }
+    return element;
+  }
+
+  function collectDocumentState() {
+    return {
+      fields: inputFields.map(element => ({
+        name: element.dataset.field,
+        value: element.value || ''
+      })),
+      results: resultCells.map(cell => ({
+        name: cell.dataset.result,
+        state: cell.dataset.state || ''
+      }))
+    };
+  }
+
+  window.AutolabCollectDocumentState = collectDocumentState;
+
+  function notifyStateChanged() {
+    clearTimeout(notifyTimer);
+    notifyTimer = setTimeout(() => {
+      if (window.DocumentState && window.DocumentState.postMessage) {
+        window.DocumentState.postMessage(JSON.stringify(collectDocumentState()));
+      }
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'autolab-document-state', state: collectDocumentState() }, '*');
+      }
+    }, 80);
+  }
+
+  function applyResult(cell, state, enforcePair = true) {
+    cell.dataset.state = state || '';
+    cell.setAttribute('aria-checked', state ? 'true' : 'false');
+    if (state && enforcePair) {
+      const row = cell.closest('tr');
+      row?.querySelectorAll('[data-result]').forEach(other => {
+        if (other !== cell) {
+          other.dataset.state = '';
+          other.setAttribute('aria-checked', 'false');
+        }
+      });
+    }
+  }
+
+  function nextState(current) {
+    if (current === '') return 'check';
+    if (current === 'check') return 'dash';
+    if (current === 'dash') return 'cross';
+    return '';
+  }
+
+  function applyDocumentState(raw) {
+    if (!raw) return;
+    try {
+      const state = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      (state.fields || []).forEach(item => setValue(item.name, item.value || '', true));
+      (state.results || []).forEach(item => {
+        const cell = document.querySelector('[data-result="' + item.name + '"]');
+        if (cell) applyResult(cell, item.state || '', false);
+      });
+    } catch (_) {}
+  }
+
+  function fillAutoFields() {
+    const docPrefix = prefix();
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = now.toLocaleString('ru-RU', { month: 'long' });
+    const year = String(now.getFullYear());
+    setValue(docPrefix + '_vehicle_mark', params.get('brand') || '', false);
+    setValue(docPrefix + '_registration_number', params.get('plate_number') || '', false);
+    setValue(docPrefix + '_day', day, false);
+    setValue(docPrefix + '_month', month, false);
+    setValue(docPrefix + '_signature', params.get('expert_name') || '', false);
+    document.querySelectorAll('[data-year]').forEach(element => {
+      element.textContent = year + ' года';
+    });
+  }
+
+  inputFields.forEach(element => element.addEventListener('input', notifyStateChanged));
+  resultCells.forEach(cell => {
+    const isDefaultOk = cell.dataset.result.endsWith('_ok');
+    applyResult(cell, isDefaultOk ? 'check' : '', false);
+    const toggle = () => {
+      applyResult(cell, nextState(cell.dataset.state || ''));
+      notifyStateChanged();
+    };
+    cell.addEventListener('click', toggle);
+    cell.addEventListener('keydown', event => {
+      if (event.key === ' ' || event.key === 'Enter') {
+        event.preventDefault();
+        toggle();
+      }
+    });
+  });
+
+  fillAutoFields();
+  applyDocumentState(params.get('state'));
+  fillAutoFields();
+  notifyStateChanged();
+
+  window.addEventListener('message', event => {
+    if (event.data === 'autolab-scroll-bottom') {
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+    }
+    if (event.data === 'autolab-scroll-top') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  });
+})();
+</script>
+</body>
+</html>

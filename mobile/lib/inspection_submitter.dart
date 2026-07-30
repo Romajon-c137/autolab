@@ -61,15 +61,17 @@ Future<String> _buildInspectionDocumentHtml({
   required String documentStateJson,
 }) async {
   final source = await rootBundle.loadString(
-    'assets/${draft.vehicleCategory.apiValue}_document_clean.html',
+    'assets/${_documentAssetName(draft)}',
   );
-  final params = Uri(
-    queryParameters: {
-      'brand': draft.brand,
-      'country': draft.country,
-      'vehicle_category': draft.vehicleCategory.apiValue,
-      'vin': draft.vin,
-      'expert_name': expertName,
+    final params = Uri(
+      queryParameters: {
+        'brand': draft.brand,
+        'plate_number': draft.plateNumber,
+        'country': draft.country,
+        'vehicle_category': draft.vehicleCategory.apiValue,
+        'vin': draft.vin,
+        if (draft.mileage != null) 'mileage': draft.mileage.toString(),
+        'expert_name': expertName,
       // ignore: use_null_aware_elements
       if (signatureSvg case final svg?) 'signature': svg,
       if (documentStateJson.isNotEmpty) 'state': documentStateJson,
@@ -92,4 +94,13 @@ Future<String> _buildInspectionDocumentHtml({
         'new URLSearchParams(window.location.search)',
         'new URLSearchParams(${jsonEncode(params)})',
       );
+}
+
+String _documentAssetName(_InspectionDraft draft) {
+  if (draft.operationCategory == _OperationCategory.techInspection) {
+    return draft.vehicleCategory == _VehicleCategory.n2
+        ? 'N2_visual_inspection.html'
+        : 'M1_visual_inspection.html';
+  }
+  return '${draft.vehicleCategory.apiValue}_document_clean.html';
 }

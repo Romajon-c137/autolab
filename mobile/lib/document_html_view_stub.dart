@@ -7,8 +7,10 @@ import 'package:webview_flutter/webview_flutter.dart';
 class DocumentHtmlView extends StatefulWidget {
   const DocumentHtmlView({
     super.key,
+    required this.operationType,
     required this.vehicleCategory,
     required this.brand,
+    required this.plateNumber,
     required this.country,
     required this.vin,
     required this.expertName,
@@ -18,12 +20,16 @@ class DocumentHtmlView extends StatefulWidget {
     required this.onSignRequested,
     required this.scrollToBottomSignal,
     required this.scrollToTopSignal,
+    this.mileage,
   });
 
+  final String operationType;
   final String vehicleCategory;
   final String brand;
+  final String plateNumber;
   final String country;
   final String vin;
+  final int? mileage;
   final String expertName;
   final String? signatureSvg;
   final String documentStateJson;
@@ -64,10 +70,13 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
   @override
   void didUpdateWidget(covariant DocumentHtmlView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.vehicleCategory != widget.vehicleCategory ||
+    if (oldWidget.operationType != widget.operationType ||
+        oldWidget.vehicleCategory != widget.vehicleCategory ||
         oldWidget.brand != widget.brand ||
+        oldWidget.plateNumber != widget.plateNumber ||
         oldWidget.country != widget.country ||
         oldWidget.vin != widget.vin ||
+        oldWidget.mileage != widget.mileage ||
         oldWidget.expertName != widget.expertName ||
         oldWidget.signatureSvg != widget.signatureSvg) {
       _captureCurrentState().then((state) {
@@ -117,14 +126,16 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
 
   Future<void> _loadDocument({String? stateOverride}) async {
     final source = await rootBundle.loadString(
-      'assets/${widget.vehicleCategory}_document_clean.html',
+      'assets/${_documentAssetName(widget.operationType, widget.vehicleCategory)}',
     );
     final params = Uri(
       queryParameters: {
         'brand': widget.brand,
+        'plate_number': widget.plateNumber,
         'country': widget.country,
         'vehicle_category': widget.vehicleCategory,
         'vin': widget.vin,
+        if (widget.mileage != null) 'mileage': widget.mileage.toString(),
         'expert_name': widget.expertName,
         if (widget.signatureSvg != null) 'signature': widget.signatureSvg!,
         if ((stateOverride ?? widget.documentStateJson).isNotEmpty)
@@ -151,6 +162,15 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
         "document.querySelector('.signature-line')?.scrollIntoView({block:'center'});",
       );
     }
+  }
+
+  String _documentAssetName(String operationType, String vehicleCategory) {
+    if (operationType == 'tech_inspection') {
+      return vehicleCategory == 'N2'
+          ? 'N2_visual_inspection.html'
+          : 'M1_visual_inspection.html';
+    }
+    return '${vehicleCategory}_document_clean.html';
   }
 
   Future<void> _scrollToBottom() async {

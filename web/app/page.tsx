@@ -5,12 +5,14 @@ import {
   Archive,
   ChartColumn,
   ClipboardList,
+  Download,
   ExternalLink,
   ListChecks,
   LogOut,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
+  Printer,
 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://autolab.glasscenter.kg";
@@ -512,11 +514,33 @@ function InspectionDetail({
             <div className="document-panel-header">
               <h3>Документ</h3>
               <div className="document-actions">
-                <a href={inspection.document_pdf} target="_blank" rel="noreferrer">
-                  Предпросмотр
+                <button
+                  className="icon-button print-btn"
+                  type="button"
+                  onClick={() => window.open(inspection.document_pdf)}
+                  title="Печать PDF"
+                  aria-label="Печать PDF"
+                >
+                  <Printer aria-hidden="true" />
+                </button>
+                <a
+                  href={inspection.document_pdf}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="icon-button"
+                  title="Предпросмотр"
+                  aria-label="Предпросмотр"
+                >
+                  <ExternalLink aria-hidden="true" />
                 </a>
-                <a href={inspection.document_pdf} download={pdfName}>
-                  Скачать PDF
+                <a
+                  href={inspection.document_pdf}
+                  download={pdfName}
+                  className="icon-button"
+                  title="Скачать PDF"
+                  aria-label="Скачать PDF"
+                >
+                  <Download aria-hidden="true" />
                 </a>
               </div>
             </div>

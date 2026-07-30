@@ -77,10 +77,13 @@ class _DocumentHtmlPanel extends StatelessWidget {
       color: Colors.white,
       child: DocumentHtmlView(
         key: documentViewKey,
+        operationType: draft.operationCategory.apiValue,
         vehicleCategory: draft.vehicleCategory.apiValue,
         brand: draft.brand,
+        plateNumber: draft.plateNumber,
         country: draft.country,
         vin: draft.vin,
+        mileage: draft.mileage,
         expertName: expertName,
         signatureSvg: signatureSvg,
         documentStateJson: documentStateJson,
@@ -92,3 +95,5 @@ class _DocumentHtmlPanel extends StatelessWidget {
     );
   }
 }
+
+

@@ -42,7 +42,7 @@ enum _VehicleCategory {
 }
 
 enum _OperationCategory {
-  techInspection('tech_inspection', 'Техосмотр', false),
+  techInspection('tech_inspection', 'Техосмотр', true),
   sbgts('sbgts', 'СБКТС', true),
   legalization('legalization', 'Легализация', false),
   conversion('conversion', 'Переоборудование', false);
@@ -72,6 +72,7 @@ class _InspectionDraft {
     required this.country,
     required this.vehicleCategory,
     required this.vin,
+    this.mileage,
     required this.documentStateJson,
     required this.photos,
     required this.photoTakenAt,
@@ -87,6 +88,7 @@ class _InspectionDraft {
   final String country;
   final _VehicleCategory vehicleCategory;
   final String vin;
+  final int? mileage;
   final String documentStateJson;
   final Map<_PhotoKind, String> photos;
   final Map<_PhotoKind, DateTime> photoTakenAt;
@@ -103,6 +105,7 @@ class _InspectionDraft {
       'country': country,
       'vehicle_category': vehicleCategory.apiValue,
       'vin': vin,
+      'mileage': mileage,
       'document_state': documentStateJson,
       'photos': photos.map((key, value) => MapEntry(key.apiField, value)),
       'photo_taken_at': photoTakenAt.map(
@@ -149,6 +152,7 @@ class _InspectionDraft {
         json['vehicle_category'] as String?,
       ),
       vin: json['vin'] as String? ?? '',
+      mileage: json['mileage'] as int?,
       documentStateJson: json['document_state'] as String? ?? '',
       photos: photos,
       photoTakenAt: photoTakenAt,

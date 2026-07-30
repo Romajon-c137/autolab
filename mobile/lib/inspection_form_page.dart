@@ -17,8 +17,10 @@ class _InspectionFormPage extends StatefulWidget {
 
 class _InspectionFormPageState extends State<_InspectionFormPage> {
   final _brandController = TextEditingController();
+  final _plateNumberController = TextEditingController();
   final _countryController = TextEditingController();
   final _vinController = TextEditingController();
+  final _mileageController = TextEditingController();
   final _picker = ImagePicker();
   final GlobalKey _documentViewKey = GlobalKey(
     debugLabel: 'inspection-document-view',
@@ -36,11 +38,19 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   bool _statusIsError = false;
   int _documentScrollToBottomSignal = 0;
   int _documentScrollToTopSignal = 0;
+  bool _documentScrollDown = true;
   late String _draftId;
   Timer? _autoSaveTimer;
 
   bool get _isEditingDraft => widget.initialDraft != null;
   bool get _isConversion => _operationCategory == _OperationCategory.conversion;
+  List<_VehicleCategory> get _availableVehicleCategories {
+    if (_operationCategory == _OperationCategory.techInspection) {
+      return const [_VehicleCategory.m1, _VehicleCategory.n2];
+    }
+    return _VehicleCategory.values;
+  }
+
   List<_PhotoKind> get _visiblePhotoKinds {
     if (_isConversion) {
       return _PhotoKind.values
@@ -58,8 +68,12 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     if (draft != null) {
       _operationCategory = draft.operationCategory;
       _brandController.text = draft.brand;
+      _plateNumberController.text = draft.plateNumber;
       _countryController.text = draft.country;
       _vinController.text = draft.vin;
+      if (draft.mileage != null) {
+        _mileageController.text = draft.mileage.toString();
+      }
       _vehicleCategory = draft.vehicleCategory;
       _documentStateJson = draft.documentStateJson;
       _photos.addAll(draft.photos);
@@ -68,9 +82,12 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     } else {
       _operationCategory = widget.operationCategory ?? _OperationCategory.sbgts;
     }
+    _ensureAllowedVehicleCategory();
     _brandController.addListener(_handleFieldChanged);
+    _plateNumberController.addListener(_handleFieldChanged);
     _countryController.addListener(_handleFieldChanged);
     _vinController.addListener(_handleFieldChanged);
+    _mileageController.addListener(_handleFieldChanged);
   }
 
   @override
@@ -78,8 +95,10 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     _autoSaveTimer?.cancel();
     _autoSaveDraft();
     _brandController.dispose();
+    _plateNumberController.dispose();
     _countryController.dispose();
     _vinController.dispose();
+    _mileageController.dispose();
     super.dispose();
   }
 
@@ -96,6 +115,12 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     _scheduleAutoSave();
     if (_showDocument) {
       setState(() {});
+    }
+  }
+
+  void _ensureAllowedVehicleCategory() {
+    if (!_availableVehicleCategories.contains(_vehicleCategory)) {
+      _vehicleCategory = _availableVehicleCategories.first;
     }
   }
 
@@ -348,11 +373,12 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     return _InspectionDraft(
       id: _draftId,
       operationCategory: _operationCategory,
-      plateNumber: '',
+      plateNumber: _plateNumberController.text.trim().toUpperCase(),
       brand: _brandController.text.trim(),
       country: _countryController.text.trim(),
       vehicleCategory: _vehicleCategory,
       vin: _vinController.text.trim().toUpperCase(),
+      mileage: int.tryParse(_mileageController.text.trim()),
       documentStateJson: _documentStateJson,
       photos: Map<_PhotoKind, String>.from(_photos),
       photoTakenAt: Map<_PhotoKind, DateTime>.from(_photoTakenAt),
@@ -391,8 +417,10 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     bool showErrors = true,
   }) {
     final brand = _brandController.text.trim();
+    final plateNumber = _plateNumberController.text.trim().toUpperCase();
     final country = _countryController.text.trim();
     final vin = _vinController.text.trim().toUpperCase();
+    final mileage = int.tryParse(_mileageController.text.trim());
 
     if (!requireBrand &&
         brand.isEmpty &&
@@ -430,11 +458,12 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     return _InspectionDraft(
       id: _draftId,
       operationCategory: _operationCategory,
-      plateNumber: '',
+      plateNumber: plateNumber,
       brand: brand,
       country: country,
       vehicleCategory: _vehicleCategory,
       vin: vin,
+      mileage: mileage,
       documentStateJson: _documentStateJson,
       photos: Map<_PhotoKind, String>.from(_photos),
       photoTakenAt: Map<_PhotoKind, DateTime>.from(_photoTakenAt),
@@ -448,27 +477,27 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_operationCategory.label),
-        bottom: _isEditingDraft
-            ? PreferredSize(
-                preferredSize: const Size.fromHeight(24),
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    'Черновик',
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
+              title: Text(_operationCategory.label),
+              bottom: _isEditingDraft
+                  ? PreferredSize(
+                      preferredSize: const Size.fromHeight(24),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          'Черновик',
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                      ),
+                    )
+                  : null,
+              actions: [
+                TextButton.icon(
+                  onPressed: _goHome,
+                  icon: const Icon(Icons.home),
+                  label: const Text('Домой'),
                 ),
-              )
-            : null,
-        actions: [
-          TextButton.icon(
-            onPressed: _goHome,
-            icon: const Icon(Icons.home),
-            label: const Text('Домой'),
-          ),
-        ],
-      ),
+              ],
+            ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -593,68 +622,90 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   }
 
   Widget _buildDocumentPortraitForm() {
-    return Column(
+    final isTech = _operationCategory == _OperationCategory.techInspection;
+    return Stack(
       children: [
-        Material(
-          color: Theme.of(context).colorScheme.surface,
-          child: ExpansionTile(
-            initiallyExpanded: false,
-            title: const Text('Данные авто'),
-            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            children: [
-              _buildFields(compact: true, showCategory: false),
-              if (_status != null) ...[
-                const SizedBox(height: 10),
-                _StatusBox(text: _status!, isError: _statusIsError),
-              ],
-              const SizedBox(height: 10),
-              _buildFormActions(),
-            ],
-          ),
+        Column(
+          children: [
+            Material(
+              color: Theme.of(context).colorScheme.surface,
+              child: ExpansionTile(
+                initiallyExpanded: false,
+                title: const Text('Данные авто'),
+                childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                children: [
+                  _buildFields(compact: true, showCategory: false),
+                  if (_status != null) ...[
+                    const SizedBox(height: 10),
+                    _StatusBox(text: _status!, isError: _statusIsError),
+                  ],
+                  const SizedBox(height: 10),
+                  _buildFormActions(),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: _buildEmbeddedDocument(),
+              ),
+            ),
+          ],
         ),
-        const Divider(height: 1),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-          child: _DocumentJumpButton(
-            label: 'В самый низ',
-            icon: Icons.keyboard_double_arrow_down,
-            onPressed: _scrollDocumentToBottom,
+        if (!isTech)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton.small(
+              heroTag: 'scroll_document',
+              onPressed: () {
+                if (_documentScrollDown) {
+                  _scrollDocumentToBottom();
+                } else {
+                  _scrollDocumentToTop();
+                }
+                setState(() => _documentScrollDown = !_documentScrollDown);
+              },
+              child: Icon(_documentScrollDown
+                  ? Icons.keyboard_double_arrow_down
+                  : Icons.keyboard_double_arrow_up),
+            ),
           ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: _buildEmbeddedDocument(),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-          child: _DocumentJumpButton(
-            label: 'Вверх',
-            icon: Icons.keyboard_double_arrow_up,
-            onPressed: _scrollDocumentToTop,
-          ),
-        ),
       ],
     );
   }
 
   Widget _buildDocumentWithScrollControls() {
-    return Column(
+    final isTech = _operationCategory == _OperationCategory.techInspection;
+    return Stack(
       children: [
-        _DocumentJumpButton(
-          label: 'В самый низ',
-          icon: Icons.keyboard_double_arrow_down,
-          onPressed: _scrollDocumentToBottom,
+        Column(
+          children: [
+            const SizedBox(height: 8),
+            Expanded(child: _buildEmbeddedDocument()),
+            const SizedBox(height: 8),
+          ],
         ),
-        const SizedBox(height: 8),
-        Expanded(child: _buildEmbeddedDocument()),
-        const SizedBox(height: 8),
-        _DocumentJumpButton(
-          label: 'Вверх',
-          icon: Icons.keyboard_double_arrow_up,
-          onPressed: _scrollDocumentToTop,
-        ),
+        if (!isTech)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton.small(
+              heroTag: 'scroll_document_landscape',
+              onPressed: () {
+                if (_documentScrollDown) {
+                  _scrollDocumentToBottom();
+                } else {
+                  _scrollDocumentToTop();
+                }
+                setState(() => _documentScrollDown = !_documentScrollDown);
+              },
+              child: Icon(_documentScrollDown
+                  ? Icons.keyboard_double_arrow_down
+                  : Icons.keyboard_double_arrow_up),
+            ),
+          ),
       ],
     );
   }
@@ -681,6 +732,79 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
 
   Widget _buildFields({bool compact = false, bool showCategory = true}) {
     final gap = compact ? 8.0 : 12.0;
+    final isTech = _operationCategory == _OperationCategory.techInspection;
+
+    if (isTech) {
+      return Column(
+        children: [
+          if (showCategory) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SegmentedButton<_VehicleCategory>(
+                  segments: _availableVehicleCategories
+                      .map(
+                        (category) => ButtonSegment(
+                          value: category,
+                          label: Text(category.apiValue),
+                        ),
+                      )
+                      .toList(),
+                  selected: {_vehicleCategory},
+                  onSelectionChanged: (selection) {
+                    final next = selection.first;
+                    if (next == _vehicleCategory) {
+                      return;
+                    }
+                    setState(() {
+                      _vehicleCategory = next;
+                    });
+                    _scheduleAutoSave();
+                  },
+                ),
+              ),
+            ),
+            SizedBox(height: gap),
+          ],
+          TextField(
+            controller: _brandController,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              isDense: compact,
+              labelText: 'Марка авто',
+              hintText: 'Toyota',
+            ),
+          ),
+          SizedBox(height: gap),
+          TextField(
+            controller: _plateNumberController,
+            textInputAction: TextInputAction.next,
+            textCapitalization: TextCapitalization.characters,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              isDense: compact,
+              labelText: 'Гос номер',
+              hintText: '001ABC',
+            ),
+          ),
+          SizedBox(height: gap),
+          TextField(
+            controller: _mileageController,
+            textInputAction: TextInputAction.done,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              isDense: compact,
+              labelText: 'Пробег (км)',
+              hintText: '150000',
+            ),
+          ),
+        ],
+      );
+    }
+
     return Column(
       children: [
         if (showCategory) ...[
@@ -689,14 +813,14 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: SegmentedButton<_VehicleCategory>(
-                segments: const [
-                  ButtonSegment(value: _VehicleCategory.m1, label: Text('M1')),
-                  ButtonSegment(value: _VehicleCategory.m2, label: Text('M2')),
-                  ButtonSegment(value: _VehicleCategory.m3, label: Text('M3')),
-                  ButtonSegment(value: _VehicleCategory.n1, label: Text('N1')),
-                  ButtonSegment(value: _VehicleCategory.n2, label: Text('N2')),
-                  ButtonSegment(value: _VehicleCategory.n3, label: Text('N3')),
-                ],
+                segments: _availableVehicleCategories
+                    .map(
+                      (category) => ButtonSegment(
+                        value: category,
+                        label: Text(category.apiValue),
+                      ),
+                    )
+                    .toList(),
                 selected: {_vehicleCategory},
                 onSelectionChanged: (selection) {
                   final next = selection.first;

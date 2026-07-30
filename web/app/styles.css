@@ -594,17 +594,26 @@ button:disabled {
   font-size: 15px;
 }
 
-.document-panel-header a {
-  color: var(--primary);
-  font-weight: 800;
-  text-decoration: none;
+.document-panel-header .icon-button {
+  width: 34px;
+  height: 34px;
+}
+
+.document-panel-header .icon-button.print-btn {
+  color: #fff;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.document-panel-header .icon-button.print-btn:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
 }
 
 .document-actions {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 10px;
+  align-items: center;
+  gap: 6px;
 }
 
 .document-preview-card {
@@ -1047,6 +1056,7 @@ button:disabled {
   }
 
   .sidebar,
+  .mobile-appbar,
   .topbar,
   .filters,
   .no-print,
@@ -1074,8 +1084,8 @@ button:disabled {
 
   .photo-grid {
     display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8mm;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4mm;
     width: 100%;
   }
 
@@ -1083,6 +1093,7 @@ button:disabled {
     break-inside: avoid;
     border: 0;
     background: #fff;
+    padding: 0;
   }
 
   .photo-card span {
@@ -1091,12 +1102,14 @@ button:disabled {
 
   .photo-open-button {
     cursor: default;
+    padding: 0;
   }
 
   .photo-card img {
+    display: block;
     width: 100%;
-    aspect-ratio: 4 / 3;
-    object-fit: contain;
+    height: auto;
+    object-fit: cover;
   }
 
   @page {

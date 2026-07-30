@@ -112,6 +112,7 @@ class _ApiClient {
       'country': draft.country,
       'vehicle_category': draft.vehicleCategory.apiValue,
       'vin': draft.vin,
+      if (draft.mileage != null) 'mileage': draft.mileage.toString(),
     });
 
     for (final kind in _PhotoKind.values) {
