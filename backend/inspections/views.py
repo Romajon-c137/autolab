@@ -123,6 +123,8 @@ def _serialize_inspection(request, inspection):
     return {
         "id": inspection.id,
         "title": inspection.title,
+        "operation_type": inspection.operation_type,
+        "operation_type_label": inspection.get_operation_type_display(),
         "plate_number": inspection.plate_number,
         "brand": inspection.brand,
         "country": inspection.country,
@@ -208,6 +210,7 @@ def _notify_telegram_inspection_created(request, inspection):
         "<b>Новый осмотр</b>",
         f"<b>ID:</b> {inspection.id}",
         f"<b>Филиал:</b> {html.escape(branch)}",
+        f"<b>Операция:</b> {html.escape(inspection.get_operation_type_display() or '-')}",
         f"<b>Категория:</b> {html.escape(inspection.vehicle_category or '-')}",
         f"<b>Марка:</b> {html.escape(inspection.brand or '-')}",
         f"<b>VIN:</b> {html.escape(inspection.vin or '-')}",
@@ -593,6 +596,10 @@ def create_inspection(request):
         }, status=405)
 
     title = request.POST.get("title", "").strip()
+    operation_type = request.POST.get(
+        "operation_type",
+        VehicleInspection.OPERATION_SBGTS,
+    ).strip()
     plate_number = request.POST.get("plate_number", "").strip().upper()
     brand = request.POST.get("brand", "").strip()
     country = request.POST.get("country", "").strip()
@@ -607,6 +614,12 @@ def create_inspection(request):
         return JsonResponse({
             "ok": False,
             "error": "Field 'vehicle_category' must be M1, M2, M3, N1, N2 or N3",
+        }, status=400)
+
+    if operation_type not in dict(VehicleInspection.OPERATION_CHOICES):
+        return JsonResponse({
+            "ok": False,
+            "error": "Field 'operation_type' is invalid",
         }, status=400)
 
     if not title:
@@ -653,6 +666,7 @@ def create_inspection(request):
 
     inspection = VehicleInspection.objects.create(
         title=title,
+        operation_type=operation_type,
         plate_number=plate_number,
         brand=brand,
         country=country,
@@ -680,6 +694,8 @@ def create_inspection(request):
         "ok": True,
         "id": inspection.id,
         "title": inspection.title,
+        "operation_type": inspection.operation_type,
+        "operation_type_label": inspection.get_operation_type_display(),
         "plate_number": inspection.plate_number,
         "brand": inspection.brand,
         "country": inspection.country,

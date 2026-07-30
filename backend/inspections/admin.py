@@ -73,6 +73,7 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "title",
+        "operation_type",
         "plate_number",
         "brand",
         "country",
@@ -99,11 +100,18 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
         "document_link",
     )
     search_fields = ("title", "plate_number", "brand", "country", "vin")
-    list_filter = ("vehicle_category", "branch", "created_by", "created_at")
+    list_filter = (
+        "operation_type",
+        "vehicle_category",
+        "branch",
+        "created_by",
+        "created_at",
+    )
 
     fieldsets = (
         ("Данные авто", {
             "fields": (
+                "operation_type",
                 "plate_number",
                 "brand",
                 "country",

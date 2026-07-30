@@ -61,6 +61,17 @@ class UserProfile(models.Model):
 
 
 class VehicleInspection(models.Model):
+    OPERATION_TECH_INSPECTION = "tech_inspection"
+    OPERATION_SBGTS = "sbgts"
+    OPERATION_LEGALIZATION = "legalization"
+    OPERATION_CONVERSION = "conversion"
+    OPERATION_CHOICES = (
+        (OPERATION_TECH_INSPECTION, "Техосмотр"),
+        (OPERATION_SBGTS, "СБГТС"),
+        (OPERATION_LEGALIZATION, "Легализация"),
+        (OPERATION_CONVERSION, "Переоборудование"),
+    )
+
     CATEGORY_M1 = "M1"
     CATEGORY_M2 = "M2"
     CATEGORY_M3 = "M3"
@@ -77,6 +88,12 @@ class VehicleInspection(models.Model):
     )
 
     title = models.CharField("Название", max_length=120, blank=True)
+    operation_type = models.CharField(
+        "Категория операции",
+        max_length=32,
+        choices=OPERATION_CHOICES,
+        default=OPERATION_SBGTS,
+    )
     plate_number = models.CharField("Гос номер", max_length=20, blank=True)
     brand = models.CharField("Марка авто", max_length=80, blank=True)
     country = models.CharField("Страна", max_length=80, blank=True)
