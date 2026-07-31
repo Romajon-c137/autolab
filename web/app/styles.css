@@ -600,6 +600,10 @@ button:disabled {
 }
 
 .document-panel-header .icon-button.print-btn {
+  width: auto;
+  height: auto;
+  padding: 8px 14px;
+  white-space: nowrap;
   color: #fff;
   background: var(--primary);
   border-color: var(--primary);

@@ -12,7 +12,6 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  Printer,
 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://autolab.glasscenter.kg";
@@ -466,6 +465,29 @@ function InspectionCard({
   );
 }
 
+function printDocumentPdf(url: string) {
+  const win = window.open("about:blank", "_blank");
+  if (!win) {
+    window.open(url, "_blank");
+    return;
+  }
+  const safeUrl = url.replace(/"/g, "%22");
+  win.document.write(
+    '<!doctype html><html><head><title>Печать</title></head>' +
+      '<body style="margin:0;padding:0">' +
+      '<embed id="doc" src="' +
+      safeUrl +
+      '" type="application/pdf" style="width:100vw;height:100vh">' +
+      "</body></html>"
+  );
+  win.document.close();
+  win.addEventListener("afterprint", () => win.close());
+  win.addEventListener("load", () => {
+    win.focus();
+    setTimeout(() => win.print(), 600);
+  });
+}
+
 function InspectionDetail({
   inspection,
 }: {
@@ -517,11 +539,11 @@ function InspectionDetail({
                 <button
                   className="icon-button print-btn"
                   type="button"
-                  onClick={() => window.open(inspection.document_pdf)}
+                  onClick={() => inspection.document_pdf && printDocumentPdf(inspection.document_pdf)}
                   title="Печать PDF"
                   aria-label="Печать PDF"
                 >
-                  <Printer aria-hidden="true" />
+                  Печать
                 </button>
                 <a
                   href={inspection.document_pdf}
