@@ -346,6 +346,22 @@ function InspectionsPage({
   selectedRef.current = selected;
   const lastSignature = useRef("");
 
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("autoSync") === "1") setAutoSync(true);
+    } catch {
+      // localStorage unavailable
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("autoSync", autoSync ? "1" : "0");
+    } catch {
+      // localStorage unavailable
+    }
+  }, [autoSync]);
+
   function signatureOf(list: Inspection[]) {
     return list
       .map((item) => `${item.id}:${item.created_at}:${item.operation_type ?? ""}`)
