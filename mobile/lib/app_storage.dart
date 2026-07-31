@@ -133,9 +133,11 @@ class _AppStorage {
       return '<path d="$buffer" />';
     }).join();
 
+    final strokeWidth = (height / 12).clamp(4.0, 10.0);
     return '<svg xmlns="http://www.w3.org/2000/svg" '
+        'width="${number(width)}" height="${number(height)}" '
         'viewBox="0 0 ${number(width)} ${number(height)}">'
-        '<g fill="none" stroke="#000" stroke-width="3" '
+        '<g fill="none" stroke="#000" stroke-width="${number(strokeWidth)}" '
         'stroke-linecap="round" stroke-linejoin="round">$paths</g></svg>';
   }
 
