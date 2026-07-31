@@ -923,6 +923,14 @@ function DailyReportsArchivePage({
   );
 }
 
+const REPORT_TYPE_OPTIONS = [
+  { value: "all", label: "Все" },
+  { value: "sbgts", label: "СБКТС" },
+  { value: "tech_inspection", label: "Техосмотр" },
+  { value: "legalization", label: "Легализация" },
+  { value: "conversion", label: "Переоборудование" },
+];
+
 function ReportsPage({
   serverUrl,
   sessionKey,
@@ -936,6 +944,7 @@ function ReportsPage({
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [selected, setSelected] = useState<Inspection | null>(null);
+  const [typeFilter, setTypeFilter] = useState("all");
   const [error, setError] = useState("");
 
   async function load() {
@@ -963,6 +972,10 @@ function ReportsPage({
   const periodLabel = dateFrom === dateTo
     ? formatDateOnly(dateFrom)
     : `${formatDateOnly(dateFrom)} - ${formatDateOnly(dateTo)}`;
+  const filteredInspections = typeFilter === "all"
+    ? inspections
+    : inspections.filter((item) => (item.operation_type ?? "") === typeFilter);
+  const typeLabel = REPORT_TYPE_OPTIONS.find((option) => option.value === typeFilter)?.label ?? "Все";
 
   return (
     <>
@@ -1001,14 +1014,31 @@ function ReportsPage({
               <strong>{totals?.period ?? 0}</strong>
               <small>{periodLabel}</small>
             </div>
-            <div>
-              <span>Сегодня</span>
-              <strong>{totals?.today ?? 0}</strong>
-              <small>{formatDateOnly(today)}</small>
+            <div className="report-type-filter">
+              <span>Тип осмотра</span>
+              <div className="report-radio-group">
+                {REPORT_TYPE_OPTIONS.map((option) => (
+                  <label className="report-radio" key={option.value}>
+                    <input
+                      type="radio"
+                      name="report-type-filter"
+                      value={option.value}
+                      checked={typeFilter === option.value}
+                      onChange={() => setTypeFilter(option.value)}
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="primary-total report-filter-sum">
+              <span>Итого</span>
+              <strong>{filteredInspections.length}</strong>
+              <small>{typeLabel}</small>
             </div>
           </div>
           <div className="inspection-list report-inspection-list">
-            {inspections.length === 0 ? (
+            {filteredInspections.length === 0 ? (
               <div className="card empty">Осмотры за период не найдены</div>
             ) : (
               <>
@@ -1020,7 +1050,7 @@ function ReportsPage({
                   <span>Оператор</span>
                   <span />
                 </div>
-                {inspections.map((inspection) => (
+                {filteredInspections.map((inspection) => (
                   <article className="inspection-row" key={inspection.id}>
                     <div className="inspection-cell">
                       <span>Марка / модель</span>

@@ -720,7 +720,7 @@ button:disabled {
 
 .report-totals {
   display: grid;
-  grid-template-columns: minmax(240px, 1.3fr) minmax(180px, 0.7fr);
+  grid-template-columns: minmax(200px, 1fr) minmax(280px, 1.5fr) minmax(140px, 0.8fr);
   border: 1px solid var(--border);
   border-bottom: 0;
   margin-bottom: 16px;
@@ -760,6 +760,41 @@ button:disabled {
   margin-top: 2px;
   color: var(--muted);
   font-size: 12px;
+}
+
+.report-type-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.report-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+}
+
+.report-totals .report-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.report-totals .report-radio span {
+  display: inline;
+  color: var(--primary-dark);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.report-radio input {
+  margin: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
 }
 
 .report-inspection-list {
@@ -1034,6 +1069,10 @@ button:disabled {
     border-right: 0;
     border-left: 0;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .report-totals .report-type-filter {
+    grid-column: 1 / -1;
   }
 
   .report-totals div {
