@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   ChartColumn,
@@ -340,7 +340,17 @@ function InspectionsPage({
   const [dateTo, setDateTo] = useState(today);
   const [items, setItems] = useState<Inspection[]>([]);
   const [selected, setSelected] = useState<Inspection | null>(null);
+  const [autoSync, setAutoSync] = useState(false);
   const [error, setError] = useState("");
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
+  const lastSignature = useRef("");
+
+  function signatureOf(list: Inspection[]) {
+    return list
+      .map((item) => `${item.id}:${item.created_at}:${item.operation_type ?? ""}`)
+      .join("|");
+  }
 
   async function load() {
     setError("");
@@ -354,15 +364,27 @@ function InspectionsPage({
         sessionKey,
         `/api/inspections/?${params}`
       );
-      setItems(data.inspections);
-      if (selected) {
-        const fresh = data.inspections.find((item) => item.id === selected.id);
-        setSelected(fresh ?? null);
+      const sig = signatureOf(data.inspections);
+      if (sig !== lastSignature.current) {
+        lastSignature.current = sig;
+        setItems(data.inspections);
+        if (selectedRef.current) {
+          const fresh = data.inspections.find((item) => item.id === selectedRef.current?.id);
+          setSelected(fresh ?? null);
+        }
       }
     } catch (err) {
       setError(humanError(err));
     }
   }
+
+  useEffect(() => {
+    if (!autoSync) return;
+    load();
+    const timer = setInterval(load, 5000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSync, dateFrom, dateTo]);
 
   useEffect(() => {
     load();
@@ -376,6 +398,14 @@ function InspectionsPage({
           <h1>Осмотры</h1>
           <p>Поиск авто и печать листа с фотографиями</p>
         </div>
+        <label className={`auto-sync-toggle${autoSync ? " active" : ""}`}>
+          <input
+            type="checkbox"
+            checked={autoSync}
+            onChange={(event) => setAutoSync(event.target.checked)}
+          />
+          <span>Автосинхронизация</span>
+        </label>
       </div>
       {selected ? (
         <div className="detail-actions-line no-print">

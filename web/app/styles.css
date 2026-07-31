@@ -337,6 +337,34 @@ button:disabled {
   margin-bottom: 16px;
 }
 
+.auto-sync-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.auto-sync-toggle.active {
+  color: var(--primary-dark);
+  border-color: var(--primary);
+  background: #eef8f3;
+}
+
+.auto-sync-toggle input {
+  margin: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
 .detail-actions-line .btn:not(.secondary) {
   margin-left: auto;
 }
