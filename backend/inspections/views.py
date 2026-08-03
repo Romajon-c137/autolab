@@ -271,7 +271,7 @@ def _build_openai_vin_payload(model, image_inputs, max_output_tokens):
             },
         },
         "reasoning": {
-            "effort": "minimal",
+            "effort": "low",
         },
         "max_output_tokens": max_output_tokens,
     }
