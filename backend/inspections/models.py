@@ -60,6 +60,21 @@ class UserProfile(models.Model):
         return self.user.get_username()
 
 
+class OpenAIApiKey(models.Model):
+    title = models.CharField("Название", max_length=120, default="Основной ключ")
+    api_key = models.CharField("API key", max_length=255)
+    model = models.CharField("Модель", max_length=80, default="gpt-5.6-terra")
+    is_active = models.BooleanField("Активен", default=True)
+    updated_at = models.DateTimeField("Дата обновления", auto_now=True)
+
+    class Meta:
+        verbose_name = "OpenAI API key"
+        verbose_name_plural = "OpenAI API keys"
+
+    def __str__(self):
+        return self.title
+
+
 class VehicleInspection(models.Model):
     OPERATION_TECH_INSPECTION = "tech_inspection"
     OPERATION_SBGTS = "sbgts"

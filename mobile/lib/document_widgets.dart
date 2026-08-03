@@ -95,5 +95,3 @@ class _DocumentHtmlPanel extends StatelessWidget {
     );
   }
 }
-
-

@@ -7,7 +7,7 @@ Future<_SentInspection> _sendInspectionDraft({
   required String? signatureSvg,
   required String documentStateJson,
 }) async {
-  final documentPdfBytes = draft.operationCategory.hasDocument
+  final documentPdfBytes = draft.operationCategory.hasDocument && !kIsWeb
       ? await _createInspectionPdf(
           draft: draft,
           expertName: expertName,
@@ -63,15 +63,15 @@ Future<String> _buildInspectionDocumentHtml({
   final source = await rootBundle.loadString(
     'assets/${_documentAssetName(draft)}',
   );
-    final params = Uri(
-      queryParameters: {
-        'brand': draft.brand,
-        'plate_number': draft.plateNumber,
-        'country': draft.country,
-        'vehicle_category': draft.vehicleCategory.apiValue,
-        'vin': draft.vin,
-        if (draft.mileage != null) 'mileage': draft.mileage.toString(),
-        'expert_name': expertName,
+  final params = Uri(
+    queryParameters: {
+      'brand': draft.brand,
+      'plate_number': draft.plateNumber,
+      'country': draft.country,
+      'vehicle_category': draft.vehicleCategory.apiValue,
+      'vin': draft.vin,
+      if (draft.mileage != null) 'mileage': draft.mileage.toString(),
+      'expert_name': expertName,
       // ignore: use_null_aware_elements
       if (signatureSvg case final svg?) 'signature': svg,
       if (documentStateJson.isNotEmpty) 'state': documentStateJson,

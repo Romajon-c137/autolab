@@ -17,6 +17,7 @@ class _InspectionFormPage extends StatefulWidget {
 
 class _InspectionFormPageState extends State<_InspectionFormPage> {
   final _brandController = TextEditingController();
+  final _brandFocusNode = FocusNode();
   final _plateNumberController = TextEditingController();
   final _countryController = TextEditingController();
   final _vinController = TextEditingController();
@@ -52,12 +53,13 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   }
 
   List<_PhotoKind> get _visiblePhotoKinds {
-    if (_isConversion) {
-      return _PhotoKind.values
-          .where((kind) => kind != _PhotoKind.mileage)
-          .toList();
-    }
-    return _PhotoKind.values;
+    final hidden = <_PhotoKind>{
+      if (_operationCategory == _OperationCategory.sbgts)
+        _PhotoKind.application,
+      if (_isConversion) _PhotoKind.mileage,
+    };
+
+    return _PhotoKind.values.where((kind) => !hidden.contains(kind)).toList();
   }
 
   @override
@@ -95,6 +97,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     _autoSaveTimer?.cancel();
     _autoSaveDraft();
     _brandController.dispose();
+    _brandFocusNode.dispose();
     _plateNumberController.dispose();
     _countryController.dispose();
     _vinController.dispose();
@@ -122,6 +125,149 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     if (!_availableVehicleCategories.contains(_vehicleCategory)) {
       _vehicleCategory = _availableVehicleCategories.first;
     }
+  }
+
+  String? _activeBrandInText(String text) {
+    final lower = text.trimLeft().toLowerCase();
+    for (final brand in _catalogBrands()) {
+      final brandLower = brand.toLowerCase();
+      if (lower == brandLower || lower.startsWith('$brandLower ')) {
+        return brand;
+      }
+    }
+    return null;
+  }
+
+  bool _subsequenceMatch(String value, String query) {
+    final chars = query.characters;
+    var index = 0;
+    for (final char in chars) {
+      var found = false;
+      while (index < value.length) {
+        if (value[index].toLowerCase() == char.toLowerCase()) {
+          found = true;
+          index++;
+          break;
+        }
+        index++;
+      }
+      if (!found) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Iterable<String> _filterSuggestions(List<String> source, String query) {
+    final lower = query.toLowerCase();
+    final prefix = source.where((s) => s.toLowerCase().startsWith(lower));
+    final contains = source.where(
+      (s) =>
+          !s.toLowerCase().startsWith(lower) && s.toLowerCase().contains(lower),
+    );
+    final subsequence = source.where(
+      (s) =>
+          !s.toLowerCase().startsWith(lower) &&
+          !s.toLowerCase().contains(lower) &&
+          _subsequenceMatch(s.toLowerCase(), lower),
+    );
+    return [...prefix, ...contains, ...subsequence];
+  }
+
+  Iterable<String> _brandSuggestions(String text) {
+    final trimmed = text.trimLeft();
+    if (trimmed.isEmpty) {
+      return _catalogBrands();
+    }
+
+    final activeBrand = _activeBrandInText(trimmed);
+    if (activeBrand != null) {
+      final rest = trimmed.substring(activeBrand.length).trimLeft();
+      final models = _catalogModels(activeBrand);
+      if (rest.isEmpty) {
+        return models.map((model) => '$activeBrand $model');
+      }
+      final matches = _filterSuggestions(models, rest);
+      if (matches.isNotEmpty) {
+        return matches.map((model) => '$activeBrand $model');
+      }
+    }
+
+    final matches = _filterSuggestions(_catalogBrands(), trimmed);
+    if (matches.isNotEmpty) {
+      return matches;
+    }
+    return const Iterable<String>.empty();
+  }
+
+  void _onBrandSelected(String option) {
+    final activeBrand = _activeBrandInText(_brandController.text);
+    final isModel =
+        activeBrand != null &&
+        _catalogModels(
+          activeBrand,
+        ).any((model) => model.toLowerCase() == option.toLowerCase());
+    final value = isModel ? '$activeBrand $option' : option;
+    _brandController.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: value.length),
+    );
+    _scheduleAutoSave();
+  }
+
+  Widget _buildBrandField({required bool compact}) {
+    return RawAutocomplete<String>(
+      textEditingController: _brandController,
+      focusNode: _brandFocusNode,
+      optionsBuilder: (textEditingValue) {
+        return _brandSuggestions(textEditingValue.text);
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        if (options.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            clipBehavior: Clip.antiAlias,
+            color: Theme.of(context).colorScheme.surface,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 240),
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: options.length,
+                itemBuilder: (context, index) {
+                  final option = options.elementAt(index);
+                  return ListTile(
+                    dense: true,
+                    visualDensity: VisualDensity.compact,
+                    title: Text(option),
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+      onSelected: _onBrandSelected,
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        return TextField(
+          controller: controller,
+          focusNode: focusNode,
+          textInputAction: TextInputAction.next,
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            isDense: compact,
+            labelText: 'Марка авто',
+            hintText: 'Toyota Corolla',
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _autoSaveDraft() async {
@@ -157,9 +303,51 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
         _statusIsError = false;
       });
       await _autoSaveDraft();
+      if (kind == _PhotoKind.vin) {
+        await _recognizeVinFromPhoto(savedPath);
+      }
     } catch (error) {
       setState(() {
         _status = _humanError(error);
+        _statusIsError = true;
+      });
+    }
+  }
+
+  Future<void> _recognizeVinFromPhoto(String path) async {
+    if (widget.storage.sessionKey == null ||
+        widget.storage.sessionKey!.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _status = 'Распознаю VIN...';
+      _statusIsError = false;
+    });
+
+    try {
+      final vin = await _ApiClient(
+        serverUrl: widget.storage.serverUrl,
+        sessionKey: widget.storage.sessionKey,
+      ).recognizeVin(path);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _vinController.text = vin;
+        _status = 'VIN распознан: $vin';
+        _statusIsError = false;
+      });
+      await _autoSaveDraft();
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _status = 'VIN не распознан: ${_humanError(error)}';
         _statusIsError = true;
       });
     }
@@ -259,7 +447,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   }
 
   Future<void> _continueToDocument() async {
-    final draft = _buildDraft(requireBrand: true);
+    final draft = _buildDraft(requireBrand: true, requireVin: true);
     if (draft == null) {
       return;
     }
@@ -330,7 +518,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   }
 
   Future<void> _sendInspection() async {
-    final draft = _buildDraft(requireBrand: true);
+    final draft = _buildDraft(requireBrand: true, requireVin: true);
     if (draft == null) {
       return;
     }
@@ -413,6 +601,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
 
   _InspectionDraft? _buildDraft({
     bool requireBrand = false,
+    bool requireVin = false,
     bool requireAllPhotos = false,
     bool showErrors = true,
   }) {
@@ -434,6 +623,16 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       if (showErrors) {
         setState(() {
           _status = 'Заполните марку авто.';
+          _statusIsError = true;
+        });
+      }
+      return null;
+    }
+
+    if (requireVin && vin.isEmpty) {
+      if (showErrors) {
+        setState(() {
+          _status = 'Заполните VIN номер.';
           _statusIsError = true;
         });
       }
@@ -477,27 +676,27 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-              title: Text(_operationCategory.label),
-              bottom: _isEditingDraft
-                  ? PreferredSize(
-                      preferredSize: const Size.fromHeight(24),
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text(
-                          'Черновик',
-                          style: Theme.of(context).textTheme.labelLarge,
-                        ),
-                      ),
-                    )
-                  : null,
-              actions: [
-                TextButton.icon(
-                  onPressed: _goHome,
-                  icon: const Icon(Icons.home),
-                  label: const Text('Домой'),
+        title: Text(_operationCategory.label),
+        bottom: _isEditingDraft
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(24),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Черновик',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
                 ),
-              ],
-            ),
+              )
+            : null,
+        actions: [
+          TextButton.icon(
+            onPressed: _goHome,
+            icon: const Icon(Icons.home),
+            label: const Text('Домой'),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -667,9 +866,11 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
                 }
                 setState(() => _documentScrollDown = !_documentScrollDown);
               },
-              child: Icon(_documentScrollDown
-                  ? Icons.keyboard_double_arrow_down
-                  : Icons.keyboard_double_arrow_up),
+              child: Icon(
+                _documentScrollDown
+                    ? Icons.keyboard_double_arrow_down
+                    : Icons.keyboard_double_arrow_up,
+              ),
             ),
           ),
       ],
@@ -701,9 +902,11 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
                 }
                 setState(() => _documentScrollDown = !_documentScrollDown);
               },
-              child: Icon(_documentScrollDown
-                  ? Icons.keyboard_double_arrow_down
-                  : Icons.keyboard_double_arrow_up),
+              child: Icon(
+                _documentScrollDown
+                    ? Icons.keyboard_double_arrow_down
+                    : Icons.keyboard_double_arrow_up,
+              ),
             ),
           ),
       ],
@@ -767,16 +970,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
             ),
             SizedBox(height: gap),
           ],
-          TextField(
-            controller: _brandController,
-            textInputAction: TextInputAction.next,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              isDense: compact,
-              labelText: 'Марка авто',
-              hintText: 'Toyota',
-            ),
-          ),
+          _buildBrandField(compact: compact),
           SizedBox(height: gap),
           TextField(
             controller: _plateNumberController,
@@ -787,6 +981,18 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
               isDense: compact,
               labelText: 'Гос номер',
               hintText: '001ABC',
+            ),
+          ),
+          SizedBox(height: gap),
+          TextField(
+            controller: _vinController,
+            textInputAction: TextInputAction.next,
+            textCapitalization: TextCapitalization.characters,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              isDense: compact,
+              labelText: 'VIN номер *',
+              hintText: 'Введите VIN вручную',
             ),
           ),
           SizedBox(height: gap),
@@ -837,16 +1043,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
           ),
           SizedBox(height: gap),
         ],
-        TextField(
-          controller: _brandController,
-          textInputAction: TextInputAction.done,
-          decoration: InputDecoration(
-            border: const OutlineInputBorder(),
-            isDense: compact,
-            labelText: 'Марка авто',
-            hintText: 'Toyota',
-          ),
-        ),
+        _buildBrandField(compact: compact),
         SizedBox(height: gap),
         TextField(
           controller: _countryController,
@@ -865,7 +1062,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
           decoration: InputDecoration(
             border: const OutlineInputBorder(),
             isDense: compact,
-            labelText: 'VIN номер',
+            labelText: 'VIN номер *',
             hintText: 'Введите VIN вручную',
           ),
         ),

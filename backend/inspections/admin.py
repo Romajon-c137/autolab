@@ -10,6 +10,7 @@ from django.utils.html import format_html
 from .models import (
     Branch,
     DailyInspectionReport,
+    OpenAIApiKey,
     UserProfile,
     VehicleInspection,
     VehicleInspectionExtraPhoto,
@@ -72,6 +73,15 @@ class BranchAdmin(admin.ModelAdmin):
     list_display = ("id", "name", "is_active", "created_at")
     list_filter = ("is_active",)
     search_fields = ("name",)
+
+
+@admin.register(OpenAIApiKey)
+class OpenAIApiKeyAdmin(admin.ModelAdmin):
+    list_display = ("title", "model", "is_active", "updated_at")
+    list_filter = ("is_active", "model")
+    search_fields = ("title", "model")
+    fields = ("title", "api_key", "model", "is_active", "updated_at")
+    readonly_fields = ("updated_at",)
 
 
 class VehicleInspectionExtraPhotoInline(admin.TabularInline):

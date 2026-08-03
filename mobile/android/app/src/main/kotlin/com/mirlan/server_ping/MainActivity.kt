@@ -167,20 +167,32 @@ class MainActivity : FlutterActivity() {
                         page.style.margin = '0';
                         page.style.boxShadow = 'none';
                         page.style.width = '210mm';
-                        page.style.height = '297mm';
+                        page.style.height = 'auto';
                         page.style.minHeight = '297mm';
+                        page.style.overflow = 'visible';
                       }
-                      'ok';
+                      return String(Math.max(
+                        page ? page.scrollHeight : 0,
+                        page ? page.offsetHeight : 0,
+                        document.documentElement.scrollHeight,
+                        document.body.scrollHeight
+                      ));
                     })();
                 """.trimIndent()
 
-                webView.evaluateJavascript(script) {
+                webView.evaluateJavascript(script) { rawPageHeight ->
                     webView.postDelayed({
+                        val contentHeight = rawPageHeight
+                            ?.trim('"')
+                            ?.toIntOrNull()
+                            ?.coerceAtLeast(sourcePageHeight)
+                            ?: sourcePageHeight
+
                         webView.measure(
                             View.MeasureSpec.makeMeasureSpec(sourceWidth, View.MeasureSpec.EXACTLY),
-                            View.MeasureSpec.makeMeasureSpec(sourcePageHeight, View.MeasureSpec.EXACTLY)
+                            View.MeasureSpec.makeMeasureSpec(contentHeight, View.MeasureSpec.EXACTLY)
                         )
-                        webView.layout(0, 0, sourceWidth, sourcePageHeight)
+                        webView.layout(0, 0, sourceWidth, contentHeight)
 
                         val previousScrollX = webView.scrollX
                         val previousScrollY = webView.scrollY
@@ -190,7 +202,7 @@ class MainActivity : FlutterActivity() {
                         val page = document.startPage(pageInfo)
                         page.canvas.scale(
                             pdfWidth.toFloat() / sourceWidth.toFloat(),
-                            pdfHeight.toFloat() / sourcePageHeight.toFloat()
+                            pdfHeight.toFloat() / contentHeight.toFloat()
                         )
                         webView.draw(page.canvas)
                         document.finishPage(page)

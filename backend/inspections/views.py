@@ -1,7 +1,10 @@
 from datetime import datetime, timedelta
+import base64
+from io import BytesIO
 import html
 import json
 import os
+import re
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import get_user_model
@@ -11,11 +14,13 @@ from django.http import JsonResponse
 from django.utils.dateparse import parse_datetime
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 import requests
 
 from .models import (
     Branch,
     DailyInspectionReport,
+    OpenAIApiKey,
     UserProfile,
     VehicleInspection,
     VehicleInspectionExtraPhoto,
@@ -31,6 +36,8 @@ REQUIRED_PHOTO_FIELDS = (
     "vin_photo",
 )
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif"}
+VIN_PATTERN = re.compile(r"^[A-HJ-NPR-Z0-9]{17}$")
+VIN_CANDIDATE_PATTERN = re.compile(r"[A-HJ-NPR-Z0-9]{17}")
 
 
 def _json_body(request):
@@ -209,6 +216,55 @@ def _category_counts_from_rows(rows):
     return counts
 
 
+def _normalize_vin_text(value):
+    return re.sub(r"[^A-Z0-9]", "", value.upper())
+
+
+def _extract_vin(value):
+    normalized = _normalize_vin_text(value)
+    if VIN_PATTERN.fullmatch(normalized):
+        return normalized
+
+    for candidate in VIN_CANDIDATE_PATTERN.findall(normalized):
+        if VIN_PATTERN.fullmatch(candidate):
+            return candidate
+
+    return ""
+
+
+def _image_data_url(image_bytes, content_type):
+    image_base64 = base64.b64encode(image_bytes).decode("ascii")
+    return f"data:{content_type};base64,{image_base64}"
+
+
+def _enhance_vin_image(image_bytes):
+    try:
+        image = Image.open(BytesIO(image_bytes))
+        image = ImageOps.exif_transpose(image)
+        image = image.convert("L")
+        image = ImageOps.autocontrast(image, cutoff=1)
+
+        width, height = image.size
+        longest_side = max(width, height)
+        if longest_side < 1800:
+            scale = min(1800 / longest_side, 3)
+            image = image.resize(
+                (int(width * scale), int(height * scale)),
+                Image.Resampling.LANCZOS,
+            )
+
+        image = ImageEnhance.Contrast(image).enhance(1.85)
+        image = ImageEnhance.Sharpness(image).enhance(2.2)
+        image = image.filter(ImageFilter.UnsharpMask(radius=1.2, percent=170, threshold=3))
+        image = image.convert("RGB")
+
+        output = BytesIO()
+        image.save(output, format="JPEG", quality=94, optimize=True)
+        return output.getvalue()
+    except Exception:
+        return None
+
+
 def _notify_telegram_inspection_created(request, inspection):
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
@@ -364,6 +420,130 @@ def inspections_collection(request):
         "ok": False,
         "error": "Only GET or POST is allowed",
     }, status=405)
+
+
+@csrf_exempt
+def recognize_vin_view(request):
+    auth_error, _user = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    if request.method != "POST":
+        return JsonResponse({
+            "ok": False,
+            "error": "Only POST is allowed",
+        }, status=405)
+
+    uploaded_file = request.FILES.get("vin_photo")
+    if uploaded_file is None:
+        return JsonResponse({
+            "ok": False,
+            "error": "Field 'vin_photo' is required",
+        }, status=400)
+
+    if not _is_image_file(uploaded_file):
+        return JsonResponse({
+            "ok": False,
+            "error": "Uploaded file must be an image",
+            "content_type": uploaded_file.content_type,
+            "filename": uploaded_file.name,
+        }, status=400)
+
+    config = OpenAIApiKey.objects.filter(is_active=True).order_by("-updated_at").first()
+    if config is None or not config.api_key.strip():
+        return JsonResponse({
+            "ok": False,
+            "error": "OpenAI API key is not configured",
+        }, status=500)
+
+    original_image_bytes = uploaded_file.read()
+    enhanced_image_bytes = _enhance_vin_image(original_image_bytes)
+    content_type = uploaded_file.content_type or "image/jpeg"
+    model = config.model.strip() or "gpt-5.6-terra"
+    image_inputs = [
+        {
+            "type": "input_image",
+            "image_url": _image_data_url(original_image_bytes, content_type),
+        },
+    ]
+    if enhanced_image_bytes:
+        image_inputs.append({
+            "type": "input_image",
+            "image_url": _image_data_url(enhanced_image_bytes, "image/jpeg"),
+        })
+
+    try:
+        response = requests.post(
+            "https://api.openai.com/v1/responses",
+            headers={
+                "Authorization": f"Bearer {config.api_key.strip()}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": model,
+                "input": [{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": (
+                                "You are reading a vehicle VIN from photos. "
+                                "Use both images: the original photo and an enhanced high-contrast copy. "
+                                "Carefully handle blur, glare, perspective distortion, dirty metal, and low contrast. "
+                                "Return only one VIN candidate, exactly 17 characters. "
+                                "Allowed characters are A-Z and 0-9, but VIN never contains I, O, or Q. "
+                                "Do not explain. If unsure, return the most likely valid 17-character VIN only."
+                            ),
+                        },
+                        *image_inputs,
+                    ],
+                }],
+                "temperature": 0,
+                "max_output_tokens": 80,
+            },
+            timeout=45,
+        )
+    except requests.RequestException as exc:
+        return JsonResponse({
+            "ok": False,
+            "error": f"OpenAI request failed: {exc}",
+        }, status=502)
+
+    try:
+        data = response.json()
+    except ValueError:
+        data = {}
+
+    if response.status_code < 200 or response.status_code >= 300:
+        message = data.get("error", {}).get("message") if isinstance(data.get("error"), dict) else ""
+        return JsonResponse({
+            "ok": False,
+            "error": message or response.text or "OpenAI returned an error",
+        }, status=502)
+
+    raw_text = data.get("output_text", "")
+    if not raw_text:
+        chunks = []
+        for item in data.get("output", []):
+            for content in item.get("content", []):
+                text = content.get("text")
+                if text:
+                    chunks.append(text)
+        raw_text = " ".join(chunks)
+
+    vin = _extract_vin(raw_text)
+    if not vin:
+        return JsonResponse({
+            "ok": False,
+            "error": "VIN was not recognized",
+            "raw_text": raw_text,
+        }, status=422)
+
+    return JsonResponse({
+        "ok": True,
+        "vin": vin,
+        "raw_text": raw_text,
+    })
 
 
 def inspections_list(request):

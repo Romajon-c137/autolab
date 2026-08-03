@@ -1,10 +1,15 @@
 part of 'main.dart';
 
 class _HomeSummary extends StatelessWidget {
-  const _HomeSummary({required this.userLabel, required this.version});
+  const _HomeSummary({
+    required this.userLabel,
+    required this.version,
+    required this.buildStamp,
+  });
 
   final String userLabel;
   final String version;
+  final String buildStamp;
 
   @override
   Widget build(BuildContext context) {
@@ -23,11 +28,25 @@ class _HomeSummary extends StatelessWidget {
             Icon(Icons.account_circle, color: colorScheme.primary),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                userLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    userLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Сборка: $buildStamp',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 8),
@@ -193,31 +212,6 @@ class _PhotoTile extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _DocumentJumpButton extends StatelessWidget {
-  const _DocumentJumpButton({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 42,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon),
-        label: Text(label),
       ),
     );
   }

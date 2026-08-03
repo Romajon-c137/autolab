@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -14,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'document_html_view.dart';
 
 part 'models.dart';
+part 'vehicle_catalog.dart';
 part 'inspection_submitter.dart';
 part 'api_client.dart';
 part 'app_storage.dart';
@@ -30,7 +32,8 @@ const _defaultServerUrl = String.fromEnvironment(
   'SERVER_URL',
   defaultValue: 'https://autolab.glasscenter.kg',
 );
-const _appVersion = '1.0.1';
+const _appVersion = '1.0.7';
+const _appBuildStamp = '2026-08-03 16:13 +06';
 const _appTitle = 'Авто лаборатория v$_appVersion';
 const _pdfChannel = MethodChannel('autolab/pdf');
 void main() {
@@ -330,6 +333,7 @@ class _HomePageState extends State<_HomePage> {
                     _HomeSummary(
                       userLabel: widget.storage.userLabel ?? '-',
                       version: _appVersion,
+                      buildStamp: _appBuildStamp,
                     ),
                     const SizedBox(height: 16),
                     _MenuButton(

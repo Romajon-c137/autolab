@@ -176,6 +176,32 @@ class _ApiClient {
     );
   }
 
+  Future<String> recognizeVin(String path) async {
+    final request = http.MultipartRequest('POST', _uri('/api/recognize-vin/'));
+    request.headers.addAll(_authHeaders());
+    request.files.add(await _multipartPhoto('vin_photo', path));
+
+    final streamedResponse = await request.send().timeout(
+      const Duration(seconds: 60),
+    );
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      if (response.statusCode == 401) {
+        throw _AuthException(response.body);
+      }
+      throw Exception('HTTP ${response.statusCode}: ${response.body}');
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final vin = '${data['vin'] ?? ''}'.trim().toUpperCase();
+    if (vin.isEmpty) {
+      throw Exception('Сервер не вернул VIN.');
+    }
+
+    return vin;
+  }
+
   Future<http.MultipartFile> _multipartPhoto(String field, String path) async {
     final mimeType = lookupMimeType(path) ?? 'image/jpeg';
     final mediaType = MediaType.parse(mimeType);

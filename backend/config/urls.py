@@ -32,6 +32,7 @@ from inspections.views import (
     login_view,
     logout_view,
     me_view,
+    recognize_vin_view,
     reports_summary,
 )
 
@@ -92,6 +93,7 @@ urlpatterns = [
     path('api/auth/logout/', logout_view, name='api-logout'),
     path('api/auth/me/', me_view, name='api-me'),
     path('api/branches/', branches_view, name='branches'),
+    path('api/recognize-vin/', recognize_vin_view, name='recognize-vin'),
     path('api/inspections/', inspections_collection, name='inspections-collection'),
     path('api/inspections/<int:inspection_id>/', inspection_detail, name='inspection-detail'),
     path('api/reports/summary/', reports_summary, name='reports-summary'),
