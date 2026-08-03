@@ -498,7 +498,6 @@ def recognize_vin_view(request):
                         *image_inputs,
                     ],
                 }],
-                "temperature": 0,
                 "max_output_tokens": 80,
             },
             timeout=45,
