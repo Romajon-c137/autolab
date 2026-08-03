@@ -22,6 +22,7 @@ from .models import (
 )
 
 REQUIRED_PHOTO_FIELDS = (
+    "application_photo",
     "front_photo",
     "rear_photo",
     "left_photo",
@@ -149,6 +150,7 @@ def _serialize_inspection(request, inspection):
             "login": inspection.created_by.get_username(),
         },
         "photos": {
+            "application_photo": _file_url(request, inspection.application_photo),
             "front_photo": _file_url(request, inspection.front_photo),
             "rear_photo": _file_url(request, inspection.rear_photo),
             "left_photo": _file_url(request, inspection.left_photo),
@@ -166,6 +168,7 @@ def _serialize_inspection(request, inspection):
         ],
         "document_pdf": _file_url(request, inspection.document_pdf),
         "photo_taken_at": {
+            "application_photo": _serialize_datetime(inspection.application_photo_taken_at),
             "front_photo": _serialize_datetime(inspection.front_photo_taken_at),
             "rear_photo": _serialize_datetime(inspection.rear_photo_taken_at),
             "left_photo": _serialize_datetime(inspection.left_photo_taken_at),
@@ -368,12 +371,18 @@ def inspections_list(request):
     if auth_error is not None:
         return auth_error
 
-    start, end, error = _date_range(request)
-    if error is not None:
-        return error
-
     query = request.GET.get("q", "").strip()
-    queryset = _allowed_inspections(user).filter(created_at__gte=start, created_at__lt=end)
+    vin_query = request.GET.get("vin", "").strip().upper()
+    queryset = _allowed_inspections(user)
+
+    if vin_query:
+        queryset = queryset.filter(vin__icontains=vin_query)
+    else:
+        start, end, error = _date_range(request)
+        if error is not None:
+            return error
+
+        queryset = queryset.filter(created_at__gte=start, created_at__lt=end)
 
     if query:
         queryset = queryset.filter(
@@ -620,12 +629,16 @@ def create_inspection(request):
     plate_number = request.POST.get("plate_number", "").strip().upper()
     brand = request.POST.get("brand", "").strip()
     country = request.POST.get("country", "").strip()
+    vin = request.POST.get("vin", "").strip().upper()
     vehicle_category = request.POST.get("vehicle_category", VehicleInspection.CATEGORY_M1).strip().upper()
     profile = getattr(user, "profile", None)
     branch = None if profile is None else profile.branch
 
     if not brand:
         return JsonResponse({"ok": False, "error": "Field 'brand' is required"}, status=400)
+
+    if not vin:
+        return JsonResponse({"ok": False, "error": "Field 'vin' is required"}, status=400)
 
     if vehicle_category not in dict(VehicleInspection.CATEGORY_CHOICES):
         return JsonResponse({
@@ -706,7 +719,8 @@ def create_inspection(request):
         vehicle_category=vehicle_category,
         branch=branch,
         created_by=user,
-        vin=request.POST.get("vin", "").strip().upper(),
+        vin=vin,
+        application_photo=request.FILES.get("application_photo"),
         front_photo=request.FILES.get("front_photo"),
         rear_photo=request.FILES.get("rear_photo"),
         left_photo=request.FILES.get("left_photo"),
@@ -714,6 +728,7 @@ def create_inspection(request):
         mileage_photo=request.FILES.get("mileage_photo"),
         vin_photo=request.FILES.get("vin_photo"),
         document_pdf=document_pdf,
+        application_photo_taken_at=photo_taken_at["application_photo"],
         front_photo_taken_at=photo_taken_at["front_photo"],
         rear_photo_taken_at=photo_taken_at["rear_photo"],
         left_photo_taken_at=photo_taken_at["left_photo"],

@@ -324,10 +324,21 @@ button:disabled {
 
 .filters {
   display: grid;
-  grid-template-columns: 160px 160px auto;
+  grid-template-columns: 160px 160px auto minmax(280px, 440px);
   gap: 10px;
   justify-content: end;
   margin-bottom: 16px;
+}
+
+.vin-global-search {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto auto;
+  gap: 8px;
+  min-width: 0;
+}
+
+.vin-global-search input {
+  min-width: 0;
 }
 
 .detail-actions-line {
@@ -1004,7 +1015,7 @@ button:disabled {
     position: sticky;
     top: 56px;
     z-index: 30;
-    grid-template-columns: 132px 132px 86px;
+    grid-template-columns: 132px 132px 86px 360px;
     justify-content: start;
     gap: 6px;
     margin: 0 -12px 12px;
@@ -1021,6 +1032,11 @@ button:disabled {
     min-height: 38px;
     padding: 8px 10px;
     font-size: 13px;
+  }
+
+  .vin-global-search {
+    grid-template-columns: 170px 70px 70px;
+    gap: 6px;
   }
 
   .detail-actions-line {

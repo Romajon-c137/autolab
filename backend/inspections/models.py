@@ -104,7 +104,7 @@ class VehicleInspection(models.Model):
         default=CATEGORY_M1,
     )
     mileage = models.PositiveIntegerField("Пробег", null=True, blank=True)
-    vin = models.CharField("VIN номер", max_length=17, blank=True)
+    vin = models.CharField("VIN номер", max_length=17)
     branch = models.ForeignKey(
         Branch,
         on_delete=models.PROTECT,
@@ -120,6 +120,12 @@ class VehicleInspection(models.Model):
         null=True,
         blank=True,
         verbose_name="Создал",
+    )
+    application_photo = models.ImageField(
+        "Фото заявки",
+        upload_to="inspections/application/",
+        null=True,
+        blank=True,
     )
     front_photo = models.ImageField(
         "Фото спереди",
@@ -169,6 +175,7 @@ class VehicleInspection(models.Model):
     right_photo_taken_at = models.DateTimeField("Дата фото справа", null=True, blank=True)
     mileage_photo_taken_at = models.DateTimeField("Дата фото пробега", null=True, blank=True)
     vin_photo_taken_at = models.DateTimeField("Дата фото VIN", null=True, blank=True)
+    application_photo_taken_at = models.DateTimeField("Дата фото заявки", null=True, blank=True)
     created_at = models.DateTimeField("Дата создания", auto_now_add=True)
 
     class Meta:

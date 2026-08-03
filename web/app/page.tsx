@@ -71,6 +71,7 @@ type DailyReport = {
 };
 
 const photoLabels: Record<string, string> = {
+  application_photo: "Фото заявки",
   front_photo: "Спереди",
   rear_photo: "Сзади",
   left_photo: "Слева",
@@ -991,6 +992,10 @@ function ReportsPage({
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [selected, setSelected] = useState<Inspection | null>(null);
   const [typeFilter, setTypeFilter] = useState("all");
+  const [vinQuery, setVinQuery] = useState("");
+  const [vinResults, setVinResults] = useState<Inspection[]>([]);
+  const [vinSearchActive, setVinSearchActive] = useState(false);
+  const [vinSearching, setVinSearching] = useState(false);
   const [error, setError] = useState("");
 
   async function load() {
@@ -1008,6 +1013,38 @@ function ReportsPage({
     }
   }
 
+  async function searchByVin() {
+    const value = vinQuery.trim().toUpperCase();
+    if (!value) {
+      setVinSearchActive(false);
+      setVinResults([]);
+      return;
+    }
+
+    setError("");
+    setVinSearching(true);
+    try {
+      const params = new URLSearchParams({ vin: value });
+      const data = await apiFetch<{ inspections: Inspection[] }>(
+        serverUrl,
+        sessionKey,
+        `/api/inspections/?${params}`
+      );
+      setVinResults(data.inspections);
+      setVinSearchActive(true);
+    } catch (err) {
+      setError(humanError(err));
+    } finally {
+      setVinSearching(false);
+    }
+  }
+
+  function resetVinSearch() {
+    setVinQuery("");
+    setVinResults([]);
+    setVinSearchActive(false);
+  }
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1021,6 +1058,7 @@ function ReportsPage({
   const filteredInspections = typeFilter === "all"
     ? inspections
     : inspections.filter((item) => (item.operation_type ?? "") === typeFilter);
+  const visibleInspections = vinSearchActive ? vinResults : filteredInspections;
   const typeLabel = REPORT_TYPE_OPTIONS.find((option) => option.value === typeFilter)?.label ?? "Все";
 
   return (
@@ -1047,6 +1085,24 @@ function ReportsPage({
           <button className="btn" onClick={load}>
             Найти
           </button>
+          <div className="vin-global-search">
+            <input
+              value={vinQuery}
+              onChange={(e) => setVinQuery(e.target.value.toUpperCase())}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") searchByVin();
+              }}
+              placeholder="Поиск VIN по всей базе"
+            />
+            <button className="btn secondary" onClick={searchByVin} disabled={vinSearching}>
+              {vinSearching ? "Ищу..." : "VIN"}
+            </button>
+            {vinSearchActive && (
+              <button className="btn ghost" onClick={resetVinSearch}>
+                Сброс
+              </button>
+            )}
+          </div>
         </div>
       )}
       {error && <div className="error">{error}</div>}
@@ -1078,14 +1134,16 @@ function ReportsPage({
               </div>
             </div>
             <div className="primary-total report-filter-sum">
-              <span>Итого</span>
-              <strong>{filteredInspections.length}</strong>
-              <small>{typeLabel}</small>
+              <span>{vinSearchActive ? "Найдено по VIN" : "Итого"}</span>
+              <strong>{visibleInspections.length}</strong>
+              <small>{vinSearchActive ? "Вся база" : typeLabel}</small>
             </div>
           </div>
           <div className="inspection-list report-inspection-list">
-            {filteredInspections.length === 0 ? (
-              <div className="card empty">Осмотры за период не найдены</div>
+            {visibleInspections.length === 0 ? (
+              <div className="card empty">
+                {vinSearchActive ? "По VIN ничего не найдено" : "Осмотры за период не найдены"}
+              </div>
             ) : (
               <>
                 <div className="inspection-header" aria-hidden="true">
@@ -1096,7 +1154,7 @@ function ReportsPage({
                   <span>Оператор</span>
                   <span />
                 </div>
-                {filteredInspections.map((inspection) => (
+                {visibleInspections.map((inspection) => (
                   <article className="inspection-row" key={inspection.id}>
                     <div className="inspection-cell">
                       <span>Марка / модель</span>
