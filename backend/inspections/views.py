@@ -232,6 +232,26 @@ def _extract_vin(value):
     return ""
 
 
+def _collect_openai_text(value):
+    chunks = []
+
+    def walk(node):
+        if isinstance(node, dict):
+            for key, item in node.items():
+                if key in {"output_text", "text", "content"} and isinstance(item, str):
+                    chunks.append(item)
+                else:
+                    walk(item)
+            return
+
+        if isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(value)
+    return " ".join(chunk.strip() for chunk in chunks if chunk.strip())
+
+
 def _image_data_url(image_bytes, content_type):
     image_base64 = base64.b64encode(image_bytes).decode("ascii")
     return f"data:{content_type};base64,{image_base64}"
@@ -498,7 +518,7 @@ def recognize_vin_view(request):
                         *image_inputs,
                     ],
                 }],
-                "max_output_tokens": 80,
+                "max_output_tokens": 300,
             },
             timeout=45,
         )
@@ -520,22 +540,20 @@ def recognize_vin_view(request):
             "error": message or response.text or "OpenAI returned an error",
         }, status=502)
 
-    raw_text = data.get("output_text", "")
-    if not raw_text:
-        chunks = []
-        for item in data.get("output", []):
-            for content in item.get("content", []):
-                text = content.get("text")
-                if text:
-                    chunks.append(text)
-        raw_text = " ".join(chunks)
+    raw_text = _collect_openai_text(data)
 
     vin = _extract_vin(raw_text)
     if not vin:
+        output_types = [
+            item.get("type", "")
+            for item in data.get("output", [])
+            if isinstance(item, dict)
+        ]
         return JsonResponse({
             "ok": False,
             "error": "VIN was not recognized",
             "raw_text": raw_text,
+            "output_types": output_types,
         }, status=422)
 
     return JsonResponse({
