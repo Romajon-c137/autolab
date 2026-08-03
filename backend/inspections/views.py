@@ -232,6 +232,51 @@ def _extract_vin(value):
     return ""
 
 
+def _build_openai_vin_payload(model, image_inputs, max_output_tokens):
+    return {
+        "model": model,
+        "input": [{
+            "role": "user",
+            "content": [
+                {
+                    "type": "input_text",
+                    "text": (
+                        "Read the vehicle VIN from the image. "
+                        "Return only JSON with one field named vin. "
+                        "The vin value must be exactly 17 characters when readable. "
+                        "Allowed characters are A-Z and 0-9, but VIN never contains I, O, or Q. "
+                        "If multiple candidates are visible, choose the most likely valid VIN. "
+                        "If no VIN is readable, return an empty string in vin."
+                    ),
+                },
+                *image_inputs,
+            ],
+        }],
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "vin_recognition",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "vin": {
+                            "type": "string",
+                            "description": "A 17-character vehicle VIN, or an empty string when unreadable.",
+                        },
+                    },
+                    "required": ["vin"],
+                },
+            },
+        },
+        "reasoning": {
+            "effort": "minimal",
+        },
+        "max_output_tokens": max_output_tokens,
+    }
+
+
 def _collect_openai_text(value):
     chunks = []
 
@@ -499,27 +544,7 @@ def recognize_vin_view(request):
                 "Authorization": f"Bearer {config.api_key.strip()}",
                 "Content-Type": "application/json",
             },
-            json={
-                "model": model,
-                "input": [{
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": (
-                                "You are reading a vehicle VIN from photos. "
-                                "Use both images: the original photo and an enhanced high-contrast copy. "
-                                "Carefully handle blur, glare, perspective distortion, dirty metal, and low contrast. "
-                                "Return only one VIN candidate, exactly 17 characters. "
-                                "Allowed characters are A-Z and 0-9, but VIN never contains I, O, or Q. "
-                                "Do not explain. If unsure, return the most likely valid 17-character VIN only."
-                            ),
-                        },
-                        *image_inputs,
-                    ],
-                }],
-                "max_output_tokens": 300,
-            },
+            json=_build_openai_vin_payload(model, image_inputs, 2000),
             timeout=45,
         )
     except requests.RequestException as exc:
