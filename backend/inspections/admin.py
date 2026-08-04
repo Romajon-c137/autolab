@@ -115,7 +115,6 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
         "branch",
         "created_by",
         "created_at",
-        "application_preview",
         "mileage_preview",
         "vin_preview",
         "front_preview",
@@ -126,7 +125,6 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
     )
     readonly_fields = (
         "created_at",
-        "application_preview",
         "mileage_preview",
         "vin_preview",
         "front_preview",
@@ -165,7 +163,6 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
         }),
         ("Фотографии", {
             "fields": (
-                ("application_photo", "application_preview"),
                 ("mileage_photo", "mileage_preview"),
                 ("vin_photo", "vin_preview"),
                 ("front_photo", "front_preview"),
@@ -185,10 +182,6 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
     @admin.display(description="Пробег")
     def mileage_preview(self, obj):
         return self._image_preview(obj.mileage_photo)
-
-    @admin.display(description="Заявка")
-    def application_preview(self, obj):
-        return self._image_preview(obj.application_photo)
 
     @admin.display(description="VIN")
     def vin_preview(self, obj):

@@ -27,7 +27,6 @@ from .models import (
 )
 
 REQUIRED_PHOTO_FIELDS = (
-    "application_photo",
     "front_photo",
     "rear_photo",
     "left_photo",
@@ -157,7 +156,6 @@ def _serialize_inspection(request, inspection):
             "login": inspection.created_by.get_username(),
         },
         "photos": {
-            "application_photo": _file_url(request, inspection.application_photo),
             "front_photo": _file_url(request, inspection.front_photo),
             "rear_photo": _file_url(request, inspection.rear_photo),
             "left_photo": _file_url(request, inspection.left_photo),
@@ -175,7 +173,6 @@ def _serialize_inspection(request, inspection):
         ],
         "document_pdf": _file_url(request, inspection.document_pdf),
         "photo_taken_at": {
-            "application_photo": _serialize_datetime(inspection.application_photo_taken_at),
             "front_photo": _serialize_datetime(inspection.front_photo_taken_at),
             "rear_photo": _serialize_datetime(inspection.rear_photo_taken_at),
             "left_photo": _serialize_datetime(inspection.left_photo_taken_at),
@@ -942,7 +939,6 @@ def create_inspection(request):
         branch=branch,
         created_by=user,
         vin=vin,
-        application_photo=request.FILES.get("application_photo"),
         front_photo=request.FILES.get("front_photo"),
         rear_photo=request.FILES.get("rear_photo"),
         left_photo=request.FILES.get("left_photo"),
@@ -950,7 +946,6 @@ def create_inspection(request):
         mileage_photo=request.FILES.get("mileage_photo"),
         vin_photo=request.FILES.get("vin_photo"),
         document_pdf=document_pdf,
-        application_photo_taken_at=photo_taken_at["application_photo"],
         front_photo_taken_at=photo_taken_at["front_photo"],
         rear_photo_taken_at=photo_taken_at["rear_photo"],
         left_photo_taken_at=photo_taken_at["left_photo"],

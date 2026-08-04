@@ -71,7 +71,6 @@ type DailyReport = {
 };
 
 const photoLabels: Record<string, string> = {
-  application_photo: "Фото заявки",
   front_photo: "Спереди",
   rear_photo: "Сзади",
   left_photo: "Слева",

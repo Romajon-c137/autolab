@@ -1,7 +1,6 @@
 part of 'main.dart';
 
 enum _PhotoKind {
-  application('application_photo', 'Фото заявки', 'assets/vin.jpg'),
   front('front_photo', 'Спереди', 'assets/front.jpg'),
   right('right_photo', 'Справа', 'assets/right.jpg'),
   rear('rear_photo', 'Сзади', 'assets/back.jpg'),

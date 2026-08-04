@@ -54,8 +54,6 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
 
   List<_PhotoKind> get _visiblePhotoKinds {
     final hidden = <_PhotoKind>{
-      if (_operationCategory == _OperationCategory.sbgts)
-        _PhotoKind.application,
       if (_isConversion) _PhotoKind.mileage,
     };
 
