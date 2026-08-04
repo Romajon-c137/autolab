@@ -37,6 +37,7 @@ REQUIRED_PHOTO_FIELDS = (
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif"}
 VIN_PATTERN = re.compile(r"^[A-HJ-NPR-Z0-9]{17}$")
 VIN_CANDIDATE_PATTERN = re.compile(r"[A-HJ-NPR-Z0-9]{17}")
+MILEAGE_CANDIDATE_PATTERN = re.compile(r"\d{1,8}")
 
 
 def _json_body(request):
@@ -229,6 +230,14 @@ def _extract_vin(value):
     return ""
 
 
+def _extract_mileage(value):
+    candidates = MILEAGE_CANDIDATE_PATTERN.findall(value.replace(" ", ""))
+    if not candidates:
+        return ""
+
+    return max(candidates, key=len)
+
+
 def _build_openai_vin_payload(model, image_inputs, max_output_tokens):
     return {
         "model": model,
@@ -264,6 +273,50 @@ def _build_openai_vin_payload(model, image_inputs, max_output_tokens):
                         },
                     },
                     "required": ["vin"],
+                },
+            },
+        },
+        "reasoning": {
+            "effort": "low",
+        },
+        "max_output_tokens": max_output_tokens,
+    }
+
+
+def _build_openai_mileage_payload(model, image_inputs, max_output_tokens):
+    return {
+        "model": model,
+        "input": [{
+            "role": "user",
+            "content": [
+                {
+                    "type": "input_text",
+                    "text": (
+                        "Read the vehicle odometer mileage from the dashboard image. "
+                        "The mileage consists only of digits. "
+                        "Ignore labels, units, icons, decimals, trip counters, time, date, and warning text. "
+                        "Return only JSON with one field named mileage. "
+                        "If no mileage is readable, return an empty string in mileage."
+                    ),
+                },
+                *image_inputs,
+            ],
+        }],
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "mileage_recognition",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "mileage": {
+                            "type": "string",
+                            "description": "Dashboard odometer mileage digits, or an empty string when unreadable.",
+                        },
+                    },
+                    "required": ["mileage"],
                 },
             },
         },
@@ -581,6 +634,106 @@ def recognize_vin_view(request):
     return JsonResponse({
         "ok": True,
         "vin": vin,
+        "raw_text": raw_text,
+    })
+
+
+@csrf_exempt
+def recognize_mileage_view(request):
+    auth_error, _user = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    if request.method != "POST":
+        return JsonResponse({
+            "ok": False,
+            "error": "Only POST is allowed",
+        }, status=405)
+
+    uploaded_file = request.FILES.get("mileage_photo")
+    if uploaded_file is None:
+        return JsonResponse({
+            "ok": False,
+            "error": "Field 'mileage_photo' is required",
+        }, status=400)
+
+    if not _is_image_file(uploaded_file):
+        return JsonResponse({
+            "ok": False,
+            "error": "Uploaded file must be an image",
+            "content_type": uploaded_file.content_type,
+            "filename": uploaded_file.name,
+        }, status=400)
+
+    config = OpenAIApiKey.objects.filter(is_active=True).order_by("-updated_at").first()
+    if config is None or not config.api_key.strip():
+        return JsonResponse({
+            "ok": False,
+            "error": "OpenAI API key is not configured",
+        }, status=500)
+
+    original_image_bytes = uploaded_file.read()
+    enhanced_image_bytes = _enhance_vin_image(original_image_bytes)
+    content_type = uploaded_file.content_type or "image/jpeg"
+    model = config.model.strip() or "gpt-5.6-terra"
+    image_inputs = [
+        {
+            "type": "input_image",
+            "image_url": _image_data_url(original_image_bytes, content_type),
+        },
+    ]
+    if enhanced_image_bytes:
+        image_inputs.append({
+            "type": "input_image",
+            "image_url": _image_data_url(enhanced_image_bytes, "image/jpeg"),
+        })
+
+    try:
+        response = requests.post(
+            "https://api.openai.com/v1/responses",
+            headers={
+                "Authorization": f"Bearer {config.api_key.strip()}",
+                "Content-Type": "application/json",
+            },
+            json=_build_openai_mileage_payload(model, image_inputs, 1000),
+            timeout=45,
+        )
+    except requests.RequestException as exc:
+        return JsonResponse({
+            "ok": False,
+            "error": f"OpenAI request failed: {exc}",
+        }, status=502)
+
+    try:
+        data = response.json()
+    except ValueError:
+        data = {}
+
+    if response.status_code < 200 or response.status_code >= 300:
+        message = data.get("error", {}).get("message") if isinstance(data.get("error"), dict) else ""
+        return JsonResponse({
+            "ok": False,
+            "error": message or response.text or "OpenAI returned an error",
+        }, status=502)
+
+    raw_text = _collect_openai_text(data)
+    mileage = _extract_mileage(raw_text)
+    if not mileage:
+        output_types = [
+            item.get("type", "")
+            for item in data.get("output", [])
+            if isinstance(item, dict)
+        ]
+        return JsonResponse({
+            "ok": False,
+            "error": "Mileage was not recognized",
+            "raw_text": raw_text,
+            "output_types": output_types,
+        }, status=422)
+
+    return JsonResponse({
+        "ok": True,
+        "mileage": mileage,
         "raw_text": raw_text,
     })
 

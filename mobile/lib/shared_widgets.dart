@@ -138,12 +138,14 @@ class _PhotoTile extends StatelessWidget {
     required this.label,
     required this.asset,
     required this.path,
+    this.isLoading = false,
     required this.onTap,
   });
 
   final String label;
   final String asset;
   final String? path;
+  final bool isLoading;
   final VoidCallback? onTap;
 
   @override
@@ -151,7 +153,7 @@ class _PhotoTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return OutlinedButton(
-      onPressed: onTap,
+      onPressed: isLoading ? null : onTap,
       style: OutlinedButton.styleFrom(
         padding: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -210,6 +212,20 @@ class _PhotoTile extends StatelessWidget {
                 ),
               ),
             ),
+            if (isLoading)
+              ColoredBox(
+                color: Colors.black.withValues(alpha: 0.34),
+                child: const Center(
+                  child: SizedBox(
+                    width: 34,
+                    height: 34,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

@@ -15,10 +15,23 @@ class _InspectionFormPage extends StatefulWidget {
   State<_InspectionFormPage> createState() => _InspectionFormPageState();
 }
 
+class _UpperCaseTextFormatter extends TextInputFormatter {
+  const _UpperCaseTextFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return newValue.copyWith(text: newValue.text.toUpperCase());
+  }
+}
+
 class _InspectionFormPageState extends State<_InspectionFormPage> {
   final _brandController = TextEditingController();
   final _brandFocusNode = FocusNode();
   final _plateNumberController = TextEditingController();
+  final _plateNumberFocusNode = FocusNode();
   final _countryController = TextEditingController();
   final _vinController = TextEditingController();
   final _mileageController = TextEditingController();
@@ -34,6 +47,8 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   bool _isSaving = false;
   bool _showDocument = false;
   bool _documentSigned = false;
+  bool _isRecognizingVin = false;
+  bool _isRecognizingMileage = false;
   String _documentStateJson = '';
   String? _status;
   bool _statusIsError = false;
@@ -47,7 +62,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   bool get _isConversion => _operationCategory == _OperationCategory.conversion;
   List<_VehicleCategory> get _availableVehicleCategories {
     if (_operationCategory == _OperationCategory.techInspection) {
-      return const [_VehicleCategory.m1, _VehicleCategory.n2];
+      return const [_VehicleCategory.n2, _VehicleCategory.m1];
     }
     return _VehicleCategory.values;
   }
@@ -96,6 +111,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     _autoSaveDraft();
     _brandController.dispose();
     _brandFocusNode.dispose();
+    _plateNumberFocusNode.dispose();
     _plateNumberController.dispose();
     _countryController.dispose();
     _vinController.dispose();
@@ -123,6 +139,18 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     if (!_availableVehicleCategories.contains(_vehicleCategory)) {
       _vehicleCategory = _availableVehicleCategories.first;
     }
+  }
+
+  String _vehicleCategoryLabel(_VehicleCategory category) {
+    if (_operationCategory == _OperationCategory.techInspection) {
+      return switch (category) {
+        _VehicleCategory.n2 => 'Грузовой',
+        _VehicleCategory.m1 => 'Легковой',
+        _ => category.apiValue,
+      };
+    }
+
+    return category.apiValue;
   }
 
   String? _activeBrandInText(String text) {
@@ -211,6 +239,93 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       selection: TextSelection.collapsed(offset: value.length),
     );
     _scheduleAutoSave();
+  }
+
+  Iterable<String> _platePrefixSuggestions(String query) {
+    final normalized = query.trim().toUpperCase();
+    final prefixes = List.generate(
+      10,
+      (index) => '${(index + 1).toString().padLeft(2, '0')}KG',
+    );
+
+    if (normalized.isEmpty) {
+      return prefixes;
+    }
+
+    return prefixes.where(
+      (prefix) => prefix.startsWith(normalized) || normalized.startsWith(prefix),
+    );
+  }
+
+  void _onPlatePrefixSelected(String option) {
+    final current = _plateNumberController.text.trim().toUpperCase();
+    final withoutKnownPrefix = current.replaceFirst(
+      RegExp(r'^(0[1-9]|10)KG'),
+      '',
+    );
+    final value = '$option$withoutKnownPrefix';
+    _plateNumberController.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: value.length),
+    );
+    _scheduleAutoSave();
+  }
+
+  Widget _buildPlateNumberField({required bool compact}) {
+    return RawAutocomplete<String>(
+      textEditingController: _plateNumberController,
+      focusNode: _plateNumberFocusNode,
+      optionsBuilder: (textEditingValue) {
+        return _platePrefixSuggestions(textEditingValue.text);
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        if (options.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            clipBehavior: Clip.antiAlias,
+            color: Theme.of(context).colorScheme.surface,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 220),
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: options.length,
+                itemBuilder: (context, index) {
+                  final option = options.elementAt(index);
+                  return ListTile(
+                    dense: true,
+                    visualDensity: VisualDensity.compact,
+                    title: Text(option),
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+      onSelected: _onPlatePrefixSelected,
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        return TextField(
+          controller: controller,
+          focusNode: focusNode,
+          textInputAction: TextInputAction.next,
+          textCapitalization: TextCapitalization.characters,
+          inputFormatters: const [_UpperCaseTextFormatter()],
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            isDense: compact,
+            labelText: 'Гос номер',
+            hintText: '01KG000AAA',
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildBrandField({required bool compact}) {
@@ -303,6 +418,8 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       await _autoSaveDraft();
       if (kind == _PhotoKind.vin) {
         await _recognizeVinFromPhoto(savedPath);
+      } else if (kind == _PhotoKind.mileage) {
+        await _recognizeMileageFromPhoto(savedPath);
       }
     } catch (error) {
       setState(() {
@@ -319,6 +436,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     }
 
     setState(() {
+      _isRecognizingVin = true;
       _status = 'Распознаю VIN...';
       _statusIsError = false;
     });
@@ -335,6 +453,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
 
       setState(() {
         _vinController.text = vin;
+        _isRecognizingVin = false;
         _status = 'VIN распознан: $vin';
         _statusIsError = false;
       });
@@ -345,7 +464,50 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
       }
 
       setState(() {
+        _isRecognizingVin = false;
         _status = 'VIN не распознан: ${_humanError(error)}';
+        _statusIsError = true;
+      });
+    }
+  }
+
+  Future<void> _recognizeMileageFromPhoto(String path) async {
+    if (widget.storage.sessionKey == null ||
+        widget.storage.sessionKey!.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _isRecognizingMileage = true;
+      _status = 'Распознаю пробег...';
+      _statusIsError = false;
+    });
+
+    try {
+      final mileage = await _ApiClient(
+        serverUrl: widget.storage.serverUrl,
+        sessionKey: widget.storage.sessionKey,
+      ).recognizeMileage(path);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _mileageController.text = mileage.toString();
+        _isRecognizingMileage = false;
+        _status = 'Пробег распознан: $mileage км';
+        _statusIsError = false;
+      });
+      await _autoSaveDraft();
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isRecognizingMileage = false;
+        _status = 'Пробег не распознан: ${_humanError(error)}';
         _statusIsError = true;
       });
     }
@@ -948,7 +1110,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
                       .map(
                         (category) => ButtonSegment(
                           value: category,
-                          label: Text(category.apiValue),
+                          label: Text(_vehicleCategoryLabel(category)),
                         ),
                       )
                       .toList(),
@@ -970,22 +1132,13 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
           ],
           _buildBrandField(compact: compact),
           SizedBox(height: gap),
-          TextField(
-            controller: _plateNumberController,
-            textInputAction: TextInputAction.next,
-            textCapitalization: TextCapitalization.characters,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              isDense: compact,
-              labelText: 'Гос номер',
-              hintText: '001ABC',
-            ),
-          ),
+          _buildPlateNumberField(compact: compact),
           SizedBox(height: gap),
           TextField(
             controller: _vinController,
             textInputAction: TextInputAction.next,
             textCapitalization: TextCapitalization.characters,
+            inputFormatters: const [_UpperCaseTextFormatter()],
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
               isDense: compact,
@@ -1021,7 +1174,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
                     .map(
                       (category) => ButtonSegment(
                         value: category,
-                        label: Text(category.apiValue),
+                        label: Text(_vehicleCategoryLabel(category)),
                       ),
                     )
                     .toList(),
@@ -1057,6 +1210,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
         TextField(
           controller: _vinController,
           textCapitalization: TextCapitalization.characters,
+          inputFormatters: const [_UpperCaseTextFormatter()],
           decoration: InputDecoration(
             border: const OutlineInputBorder(),
             isDense: compact,
@@ -1088,6 +1242,9 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
             label: kind.label,
             asset: kind.asset,
             path: _photos[kind],
+            isLoading:
+                (kind == _PhotoKind.vin && _isRecognizingVin) ||
+                (kind == _PhotoKind.mileage && _isRecognizingMileage),
             onTap: () => _takePhoto(kind),
           ),
       ],
