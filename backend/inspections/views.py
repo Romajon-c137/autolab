@@ -275,6 +275,9 @@ def _build_openai_vin_payload(model, image_inputs, max_output_tokens):
                 },
             },
         },
+        "reasoning": {
+            "effort": "low",
+        },
         "max_output_tokens": max_output_tokens,
     }
 
@@ -589,7 +592,7 @@ def recognize_vin_view(request):
                 "Authorization": f"Bearer {config.api_key.strip()}",
                 "Content-Type": "application/json",
             },
-            json=_build_openai_vin_payload(model, image_inputs, 120),
+            json=_build_openai_vin_payload(model, image_inputs, 2000),
             timeout=45,
         )
     except requests.RequestException as exc:
