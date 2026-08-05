@@ -62,7 +62,7 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   bool get _isConversion => _operationCategory == _OperationCategory.conversion;
   List<_VehicleCategory> get _availableVehicleCategories {
     if (_operationCategory == _OperationCategory.techInspection) {
-      return const [_VehicleCategory.n2, _VehicleCategory.m1];
+      return const [_VehicleCategory.m1, _VehicleCategory.n2];
     }
     return _VehicleCategory.values;
   }

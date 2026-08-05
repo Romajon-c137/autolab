@@ -217,7 +217,7 @@ body { padding:14px 0 44px; }
 
   inputFields.forEach(element => element.addEventListener('input', notifyStateChanged));
   resultCells.forEach(cell => {
-    const isDefaultOk = cell.dataset.result.endsWith('_ok');
+    const isDefaultOk = cell.dataset.noPair === 'true' || cell.dataset.result.endsWith('_ok');
     applyResult(cell, isDefaultOk ? 'check' : '', false);
     const toggle = () => {
       const noPair = cell.dataset.noPair === 'true';

@@ -247,12 +247,11 @@ def _build_openai_vin_payload(model, image_inputs, max_output_tokens):
                 {
                     "type": "input_text",
                     "text": (
-                        "Read the vehicle VIN from the image. "
-                        "Return only JSON with one field named vin. "
-                        "The vin value must be exactly 17 characters when readable. "
-                        "Allowed characters are A-Z and 0-9, but VIN never contains I, O, or Q. "
-                        "If multiple candidates are visible, choose the most likely valid VIN. "
-                        "If no VIN is readable, return an empty string in vin."
+                        "Read the vehicle VIN. Return JSON only: {\"vin\":\"...\"}. "
+                        "VIN is exactly 17 chars, A-Z/0-9, never I/O/Q. "
+                        "If the first char looks like N, recheck it carefully: "
+                        "vehicle VINs almost never start with N, and this is often X/K/J/W/Z. "
+                        "Do not drop the final chars. If unreadable, use empty string."
                     ),
                 },
                 *image_inputs,
@@ -276,9 +275,6 @@ def _build_openai_vin_payload(model, image_inputs, max_output_tokens):
                 },
             },
         },
-        "reasoning": {
-            "effort": "low",
-        },
         "max_output_tokens": max_output_tokens,
     }
 
@@ -292,11 +288,10 @@ def _build_openai_mileage_payload(model, image_inputs, max_output_tokens):
                 {
                     "type": "input_text",
                     "text": (
-                        "Read the vehicle odometer mileage from the dashboard image. "
-                        "The mileage consists only of digits. "
-                        "Ignore labels, units, icons, decimals, trip counters, time, date, and warning text. "
-                        "Return only JSON with one field named mileage. "
-                        "If no mileage is readable, return an empty string in mileage."
+                        "Read odometer mileage digits only. "
+                        "Ignore labels, km, trip, time/date, icons. "
+                        "Return JSON only: {\"mileage\":\"123456\"}. "
+                        "If unreadable, use empty string."
                     ),
                 },
                 *image_inputs,
@@ -319,9 +314,6 @@ def _build_openai_mileage_payload(model, image_inputs, max_output_tokens):
                     "required": ["mileage"],
                 },
             },
-        },
-        "reasoning": {
-            "effort": "low",
         },
         "max_output_tokens": max_output_tokens,
     }
@@ -350,6 +342,20 @@ def _collect_openai_text(value):
 def _image_data_url(image_bytes, content_type):
     image_base64 = base64.b64encode(image_bytes).decode("ascii")
     return f"data:{content_type};base64,{image_base64}"
+
+
+def _single_ocr_image_input(original_image_bytes, content_type):
+    enhanced_image_bytes = _enhance_vin_image(original_image_bytes)
+    if enhanced_image_bytes:
+        return [{
+            "type": "input_image",
+            "image_url": _image_data_url(enhanced_image_bytes, "image/jpeg"),
+        }]
+
+    return [{
+        "type": "input_image",
+        "image_url": _image_data_url(original_image_bytes, content_type or "image/jpeg"),
+    }]
 
 
 def _enhance_vin_image(image_bytes):
@@ -572,20 +578,9 @@ def recognize_vin_view(request):
         }, status=500)
 
     original_image_bytes = uploaded_file.read()
-    enhanced_image_bytes = _enhance_vin_image(original_image_bytes)
     content_type = uploaded_file.content_type or "image/jpeg"
     model = config.model.strip() or "gpt-5.6-terra"
-    image_inputs = [
-        {
-            "type": "input_image",
-            "image_url": _image_data_url(original_image_bytes, content_type),
-        },
-    ]
-    if enhanced_image_bytes:
-        image_inputs.append({
-            "type": "input_image",
-            "image_url": _image_data_url(enhanced_image_bytes, "image/jpeg"),
-        })
+    image_inputs = _single_ocr_image_input(original_image_bytes, content_type)
 
     try:
         response = requests.post(
@@ -594,7 +589,7 @@ def recognize_vin_view(request):
                 "Authorization": f"Bearer {config.api_key.strip()}",
                 "Content-Type": "application/json",
             },
-            json=_build_openai_vin_payload(model, image_inputs, 2000),
+            json=_build_openai_vin_payload(model, image_inputs, 120),
             timeout=45,
         )
     except requests.RequestException as exc:
@@ -673,20 +668,9 @@ def recognize_mileage_view(request):
         }, status=500)
 
     original_image_bytes = uploaded_file.read()
-    enhanced_image_bytes = _enhance_vin_image(original_image_bytes)
     content_type = uploaded_file.content_type or "image/jpeg"
-    model = config.model.strip() or "gpt-5.6-terra"
-    image_inputs = [
-        {
-            "type": "input_image",
-            "image_url": _image_data_url(original_image_bytes, content_type),
-        },
-    ]
-    if enhanced_image_bytes:
-        image_inputs.append({
-            "type": "input_image",
-            "image_url": _image_data_url(enhanced_image_bytes, "image/jpeg"),
-        })
+    model = os.environ.get("OPENAI_MILEAGE_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
+    image_inputs = _single_ocr_image_input(original_image_bytes, content_type)
 
     try:
         response = requests.post(
@@ -695,7 +679,7 @@ def recognize_mileage_view(request):
                 "Authorization": f"Bearer {config.api_key.strip()}",
                 "Content-Type": "application/json",
             },
-            json=_build_openai_mileage_payload(model, image_inputs, 1000),
+            json=_build_openai_mileage_payload(model, image_inputs, 60),
             timeout=45,
         )
     except requests.RequestException as exc:
