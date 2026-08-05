@@ -247,11 +247,13 @@ def _build_openai_vin_payload(model, image_inputs, max_output_tokens):
                 {
                     "type": "input_text",
                     "text": (
-                        "Read the vehicle VIN. Return JSON only: {\"vin\":\"...\"}. "
+                        "Read the vehicle VIN from the photos. Return JSON only: {\"vin\":\"...\"}. "
+                        "The first image is the original and is the source of truth. "
+                        "The second image may be enhanced and is only a helper. "
                         "VIN is exactly 17 chars, A-Z/0-9, never I/O/Q. "
-                        "If the first char looks like N, recheck it carefully: "
-                        "vehicle VINs almost never start with N, and this is often X/K/J/W/Z. "
-                        "Do not drop the final chars. If unreadable, use empty string."
+                        "Do not guess or invent missing characters. "
+                        "Only return a VIN when all 17 characters are visible enough to read. "
+                        "If any character is unclear, hidden, cut off, or ambiguous, use empty string."
                     ),
                 },
                 *image_inputs,
@@ -359,6 +361,22 @@ def _single_ocr_image_input(original_image_bytes, content_type):
         "type": "input_image",
         "image_url": _image_data_url(original_image_bytes, content_type or "image/jpeg"),
     }]
+
+
+def _vin_ocr_image_inputs(original_image_bytes, content_type):
+    image_inputs = [{
+        "type": "input_image",
+        "image_url": _image_data_url(original_image_bytes, content_type or "image/jpeg"),
+    }]
+
+    enhanced_image_bytes = _enhance_vin_image(original_image_bytes)
+    if enhanced_image_bytes:
+        image_inputs.append({
+            "type": "input_image",
+            "image_url": _image_data_url(enhanced_image_bytes, "image/jpeg"),
+        })
+
+    return image_inputs
 
 
 def _enhance_vin_image(image_bytes):
@@ -583,7 +601,7 @@ def recognize_vin_view(request):
     original_image_bytes = uploaded_file.read()
     content_type = uploaded_file.content_type or "image/jpeg"
     model = config.model.strip() or "gpt-5.6-terra"
-    image_inputs = _single_ocr_image_input(original_image_bytes, content_type)
+    image_inputs = _vin_ocr_image_inputs(original_image_bytes, content_type)
 
     try:
         response = requests.post(
