@@ -38,6 +38,24 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif"}
 VIN_PATTERN = re.compile(r"^[A-HJ-NPR-Z0-9]{17}$")
 VIN_CANDIDATE_PATTERN = re.compile(r"[A-HJ-NPR-Z0-9]{17}")
 MILEAGE_CANDIDATE_PATTERN = re.compile(r"\d{1,8}")
+KNOWN_WMI_PREFIXES = (
+    "KLY",
+    "XUU",
+    "JT",
+    "JH",
+    "JM",
+    "JN",
+    "KL",
+    "KM",
+    "KN",
+    "W0",
+    "WA",
+    "WB",
+    "WD",
+    "WF",
+    "WVW",
+    "ZFA",
+)
 
 
 def _json_body(request):
@@ -223,11 +241,24 @@ def _extract_vin(value):
     if VIN_PATTERN.fullmatch(normalized):
         return normalized
 
-    for candidate in VIN_CANDIDATE_PATTERN.findall(normalized):
-        if VIN_PATTERN.fullmatch(candidate):
+    candidates = [
+        normalized[index:index + 17]
+        for index in range(max(len(normalized) - 16, 0))
+        if VIN_PATTERN.fullmatch(normalized[index:index + 17])
+    ]
+    if not candidates:
+        return ""
+
+    for candidate in candidates:
+        if candidate.startswith(KNOWN_WMI_PREFIXES):
             return candidate
 
-    return ""
+    if len(normalized) > 17:
+        for candidate in candidates:
+            if not candidate.startswith("N"):
+                return candidate
+
+    return candidates[0]
 
 
 def _extract_mileage(value):
@@ -248,10 +279,11 @@ def _build_openai_vin_payload(model, image_inputs, max_output_tokens):
                     "type": "input_text",
                     "text": (
                         "Read the vehicle VIN from the photos. Return JSON only: {\"vin\":\"...\"}. "
-                        "The first image is the original and is the source of truth. "
-                        "The second image may be enhanced and is only a helper. "
+                        "Use the original photo as the source of truth. "
                         "VIN is exactly 17 chars, A-Z/0-9, never I/O/Q. "
                         "Read the 17 physical character positions left-to-right; do not add a prefix. "
+                        "Ignore any isolated leading scratch, star, cross, seam, bolt, border, or stamped mark "
+                        "that is not aligned with the 17 VIN characters. "
                         "The first 3 characters are the WMI manufacturer identifier, and character 1 is a "
                         "country/region code. Common first characters in imported vehicles include X, J, K, L, "
                         "W, Z, S, V, T, M, R, digits 1-5, 6, 7, 8, and 9. "
@@ -287,9 +319,6 @@ def _build_openai_vin_payload(model, image_inputs, max_output_tokens):
                     "required": ["vin"],
                 },
             },
-        },
-        "reasoning": {
-            "effort": "low",
         },
         "max_output_tokens": max_output_tokens,
     }
@@ -375,19 +404,10 @@ def _single_ocr_image_input(original_image_bytes, content_type):
 
 
 def _vin_ocr_image_inputs(original_image_bytes, content_type):
-    image_inputs = [{
+    return [{
         "type": "input_image",
         "image_url": _image_data_url(original_image_bytes, content_type or "image/jpeg"),
     }]
-
-    enhanced_image_bytes = _enhance_vin_image(original_image_bytes)
-    if enhanced_image_bytes:
-        image_inputs.append({
-            "type": "input_image",
-            "image_url": _image_data_url(enhanced_image_bytes, "image/jpeg"),
-        })
-
-    return image_inputs
 
 
 def _enhance_vin_image(image_bytes):
@@ -611,7 +631,7 @@ def recognize_vin_view(request):
 
     original_image_bytes = uploaded_file.read()
     content_type = uploaded_file.content_type or "image/jpeg"
-    model = config.model.strip() or "gpt-5.6-terra"
+    model = os.environ.get("OPENAI_VIN_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
     image_inputs = _vin_ocr_image_inputs(original_image_bytes, content_type)
 
     try:
@@ -621,7 +641,7 @@ def recognize_vin_view(request):
                 "Authorization": f"Bearer {config.api_key.strip()}",
                 "Content-Type": "application/json",
             },
-            json=_build_openai_vin_payload(model, image_inputs, 2000),
+            json=_build_openai_vin_payload(model, image_inputs, 120),
             timeout=45,
         )
     except requests.RequestException as exc:
