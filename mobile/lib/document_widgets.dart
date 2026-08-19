@@ -1,0 +1,97 @@
+part of 'main.dart';
+
+class _EmbeddedInspectionDocument extends StatelessWidget {
+  const _EmbeddedInspectionDocument({
+    required this.draft,
+    required this.expertName,
+    required this.signatureSvg,
+    required this.documentStateJson,
+    required this.onDocumentStateChanged,
+    required this.onSign,
+    required this.documentViewKey,
+    required this.scrollToBottomSignal,
+    required this.scrollToTopSignal,
+  });
+
+  final _InspectionDraft draft;
+  final String expertName;
+  final String? signatureSvg;
+  final String documentStateJson;
+  final ValueChanged<String> onDocumentStateChanged;
+  final VoidCallback onSign;
+  final GlobalKey documentViewKey;
+  final int scrollToBottomSignal;
+  final int scrollToTopSignal;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: _DocumentHtmlPanel(
+          draft: draft,
+          expertName: expertName,
+          signatureSvg: signatureSvg,
+          documentStateJson: documentStateJson,
+          onDocumentStateChanged: onDocumentStateChanged,
+          onSignRequested: onSign,
+          documentViewKey: documentViewKey,
+          scrollToBottomSignal: scrollToBottomSignal,
+          scrollToTopSignal: scrollToTopSignal,
+        ),
+      ),
+    );
+  }
+}
+
+class _DocumentHtmlPanel extends StatelessWidget {
+  const _DocumentHtmlPanel({
+    required this.draft,
+    required this.expertName,
+    required this.signatureSvg,
+    required this.documentStateJson,
+    required this.onDocumentStateChanged,
+    required this.onSignRequested,
+    required this.documentViewKey,
+    required this.scrollToBottomSignal,
+    required this.scrollToTopSignal,
+  });
+
+  final _InspectionDraft draft;
+  final String expertName;
+  final String? signatureSvg;
+  final String documentStateJson;
+  final ValueChanged<String> onDocumentStateChanged;
+  final VoidCallback onSignRequested;
+  final GlobalKey documentViewKey;
+  final int scrollToBottomSignal;
+  final int scrollToTopSignal;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Colors.white,
+      child: DocumentHtmlView(
+        key: documentViewKey,
+        operationType: draft.operationCategory.apiValue,
+        vehicleCategory: draft.vehicleCategory.apiValue,
+        brand: draft.brand,
+        plateNumber: draft.plateNumber,
+        country: draft.country,
+        vin: draft.vin,
+        mileage: draft.mileage,
+        expertName: expertName,
+        signatureSvg: signatureSvg,
+        documentStateJson: documentStateJson,
+        onDocumentStateChanged: onDocumentStateChanged,
+        onSignRequested: onSignRequested,
+        scrollToBottomSignal: scrollToBottomSignal,
+        scrollToTopSignal: scrollToTopSignal,
+      ),
+    );
+  }
+}

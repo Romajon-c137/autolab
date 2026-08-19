@@ -1,0 +1,6 @@
+Django>=6.0,<6.1
+requests==2.33.0
+gunicorn>=23,<24
+psycopg[binary]>=3.2,<4
+Pillow>=12.3,<13
+pillow-heif>=1.1,<2

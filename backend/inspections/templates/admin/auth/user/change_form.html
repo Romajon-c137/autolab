@@ -1,0 +1,15 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+  {{ block.super }}
+  {% if original %}
+    <li>
+      <form method="post" action="{% url 'admin:auth_user_generate_password' original.pk %}" style="display:inline">
+        {% csrf_token %}
+        <button type="submit" class="historylink" style="background:none;border:0;cursor:pointer">
+          Сгенерировать пароль
+        </button>
+      </form>
+    </li>
+  {% endif %}
+{% endblock %}

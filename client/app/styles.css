@@ -1,0 +1,427 @@
+:root {
+  --bg: #f8faf9;
+  --surface: #ffffff;
+  --surface-soft: #f1f7f4;
+  --text: #24312e;
+  --muted: #687672;
+  --border: #dfe8e4;
+  --primary: #17a96f;
+  --primary-dark: #0d8a59;
+  --paper-line: #9aa39f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.page {
+  min-height: 100vh;
+  padding: 10px;
+}
+
+.workspace {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.topbar {
+  display: grid;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+  padding: 6px 2px 14px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--primary-dark);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 26px;
+  line-height: 1.08;
+}
+
+.progress {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.progress div {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8efec;
+}
+
+.progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.form-panel,
+.preview-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.form-panel {
+  padding: 14px;
+}
+
+.step-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.step-tabs button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.step-tabs button.active {
+  background: #fff;
+  color: var(--primary-dark);
+}
+
+.step-tabs button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.step-panel {
+  display: block;
+}
+
+.hidden-file {
+  display: none;
+}
+
+.scan-button {
+  width: 100%;
+  min-height: 50px;
+  margin: 0 0 14px;
+  border: 1px solid #bfe8d4;
+  border-radius: 6px;
+  background: #eef8f3;
+  color: var(--primary-dark);
+  font-weight: 800;
+}
+
+.scan-status,
+.scan-error {
+  margin: -2px 0 14px;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.scan-status {
+  background: #eef8f3;
+  color: var(--primary-dark);
+}
+
+.scan-error {
+  background: #fff2f2;
+  color: #ba1a1a;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 12px;
+}
+
+.section-title:first-child {
+  margin-top: 0;
+}
+
+.section-title span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--surface-soft);
+  color: var(--primary-dark);
+  font-weight: 800;
+}
+
+.section-title h2 {
+  font-size: 17px;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.field span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.field b {
+  color: var(--primary-dark);
+  margin-left: 3px;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text);
+  outline: none;
+  min-height: 48px;
+  padding: 12px 13px;
+  font-size: 16px;
+}
+
+.field select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 21px, calc(100% - 12px) 21px;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 38px;
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  border-color: var(--primary);
+}
+
+.field small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.field strong {
+  color: #ba1a1a;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.form-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.form-actions.two {
+  grid-template-columns: 0.8fr 1.2fr;
+}
+
+.primary-button,
+.secondary-button {
+  min-height: 50px;
+  border-radius: 6px;
+  padding: 12px 14px;
+  font-weight: 800;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.primary-button {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.secondary-button {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+}
+
+.two-col,
+.plate-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.two-col {
+  grid-template-columns: 1fr;
+}
+
+.plate-grid {
+  grid-template-columns: 0.8fr 0.8fr 1fr;
+}
+
+.preview-panel {
+  padding: 10px;
+}
+
+.signature-box {
+  border: 1px dashed #b7c7c1;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.signature-box canvas {
+  display: block;
+  width: 100%;
+  height: 260px;
+  touch-action: none;
+}
+
+.signature-helper,
+.preview-note {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.document-frame {
+  display: block;
+  width: 100%;
+  min-height: 510px;
+  border: 1px solid #cfd6d2;
+  border-radius: 6px;
+  background: #fff;
+  aspect-ratio: 1132 / 1600;
+}
+
+@media (max-width: 1100px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-panel {
+    position: static;
+  }
+}
+
+@media (min-width: 900px) {
+  .page {
+    padding: 18px;
+  }
+
+  .workspace {
+    max-width: 1480px;
+  }
+
+  .topbar {
+    grid-template-columns: 1fr 180px;
+    align-items: center;
+    min-height: 72px;
+    margin-bottom: 18px;
+    padding: 0 0 14px;
+  }
+
+  .content-grid {
+    grid-template-columns: minmax(380px, 0.9fr) minmax(560px, 1.1fr);
+    gap: 18px;
+  }
+
+  .form-panel {
+    padding: 18px;
+  }
+
+  .step-tabs {
+    max-width: 360px;
+  }
+
+  .step-tabs button {
+    font-size: 13px;
+  }
+
+  .two-col {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .preview-panel {
+    position: sticky;
+    top: 18px;
+    padding: 18px;
+  }
+
+  .signature-box canvas {
+    height: 320px;
+  }
+
+  .document-frame {
+    min-height: 1120px;
+  }
+}
+
+@media (max-width: 680px) {
+  .two-col,
+  .plate-grid {
+    grid-template-columns: 1fr;
+  }
+}
