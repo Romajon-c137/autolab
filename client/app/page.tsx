@@ -79,11 +79,13 @@ export default function Page() {
   const [scanStatus, setScanStatus] = useState("");
   const [scanError, setScanError] = useState("");
   const [scanWarning, setScanWarning] = useState("");
+  const [scanLoading, setScanLoading] = useState(false);
   const [signatureData, setSignatureData] = useState("");
   const [submitStatus, setSubmitStatus] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
   const [matchedInspectionId, setMatchedInspectionId] = useState<number | null>(null);
+  const [showInnHint, setShowInnHint] = useState(false);
   useEffect(() => {
     setForm(loadForm());
   }, []);
@@ -156,6 +158,7 @@ export default function Page() {
     setScanError("");
     setScanWarning("");
     setScanStatus("Сканируем техпаспорт...");
+    setScanLoading(true);
 
     const requestData = new FormData();
     requestData.append("tech_passport", file);
@@ -188,6 +191,8 @@ export default function Page() {
       setScanStatus("");
       setScanWarning("");
       setScanError(error instanceof Error ? error.message : "Не удалось распознать техпаспорт");
+    } finally {
+      setScanLoading(false);
     }
   }
 
@@ -341,8 +346,18 @@ export default function Page() {
                   maxLength={14}
                   helper={`${form.inn.length}/14 символов`}
                   error={form.inn.length > 0 && form.inn.length !== 14 ? "ИНН должен состоять из 14 цифр" : ""}
+                  onFocus={() => setShowInnHint(true)}
+                  onBlur={() => setShowInnHint(false)}
+                  ariaDescribedBy="inn-location-hint"
                   required
                 />
+                {showInnHint ? (
+                  <div className="inn-hint" id="inn-location-hint" role="note">
+                    <strong>Где найти ИНН</strong>
+                    <span>ИНН — это 14-значный персональный номер на обратной стороне ID-карты.</span>
+                    <img src="/inn-id-card-hint.png" alt="Место расположения ИНН на обратной стороне ID-карты обведено красным" />
+                  </div>
+                ) : null}
                 <Field
                   label="Номер телефона"
                   value={form.phone}
@@ -371,14 +386,24 @@ export default function Page() {
                   capture="environment"
                   onChange={scanTechPassport}
                 />
-                <button type="button" className="scan-button" onClick={() => scanInputRef.current?.click()}>
+                <button
+                  type="button"
+                  className="scan-button"
+                  onClick={() => scanInputRef.current?.click()}
+                  disabled={scanLoading}
+                  aria-busy={scanLoading}
+                >
                   <span className="scan-button-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none">
-                      <path d="M8.5 5.5 10 3.5h4l1.5 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-10a2 2 0 0 1 2-2h3.5Z" />
-                      <circle cx="12" cy="12.5" r="4" />
-                    </svg>
+                    {scanLoading ? (
+                      <span className="scan-spinner" />
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M8.5 5.5 10 3.5h4l1.5 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-10a2 2 0 0 1 2-2h3.5Z" />
+                        <circle cx="12" cy="12.5" r="4" />
+                      </svg>
+                    )}
                   </span>
-                  <span>Сканировать техпаспорт</span>
+                  <span>{scanLoading ? "Распознаём..." : "Сканировать техпаспорт"}</span>
                 </button>
                 {scanStatus ? <p className="scan-status">{scanStatus}</p> : null}
                 {scanError ? <p className="scan-error">{scanError}</p> : null}
@@ -512,6 +537,9 @@ function Field({
   helper,
   error,
   autoComplete,
+  onFocus,
+  onBlur,
+  ariaDescribedBy,
 }: {
   label: string;
   value: string;
@@ -525,6 +553,9 @@ function Field({
   helper?: string;
   error?: string;
   autoComplete?: string;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  ariaDescribedBy?: string;
 }) {
   return (
     <label className="field">
@@ -541,6 +572,9 @@ function Field({
         list={list}
         maxLength={maxLength}
         autoComplete={autoComplete}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        aria-describedby={ariaDescribedBy}
       />
       {helper ? <small>{helper}</small> : null}
       {error ? <strong>{error}</strong> : null}

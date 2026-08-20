@@ -180,6 +180,13 @@ h1 {
   box-shadow: 0 2px 7px rgb(13 138 89 / 22%);
 }
 
+.scan-button:disabled {
+  cursor: wait;
+  opacity: 0.78;
+  transform: none;
+  box-shadow: none;
+}
+
 .scan-button:focus-visible {
   outline: 3px solid rgb(23 169 111 / 28%);
   outline-offset: 3px;
@@ -200,6 +207,20 @@ h1 {
   stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.scan-spinner {
+  width: 24px;
+  height: 24px;
+  display: block;
+  border: 3px solid rgb(255 255 255 / 42%);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: scan-spin 700ms linear infinite;
+}
+
+@keyframes scan-spin {
+  to { transform: rotate(360deg); }
 }
 
 .scan-status,
@@ -315,6 +336,40 @@ h1 {
   color: #ba1a1a;
   font-size: 12px;
   line-height: 1.3;
+}
+
+.inn-hint {
+  display: grid;
+  gap: 7px;
+  margin: -5px 0 14px;
+  border: 1px solid #f2c678;
+  border-radius: 8px;
+  padding: 11px;
+  background: #fff9ec;
+  color: #7f4300;
+  animation: hint-appear 140ms ease-out;
+}
+
+.inn-hint > strong {
+  font-size: 13px;
+}
+
+.inn-hint > span {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.inn-hint img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 5px;
+  background: #fff;
+}
+
+@keyframes hint-appear {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .form-actions {
