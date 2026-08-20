@@ -169,20 +169,6 @@ export function categoryClassName(category: string) {
   return "category-mark";
 }
 
-export type ClientApplication = {
-  id: number;
-  vin: string;
-  applicant: string;
-  inn: string;
-  phone: string;
-  vehicle_name: string;
-  plate_number: string;
-  year: string;
-  application_pdf: string;
-  inspection_id: number | null;
-  created_at: string;
-};
-
 export function sectionPath(section: Section) {
   if (section === "reports") return "/reports";
   if (section === "applications") return "/applications";

@@ -251,6 +251,8 @@ export default function Page() {
           ? `Заявка отправлена и прикреплена к осмотру #${inspectionId}`
           : "Заявка отправлена. Будет прикреплена к осмотру автоматически, как только он появится в системе."
       );
+      clearForm();
+      setSubmitted(true);
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Не удалось отправить заявку");
     } finally {
