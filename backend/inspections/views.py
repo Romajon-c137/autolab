@@ -789,11 +789,38 @@ def _current_inspection_amount(operation_type, vehicle_category):
 
 @csrf_exempt
 def client_application_submit(request):
-    if request.method != "POST":
+    if request.method == "GET":
+        auth_error, _user = require_auth(request)
+        if auth_error is not None:
+            return auth_error
+
+        today = timezone.now().astimezone().date()
+        qs = ClientApplication.objects.filter(
+            created_at__date=today,
+        ).select_related("inspection").order_by("-created_at")
+
+        def serialize_application(app):
+            return {
+                "id": app.id,
+                "vin": app.vin,
+                "applicant": app.applicant,
+                "inn": app.inn,
+                "phone": app.phone,
+                "vehicle_name": app.vehicle_name,
+                "plate_number": app.plate_number,
+                "year": app.year,
+                "application_pdf": request.build_absolute_uri(app.application_pdf.url) if app.application_pdf else "",
+                "inspection_id": app.inspection_id,
+                "created_at": app.created_at.isoformat(),
+            }
+
         return JsonResponse({
-            "ok": False,
-            "error": "Only POST is allowed",
-        }, status=405)
+            "ok": True,
+            "applications": [serialize_application(a) for a in qs],
+        })
+
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Only GET/POST is allowed"}, status=405)
 
     expected_key = settings.CLIENT_APPLICATION_API_KEY
     supplied_key = request.headers.get("X-Client-Application-Key", "")
@@ -826,10 +853,14 @@ def client_application_submit(request):
     try:
         validate_pdf(uploaded_pdf)
     except UploadValidationError as error:
-        return JsonResponse({
-            "ok": False,
-            "error": str(error),
-        }, status=400)
+        return JsonResponse({"ok": False, "error": str(error)}, status=400)
+
+    applicant = request.POST.get("applicant", "").strip()[:200]
+    inn = request.POST.get("inn", "").strip()[:14]
+    phone = request.POST.get("phone", "").strip()[:32]
+    vehicle_name = request.POST.get("vehicle_name", "").strip()[:200]
+    plate_number = request.POST.get("plate_number", "").strip()[:20]
+    year = request.POST.get("year", "").strip()[:4]
 
     application = save_client_application(
         vin,

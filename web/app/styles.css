@@ -1254,6 +1254,43 @@ button:disabled {
   color: var(--muted);
 }
 
+.applications-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.applications-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.applications-table th {
+  background: var(--primary-dark);
+  color: #fff;
+  text-align: left;
+  padding: 9px 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.applications-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.applications-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.applications-table tbody tr:hover td {
+  background: var(--surface-2);
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);

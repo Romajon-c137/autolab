@@ -327,14 +327,13 @@ h1 {
   border: 1px dashed #b7c7c1;
   border-radius: 8px;
   background: #fff;
-  overflow: hidden;
   touch-action: none;
 }
 
 .signature-box canvas {
   display: block;
   width: 100%;
-  height: 260px;
+  aspect-ratio: 720 / 440;
   touch-action: none;
 }
 
@@ -354,6 +353,38 @@ h1 {
   border-radius: 6px;
   background: #fff;
   aspect-ratio: 1132 / 1600;
+}
+
+.success-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  text-align: center;
+  gap: 16px;
+  padding: 32px 16px;
+}
+
+.success-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 36px;
+  display: grid;
+  place-items: center;
+}
+
+.success-screen h1 {
+  font-size: 28px;
+}
+
+.success-screen p {
+  color: var(--muted);
+  font-size: 16px;
+  max-width: 320px;
 }
 
 @media (max-width: 1100px) {
@@ -392,10 +423,6 @@ h1 {
     padding: 18px;
   }
 
-  .step-tabs {
-    max-width: 360px;
-  }
-
   .step-tabs button {
     font-size: 13px;
   }
@@ -408,10 +435,6 @@ h1 {
     position: sticky;
     top: 18px;
     padding: 18px;
-  }
-
-  .signature-box canvas {
-    height: 320px;
   }
 
   .document-frame {
