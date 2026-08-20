@@ -15,12 +15,19 @@ Return ONLY valid compact JSON with this exact shape:
 Where to take values:
 - plateNumber: line 4 vehicle registration plate, uppercase, no extra punctuation. Example: 02KG370AIR.
 - vehicleName: line 5 make and model. Normalize slash to a space. Example: CHEVROLET / LACETTI -> Chevrolet Lacetti.
-- vin: line 7, 17-character VIN/body identification number. Uppercase. VIN never contains I, O, Q.
+- vin: line 7, 17-character VIN/body identification number.
 - year: line 15, four digit manufacture year.
+
+VIN rules (ISO 3779): exactly 17 characters, made only of digits 0-9 and uppercase
+letters A-Z excluding I, O and Q (these three letters are never used in a real VIN,
+because they are visually confused with 1, 0 and 0). If a printed character looks
+like I, O or Q, it is actually 1, 0 or 0 respectively — read it as that digit, do not
+read it as the letter and do not drop it.
 
 Rules:
 - Do not guess if a value is not visible; use empty string.
-- If the full 17-character VIN is not readable, return empty string for vin.
+- Read the VIN character by character across all 17 positions. Only return empty
+  string for vin if fewer than 17 characters are legible at all.
 - Remove labels and line numbers.
 - For vin and plateNumber keep only A-Z and 0-9.
 - For year keep only four digits.
@@ -137,13 +144,26 @@ function parseScanResult(text: string): Partial<ScanResult> | null {
   }
 }
 
+// ISO 3779: a VIN never contains I, O or Q — these are excluded specifically because
+// they are visually confused with 1, 0 and 0. When OCR reports one of them it is
+// almost always a misread of the digit, not a character that belongs in the VIN, so
+// we correct it in place rather than stripping it (stripping shortens the VIN below
+// 17 characters and makes an otherwise-readable scan look "unrecognized").
+const VIN_LOOKALIKES: Record<string, string> = { I: "1", O: "0", Q: "0" };
+const VIN_PATTERN = /^[A-HJ-NPR-Z0-9]{17}$/;
+
+function correctVin(value: string): string {
+  return value.replace(/[IOQ]/g, (char) => VIN_LOOKALIKES[char]);
+}
+
 function normalizeScanResult(result: Partial<ScanResult>): ScanResult {
-  const vin = normalizeText(result.vin).toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, "").slice(0, 17);
+  const vinRaw = normalizeText(result.vin).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 17);
+  const vin = correctVin(vinRaw);
   return {
     vehicleName: normalizeVehicleName(result.vehicleName),
     plateNumber: normalizeText(result.plateNumber).toUpperCase().replace(/[^A-Z0-9]/g, ""),
     year: normalizeText(result.year).replace(/\D/g, "").slice(0, 4),
-    vin: vin.length === 17 ? vin : "",
+    vin: VIN_PATTERN.test(vin) ? vin : "",
   };
 }
 

@@ -82,6 +82,7 @@ export default function Page() {
   const [submitStatus, setSubmitStatus] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [matchedInspectionId, setMatchedInspectionId] = useState<number | null>(null);
   useEffect(() => {
     setForm(loadForm());
   }, []);
@@ -230,7 +231,7 @@ export default function Page() {
   }
 
   async function submitApplication() {
-    setSubmitStatus("");
+    setSubmitStatus("Ищем совпадение по VIN в базе...");
     setSubmitError("");
     setSubmitLoading(true);
 
@@ -245,15 +246,17 @@ export default function Page() {
         throw new Error(result.error || `HTTP ${response.status}`);
       }
 
-      const inspectionId = result.inspection?.id;
+      const inspectionId = result.inspection?.id ?? null;
+      setMatchedInspectionId(inspectionId);
       setSubmitStatus(
         inspectionId
-          ? `Заявка отправлена и прикреплена к осмотру #${inspectionId}`
-          : "Заявка отправлена. Будет прикреплена к осмотру автоматически, как только он появится в системе."
+          ? `Совпадение найдено! Заявка прикреплена к осмотру #${inspectionId}`
+          : "Совпадение не найдено. Заявка сохранена и будет прикреплена автоматически, как только осмотр появится в системе."
       );
       clearForm();
       setSubmitted(true);
     } catch (error) {
+      setSubmitStatus("");
       setSubmitError(error instanceof Error ? error.message : "Не удалось отправить заявку");
     } finally {
       setSubmitLoading(false);
@@ -266,7 +269,11 @@ export default function Page() {
         <div className="success-screen">
           <div className="success-icon">✓</div>
           <h1>Заявка принята</h1>
-          <p>Мы получили вашу заявку. Ожидайте, с вами свяжутся.</p>
+          <p>
+            {matchedInspectionId
+              ? `Совпадение найдено: заявка прикреплена к осмотру #${matchedInspectionId}.`
+              : "Совпадение по VIN пока не найдено. Заявка сохранена и привяжется автоматически, когда осмотр появится."}
+          </p>
         </div>
       </main>
     );
