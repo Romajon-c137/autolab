@@ -854,8 +854,51 @@ button:disabled {
 }
 
 .application-list {
-  --inspection-columns: minmax(160px, 1.1fr) minmax(120px, 0.7fr) minmax(150px, 0.8fr) minmax(280px, 1.6fr) 240px;
+  --inspection-columns: minmax(150px, 1fr) minmax(115px, 0.65fr) minmax(140px, 0.75fr) minmax(210px, 1.25fr) 130px 330px;
 }
+
+.application-status {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.application-status.linked { background: #e7f7ef; color: #087649; }
+.application-status.unlinked { background: #fff3df; color: #a65300; }
+
+.application-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(13, 19, 17, 0.68);
+}
+
+.application-modal-card {
+  width: min(520px, 100%);
+  display: grid;
+  gap: 18px;
+  border-radius: 12px;
+  padding: 22px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+}
+
+.application-modal-card h2 { margin: 0 0 5px; }
+.application-modal-card p { margin: 0; color: var(--muted); }
+.application-vin-field { display: grid; gap: 7px; }
+.application-vin-field span { font-size: 13px; font-weight: 800; color: var(--muted); }
+.application-vin-field input { min-height: 50px; border: 1px solid var(--border); border-radius: 7px; padding: 11px 13px; font: 700 16px monospace; letter-spacing: .6px; text-transform: uppercase; }
+.application-vin-field input:focus { border-color: var(--primary); outline: 3px solid rgba(23, 169, 111, .13); }
+.application-vin-field small { color: var(--muted); }
+.application-rebuild-note, .application-modal-warning { border-radius: 7px; padding: 11px 12px; font-size: 13px; line-height: 1.45; }
+.application-rebuild-note { background: #eef8f3; color: var(--primary-dark); }
+.application-modal-warning { background: #fff3df; color: #a65300; }
+.application-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
 .operation-with-category {
   display: flex;

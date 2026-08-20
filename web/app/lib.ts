@@ -63,6 +63,7 @@ export type Application = {
   pdf: string;
   created_at: string;
   inspection_id: number | null;
+  can_rebuild: boolean;
 };
 
 export type ReportSummary = {

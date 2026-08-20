@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { existsSync, readFileSync } from "node:fs";
 import { isIP } from "node:net";
-import { chromium } from "playwright";
-import { ApplicationFormState, buildApplicationDocument } from "../../../application-document";
+import { ApplicationFormState } from "../../../application-document";
+import { applicationPdfName, renderApplicationPdf } from "../../../pdf-renderer";
 import { acquirePdfRenderSlot, consumeRateLimit, contentLengthExceeds } from "../../security";
 
 export const runtime = "nodejs";
 
 const backendUrl = (process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
 const vinPattern = /^[A-HJ-NPR-Z0-9]{17}$/;
-let cachedCaveatFont = "";
 
 type SubmitBody = {
   form?: Partial<ApplicationFormState>;
@@ -72,6 +70,7 @@ export async function POST(request: NextRequest) {
   data.append("plate_number", form.plateNumber);
   data.append("year", form.year);
   data.append("application_pdf", new Blob([new Uint8Array(pdf)], { type: "application/pdf" }), applicationPdfName(form));
+  data.append("signature", signatureBlob(signatureData), "signature.png");
 
   const response = await fetch(`${backendUrl}/api/client-applications/`, {
     method: "POST",
@@ -98,6 +97,11 @@ export async function POST(request: NextRequest) {
     ok: true,
     inspection: result.inspection,
   });
+}
+
+function signatureBlob(signatureData: string) {
+  const bytes = Buffer.from(signatureData.slice("data:image/png;base64,".length), "base64");
+  return new Blob([new Uint8Array(bytes)], { type: "image/png" });
 }
 
 function trustedClientIp(request: NextRequest) {
@@ -129,59 +133,4 @@ function validateForm(form: ApplicationFormState) {
   if (!form.plateNumber || form.plateNumber.length > 20) return "Проверьте номер авто";
   if (!/^\d{4}$/.test(form.year)) return "Проверьте год выпуска";
   return "";
-}
-
-async function renderApplicationPdf(form: ApplicationFormState, signatureData: string) {
-  const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || defaultChromiumExecutable();
-  const browser = await chromium.launch({
-    headless: true,
-    executablePath,
-  });
-  try {
-    const page = await browser.newPage({
-      viewport: { width: 794, height: 1123 },
-      deviceScaleFactor: 1,
-    });
-    await page.setContent(buildApplicationDocument(form, signatureData, caveatFontBase64()), { waitUntil: "networkidle" });
-    await page.evaluate(() => document.fonts.ready);
-    await page.emulateMedia({ media: "print" });
-
-    return await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
-      preferCSSPageSize: true,
-    });
-  } finally {
-    await browser.close();
-  }
-}
-
-function caveatFontBase64() {
-  if (!cachedCaveatFont) {
-    cachedCaveatFont = readFileSync(caveatFontPath()).toString("base64");
-  }
-  return cachedCaveatFont;
-}
-
-function caveatFontPath() {
-  return `${process.cwd()}/node_modules/@fontsource/caveat/files/caveat-cyrillic-400-normal.woff2`;
-}
-
-function applicationPdfName(form: ApplicationFormState) {
-  const brand = form.vehicleName.replace(/[^A-Za-zА-Яа-я0-9]+/g, "-").replace(/^-|-$/g, "") || "application";
-  return `${brand}-${form.vin}.pdf`;
-}
-
-function defaultChromiumExecutable() {
-  const candidates = [
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    "/Applications/Chromium.app/Contents/MacOS/Chromium",
-    "/usr/bin/google-chrome",
-    "/usr/bin/google-chrome-stable",
-    "/usr/bin/chromium",
-    "/usr/bin/chromium-browser",
-  ];
-
-  return candidates.find((path) => existsSync(path));
 }

@@ -18,6 +18,7 @@ def serialize_application(request, application):
         "pdf": file_url(request, application.pdf),
         "created_at": application.created_at.isoformat(),
         "inspection_id": application.inspection_id,
+        "can_rebuild": bool(application.signature),
     }
 
 

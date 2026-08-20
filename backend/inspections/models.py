@@ -363,6 +363,13 @@ class ClientApplication(models.Model):
         upload_to="inspections/applications/",
         max_length=255,
     )
+    signature = models.ImageField(
+        "Подпись заявителя",
+        upload_to="inspections/application_signatures/",
+        max_length=255,
+        null=True,
+        blank=True,
+    )
     inspection = models.ForeignKey(
         VehicleInspection,
         on_delete=models.SET_NULL,

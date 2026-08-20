@@ -13,6 +13,7 @@ def save_client_application(
     plate_number,
     year,
     uploaded_pdf,
+    signature,
 ):
     filename = f"application_{vin}_{timezone.now().strftime('%Y%m%d%H%M%S')}.pdf"
     application = ClientApplication(
@@ -25,8 +26,22 @@ def save_client_application(
         vin=vin,
     )
     application.pdf.save(filename, uploaded_pdf, save=False)
+    application.signature.save(f"signature_{vin}_{timezone.now().strftime('%Y%m%d%H%M%S')}.png", signature, save=False)
     application.save()
     return application
+
+
+def detach_application(application):
+    """Detach an application and remove only the PDF copy created by our linker."""
+    inspection = application.inspection
+    if inspection is not None and inspection.application_pdf:
+        filename = inspection.application_pdf.name.rsplit("/", 1)[-1]
+        if filename.startswith(f"application_{application.vin}_"):
+            inspection.application_pdf.delete(save=False)
+            inspection.application_pdf = None
+            inspection.save(update_fields=["application_pdf"])
+    application.inspection = None
+    application.save(update_fields=["inspection"])
 
 
 def _copy_pdf_to_inspection(inspection, application):

@@ -138,6 +138,10 @@ AUTH_PASSWORD_VALIDATORS = [
 MAX_IMAGE_UPLOAD_BYTES = int(os.environ.get("MAX_IMAGE_UPLOAD_BYTES", str(15 * 1024 * 1024)))
 MAX_PDF_UPLOAD_BYTES = int(os.environ.get("MAX_PDF_UPLOAD_BYTES", str(20 * 1024 * 1024)))
 CLIENT_APPLICATION_API_KEY = os.environ.get("CLIENT_APPLICATION_API_KEY", "").strip()
+CLIENT_APPLICATION_RENDER_URL = os.environ.get(
+    "CLIENT_APPLICATION_RENDER_URL",
+    "http://127.0.0.1:3100/api/applications/render",
+).strip()
 
 
 # Internationalization

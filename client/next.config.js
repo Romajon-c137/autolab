@@ -11,6 +11,10 @@ const nextConfig = {
       "./node_modules/playwright-core/browsers.json",
       "./node_modules/@fontsource/caveat/files/caveat-cyrillic-400-normal.woff2",
     ],
+    "/api/applications/render": [
+      "./node_modules/playwright-core/browsers.json",
+      "./node_modules/@fontsource/caveat/files/caveat-cyrillic-400-normal.woff2",
+    ],
     "/api/fonts/caveat": ["./node_modules/@fontsource/caveat/files/caveat-cyrillic-400-normal.woff2"],
   },
 };

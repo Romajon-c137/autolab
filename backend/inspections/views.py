@@ -9,6 +9,7 @@ import secrets
 from django.contrib.auth import authenticate, login, logout
 from django.conf import settings
 from django.db import IntegrityError, transaction
+from django.core.files.base import ContentFile
 from django.db.models import Count
 from django.http import JsonResponse
 from django.utils.dateparse import parse_datetime
@@ -25,6 +26,7 @@ from .access import (
     require_auth,
 )
 from .application_pdfs import (
+    detach_application,
     link_application_on_inspection_created,
     link_application_on_submit,
     save_client_application,
@@ -814,6 +816,7 @@ def client_application_submit(request):
     year = request.POST.get("year", "").strip()[:10]
 
     uploaded_pdf = request.FILES.get("application_pdf")
+    signature = request.FILES.get("signature")
     if uploaded_pdf is None:
         return JsonResponse({
             "ok": False,
@@ -822,6 +825,12 @@ def client_application_submit(request):
 
     try:
         validate_pdf(uploaded_pdf)
+    except UploadValidationError as error:
+        return JsonResponse({"ok": False, "error": str(error)}, status=400)
+    if signature is None:
+        return JsonResponse({"ok": False, "error": "Field 'signature' is required"}, status=400)
+    try:
+        validate_image(signature)
     except UploadValidationError as error:
         return JsonResponse({"ok": False, "error": str(error)}, status=400)
 
@@ -834,6 +843,7 @@ def client_application_submit(request):
         plate_number,
         year,
         uploaded_pdf,
+        signature,
     )
     inspection = link_application_on_submit(application)
     if inspection is not None:
@@ -883,6 +893,88 @@ def client_applications_list(request):
             serialize_application(request, application)
             for application in queryset.order_by("-created_at")[:300]
         ],
+    })
+
+
+@csrf_exempt
+def client_application_rebuild(request, application_id):
+    auth_error, _user = require_auth(request)
+    if auth_error is not None:
+        return auth_error
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Only POST is allowed"}, status=405)
+    if not rate_limit(request, "client-application-rebuild", 20, 60):
+        return JsonResponse({"ok": False, "error": "Too many requests"}, status=429)
+
+    body = _json_body(request)
+    if body is None:
+        return JsonResponse({"ok": False, "error": "Invalid JSON body"}, status=400)
+    vin = _normalize_vin_text(str(body.get("vin", "")))
+    if not VIN_PATTERN.fullmatch(vin):
+        return JsonResponse({"ok": False, "error": "VIN должен состоять из 17 допустимых символов"}, status=400)
+
+    application = ClientApplication.objects.filter(id=application_id).first()
+    if application is None:
+        return JsonResponse({"ok": False, "error": "Application not found"}, status=404)
+    if not application.signature:
+        return JsonResponse({
+            "ok": False,
+            "error": "У этой старой заявки подпись не сохранена отдельно; PDF нельзя безопасно пересобрать.",
+        }, status=409)
+
+    application.signature.open("rb")
+    try:
+        signature_data = "data:image/png;base64," + base64.b64encode(application.signature.read()).decode("ascii")
+    finally:
+        application.signature.close()
+
+    payload = {
+        "form": {
+            "applicant": application.applicant_name,
+            "inn": application.inn,
+            "phone": application.phone,
+            "vehicleName": application.vehicle_name,
+            "plateNumber": application.plate_number,
+            "year": application.year,
+            "vin": vin,
+        },
+        "signatureData": signature_data,
+    }
+    try:
+        render_response = requests.post(
+            settings.CLIENT_APPLICATION_RENDER_URL,
+            json=payload,
+            headers={"X-Client-Application-Key": settings.CLIENT_APPLICATION_API_KEY},
+            timeout=60,
+        )
+    except requests.RequestException:
+        return JsonResponse({"ok": False, "error": "PDF renderer is unavailable"}, status=502)
+    if render_response.status_code != 200 or not render_response.content.startswith(b"%PDF-"):
+        return JsonResponse({"ok": False, "error": "PDF renderer returned an error"}, status=502)
+    if len(render_response.content) > settings.MAX_PDF_UPLOAD_BYTES:
+        return JsonResponse({"ok": False, "error": "Rendered PDF is too large"}, status=502)
+
+    old_vin = application.vin
+    old_pdf_name = application.pdf.name
+    with transaction.atomic():
+        application = ClientApplication.objects.select_for_update().get(id=application_id)
+        if application.vin != old_vin:
+            return JsonResponse({"ok": False, "error": "Application was changed; reload the list"}, status=409)
+        detach_application(application)
+        application.vin = vin
+        filename = f"application_{vin}_{timezone.now().strftime('%Y%m%d%H%M%S')}.pdf"
+        application.pdf.save(filename, ContentFile(render_response.content), save=False)
+        application.save(update_fields=["vin", "pdf"])
+        inspection = link_application_on_submit(application)
+
+    if old_pdf_name and old_pdf_name != application.pdf.name:
+        application.pdf.storage.delete(old_pdf_name)
+    if inspection is not None:
+        mirror_inspection(inspection)
+    return JsonResponse({
+        "ok": True,
+        "application": serialize_application(request, application),
+        "matched": inspection is not None,
     })
 
 
