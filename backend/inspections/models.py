@@ -348,3 +348,35 @@ class VehicleInspectionExtraPhoto(models.Model):
 
     def __str__(self):
         return f"Фото #{self.id} осмотра #{self.inspection_id}"
+
+
+class ClientApplication(models.Model):
+    applicant_name = models.CharField("ФИО заявителя", max_length=200, blank=True)
+    inn = models.CharField("ИНН", max_length=20, blank=True)
+    phone = models.CharField("Телефон", max_length=32, blank=True)
+    vehicle_name = models.CharField("Марка / модель авто", max_length=120, blank=True)
+    plate_number = models.CharField("Гос номер", max_length=20, blank=True)
+    year = models.CharField("Год выпуска", max_length=10, blank=True)
+    vin = models.CharField("VIN / номер кузова", max_length=32)
+    pdf = models.FileField(
+        "PDF заявки",
+        upload_to="inspections/applications/",
+        max_length=255,
+    )
+    inspection = models.ForeignKey(
+        VehicleInspection,
+        on_delete=models.SET_NULL,
+        related_name="client_applications",
+        null=True,
+        blank=True,
+        verbose_name="Осмотр",
+    )
+    created_at = models.DateTimeField("Дата создания", auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Заявка клиента"
+        verbose_name_plural = "Заявки клиентов"
+
+    def __str__(self):
+        return f"{self.applicant_name or 'Без имени'} ({self.vin})"

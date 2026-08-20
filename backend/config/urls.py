@@ -28,6 +28,7 @@ from inspections.security import UploadValidationError, rate_limit, validate_ima
 from inspections.views import (
     branches_view,
     client_application_submit,
+    client_applications_list,
     create_inspection,
     inspection_detail,
     inspections_collection,
@@ -106,6 +107,7 @@ urlpatterns = [
     path('api/inspections/<int:inspection_id>/', inspection_detail, name='inspection-detail'),
     path('api/reports/summary/', reports_summary, name='reports-summary'),
     path('api/client-applications/', client_application_submit, name='client-application-submit'),
+    path('api/client-applications/list/', client_applications_list, name='client-applications-list'),
     path('api/upload-image/', upload_image, name='upload-image'),
     path('api/inspections/create/', create_inspection, name='create-inspection'),
 ]

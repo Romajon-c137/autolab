@@ -43,7 +43,7 @@ function ReportsContent({ serverUrl, sessionKey }: { serverUrl: string; sessionK
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [selected, setSelected] = useState<Inspection | null>(null);
   const [typeFilter, setTypeFilter] = useState("all");
-  const [sbgtsCategoryFilter, setSbgtsCategoryFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [vinQuery, setVinQuery] = useState("");
   const [vinResults, setVinResults] = useState<Inspection[]>([]);
   const [vinSearchActive, setVinSearchActive] = useState(false);
@@ -111,18 +111,19 @@ function ReportsContent({ serverUrl, sessionKey }: { serverUrl: string; sessionK
   const periodLabel = dateFrom === dateTo
     ? formatDateOnly(dateFrom)
     : `${formatDateOnly(dateFrom)} - ${formatDateOnly(dateTo)}`;
+  const typeHasCategoryFilter = typeFilter === "sbgts" || typeFilter === "tech_inspection";
   const filteredByType = typeFilter === "all"
     ? inspections
     : inspections.filter((item) => (item.operation_type ?? "") === typeFilter);
   const filteredInspections =
-    typeFilter === "sbgts" && sbgtsCategoryFilter !== "all"
-      ? filteredByType.filter((item) => item.vehicle_category === sbgtsCategoryFilter)
+    typeHasCategoryFilter && categoryFilter !== "all"
+      ? filteredByType.filter((item) => item.vehicle_category === categoryFilter)
       : filteredByType;
   const visibleInspections = vinSearchActive ? vinResults : filteredInspections;
   const typeLabel = REPORT_TYPE_OPTIONS.find((option) => option.value === typeFilter)?.label ?? "Все";
   const filterLabel =
-    typeFilter === "sbgts" && sbgtsCategoryFilter !== "all"
-      ? `${typeLabel} / ${sbgtsCategoryFilter}`
+    typeHasCategoryFilter && categoryFilter !== "all"
+      ? `${typeLabel} / ${categoryFilter}`
       : typeLabel;
 
   return (
@@ -196,8 +197,8 @@ function ReportsContent({ serverUrl, sessionKey }: { serverUrl: string; sessionK
                       checked={typeFilter === option.value}
                       onChange={() => {
                         setTypeFilter(option.value);
-                        if (option.value !== "sbgts") {
-                          setSbgtsCategoryFilter("all");
+                        if (option.value !== "sbgts" && option.value !== "tech_inspection") {
+                          setCategoryFilter("all");
                         }
                       }}
                     />
@@ -205,15 +206,15 @@ function ReportsContent({ serverUrl, sessionKey }: { serverUrl: string; sessionK
                   </label>
                 ))}
               </div>
-              {typeFilter === "sbgts" && (
+              {typeHasCategoryFilter && (
                 <div className="report-radio-group category-filter-group">
                   <label className="report-radio">
                     <input
                       type="radio"
-                      name="report-sbgts-category-filter"
+                      name="report-category-filter"
                       value="all"
-                      checked={sbgtsCategoryFilter === "all"}
-                      onChange={() => setSbgtsCategoryFilter("all")}
+                      checked={categoryFilter === "all"}
+                      onChange={() => setCategoryFilter("all")}
                     />
                     <span>Все категории</span>
                   </label>
@@ -221,10 +222,10 @@ function ReportsContent({ serverUrl, sessionKey }: { serverUrl: string; sessionK
                     <label className="report-radio" key={category}>
                       <input
                         type="radio"
-                        name="report-sbgts-category-filter"
+                        name="report-category-filter"
                         value={category}
-                        checked={sbgtsCategoryFilter === category}
-                        onChange={() => setSbgtsCategoryFilter(category)}
+                        checked={categoryFilter === category}
+                        onChange={() => setCategoryFilter(category)}
                       />
                       <span>{category}</span>
                     </label>
@@ -264,7 +265,8 @@ function ReportsContent({ serverUrl, sessionKey }: { serverUrl: string; sessionK
                       <span>Тип операции</span>
                       <strong className="operation-with-category">
                         <b>{operationLabel(inspection)}</b>
-                        {inspection.operation_type === "sbgts" && (
+                        {(inspection.operation_type === "sbgts" ||
+                          inspection.operation_type === "tech_inspection") && (
                           <b className={categoryClassName(inspection.vehicle_category)}>
                             {inspection.vehicle_category || "-"}
                           </b>

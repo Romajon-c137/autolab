@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { existsSync } from "node:fs";
 import { chromium } from "playwright";
 import { ApplicationFormState, buildApplicationDocument } from "../../../application-document";
+import { acquirePdfRenderSlot, consumeRateLimit, contentLengthExceeds } from "../../security";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,13 @@ type SubmitBody = {
 };
 
 export async function POST(request: NextRequest) {
+  if (!consumeRateLimit(request, "application-submit", 5, 60_000)) {
+    return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 });
+  }
+  if (contentLengthExceeds(request, 3 * 1024 * 1024)) {
+    return NextResponse.json({ ok: false, error: "Request is too large" }, { status: 413 });
+  }
+
   let body: SubmitBody;
   try {
     body = await request.json();
@@ -30,6 +38,14 @@ export async function POST(request: NextRequest) {
   if (!signatureData.startsWith("data:image/png;base64,")) {
     return NextResponse.json({ ok: false, error: "Подпись обязательна" }, { status: 400 });
   }
+  if (signatureData.length > 2 * 1024 * 1024) {
+    return NextResponse.json({ ok: false, error: "Signature is too large" }, { status: 413 });
+  }
+
+  const releaseRenderSlot = acquirePdfRenderSlot();
+  if (!releaseRenderSlot) {
+    return NextResponse.json({ ok: false, error: "PDF service is busy" }, { status: 503 });
+  }
 
   let pdf: Buffer;
   try {
@@ -39,14 +55,25 @@ export async function POST(request: NextRequest) {
       { ok: false, error: error instanceof Error ? error.message : "Не удалось создать PDF" },
       { status: 500 }
     );
+  } finally {
+    releaseRenderSlot();
   }
 
   const data = new FormData();
   data.append("vin", form.vin);
+  data.append("applicant_name", form.applicant);
+  data.append("inn", form.inn);
+  data.append("phone", form.phone);
+  data.append("vehicle_name", form.vehicleName);
+  data.append("plate_number", form.plateNumber);
+  data.append("year", form.year);
   data.append("application_pdf", new Blob([new Uint8Array(pdf)], { type: "application/pdf" }), applicationPdfName(form));
 
   const response = await fetch(`${backendUrl}/api/client-applications/`, {
     method: "POST",
+    headers: {
+      "X-Client-Application-Key": process.env.CLIENT_APPLICATION_API_KEY || "",
+    },
     body: data,
   });
   const result = await response.json().catch(() => null);

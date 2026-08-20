@@ -32,8 +32,8 @@ const _defaultServerUrl = String.fromEnvironment(
   'SERVER_URL',
   defaultValue: 'https://autolab.glasscenter.kg',
 );
-const _appVersion = '1.0.7';
-const _appBuildStamp = '2026-08-06 14:03 +06';
+const _appVersion = '1.0.9';
+const _appBuildStamp = '2026-08-19 15:10 +06';
 const _appTitle = 'Авто лаборатория v$_appVersion';
 const _pdfChannel = MethodChannel('autolab/pdf');
 void main() {
@@ -49,7 +49,9 @@ class AutoInspectionApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: _appTitle,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1A4A8A),
+        ),
         useMaterial3: true,
       ),
       home: const _AuthGate(),
@@ -108,8 +110,10 @@ class _LoginPageState extends State<_LoginPage> {
   late final TextEditingController _serverController;
   late final TextEditingController _loginController;
   late final TextEditingController _passwordController;
+  final TextEditingController _codeController = TextEditingController();
   bool _isLoading = false;
   String? _error;
+  _LoginChallengeResult? _challenge;
 
   @override
   void initState() {
@@ -128,6 +132,7 @@ class _LoginPageState extends State<_LoginPage> {
     _serverController.dispose();
     _loginController.dispose();
     _passwordController.dispose();
+    _codeController.dispose();
     super.dispose();
   }
 
@@ -140,7 +145,7 @@ class _LoginPageState extends State<_LoginPage> {
     try {
       final serverUrl = _serverController.text.trim();
       final api = _ApiClient(serverUrl: serverUrl);
-      final result = await api.login(
+      final challenge = await api.login(
         login: _loginController.text.trim(),
         password: _passwordController.text,
       );
@@ -150,15 +155,40 @@ class _LoginPageState extends State<_LoginPage> {
         login: _loginController.text.trim(),
         password: _passwordController.text,
       );
+
+      if (!mounted) return;
+      setState(() => _challenge = challenge);
+    } catch (error) {
+      setState(() => _error = _humanError(error));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _verifyCode() async {
+    final challenge = _challenge;
+    if (challenge == null) return;
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final api = _ApiClient(serverUrl: _serverController.text.trim());
+      final result = await api.verifyTwoFactor(
+        challengeId: challenge.challengeId,
+        code: _codeController.text.trim(),
+        login: _loginController.text.trim(),
+      );
+
       await widget.storage.setSession(
         sessionKey: result.sessionKey,
         userLabel: result.userLabel,
         userFullName: result.userFullName,
       );
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => _HomePage(storage: widget.storage)),
@@ -166,59 +196,114 @@ class _LoginPageState extends State<_LoginPage> {
     } catch (error) {
       setState(() => _error = _humanError(error));
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _backToLogin() {
+    setState(() {
+      _challenge = null;
+      _error = null;
+      _codeController.clear();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Авторизация')),
+      appBar: AppBar(
+        title: const Text('Авторизация'),
+        leading: _challenge != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _backToLogin,
+              )
+            : null,
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            TextField(
-              controller: _serverController,
-              keyboardType: TextInputType.url,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Адрес сервера',
+            if (_challenge == null) ...[
+              TextField(
+                controller: _serverController,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Адрес сервера',
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _loginController,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Логин',
+              const SizedBox(height: 12),
+              TextField(
+                controller: _loginController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Логин',
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              onSubmitted: (_) => _isLoading ? null : _login(),
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Пароль',
+              const SizedBox(height: 12),
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                onSubmitted: (_) => _isLoading ? null : _login(),
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Пароль',
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _isLoading ? null : _login,
-              icon: _isLoading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.login),
-              label: const Text('Войти'),
-            ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: _isLoading ? null : _login,
+                icon: _isLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.login),
+                label: const Text('Войти'),
+              ),
+            ] else ...[
+              _StatusBox(
+                text:
+                    'Код подтверждения отправлен в WhatsApp на номер '
+                    '${_challenge!.phoneMasked}.',
+                isError: false,
+              ),
+              if (_challenge!.debugCode != null) ...[
+                const SizedBox(height: 8),
+                _StatusBox(
+                  text: 'DEBUG код: ${_challenge!.debugCode}',
+                  isError: false,
+                ),
+              ],
+              const SizedBox(height: 16),
+              TextField(
+                controller: _codeController,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _isLoading ? null : _verifyCode(),
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Код из WhatsApp',
+                  hintText: '123456',
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: _isLoading ? null : _verifyCode,
+                icon: _isLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check),
+                label: const Text('Подтвердить'),
+              ),
+            ],
             if (_error != null) ...[
               const SizedBox(height: 16),
               _StatusBox(text: _error!, isError: true),
@@ -296,18 +381,10 @@ class _HomePageState extends State<_HomePage> {
   Widget build(BuildContext context) {
     final draftsCount = widget.storage.drafts.length;
     final todaySentCount = widget.storage.sent.where(_isToday).length;
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(_appTitle),
-        actions: [
-          IconButton(
-            tooltip: 'Выйти',
-            onPressed: _logout,
-            icon: const Icon(Icons.logout),
-          ),
-        ],
-      ),
+      backgroundColor: cs.surfaceContainerLow,
       floatingActionButton: FloatingActionButton.small(
         tooltip: 'Подпись',
         onPressed: () => _open(_SignaturePage(storage: widget.storage)),
@@ -327,35 +404,145 @@ class _HomePageState extends State<_HomePage> {
               alignment: Alignment.topCenter,
               child: SizedBox(
                 width: contentWidth,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _HomeSummary(
-                      userLabel: widget.storage.userLabel ?? '-',
-                      version: _appVersion,
-                      buildStamp: _appBuildStamp,
-                    ),
-                    const SizedBox(height: 16),
-                    _MenuButton(
-                      title: 'Новый осмотр',
-                      subtitle: 'Выбрать категорию операции',
-                      primary: true,
-                      onTap: () => _open(
-                        _OperationSelectionPage(storage: widget.storage),
+                    // Header
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: cs.primary,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 18, 8, 18),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Авто лаборатория',
+                                    style: TextStyle(
+                                      color: cs.onPrimary,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    widget.storage.userLabel ?? '—',
+                                    style: TextStyle(
+                                      color: cs.onPrimary
+                                          .withValues(alpha: 0.75),
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Выйти',
+                              onPressed: _logout,
+                              icon: Icon(
+                                Icons.logout,
+                                color: cs.onPrimary.withValues(alpha: 0.85),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    _MenuButton(
-                      title: 'Черновики',
-                      subtitle: 'Не отправлено: $draftsCount',
-                      onTap: () => _open(_DraftsPage(storage: widget.storage)),
-                    ),
-                    const SizedBox(height: 10),
-                    _MenuButton(
-                      title: 'Реестр',
-                      subtitle: 'Сегодня отправлено: $todaySentCount',
-                      onTap: () =>
-                          _open(_RegisterPage(storage: widget.storage)),
+                    // Content
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                        children: [
+                          // Stats row
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _HomeStatCard(
+                                  label: 'Черновики',
+                                  value: draftsCount,
+                                  icon: Icons.edit_document,
+                                  onTap: () => _open(
+                                    _DraftsPage(storage: widget.storage),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _HomeStatCard(
+                                  label: 'Сегодня отправлено',
+                                  value: todaySentCount,
+                                  icon: Icons.check_circle_outline,
+                                  onTap: () => _open(
+                                    _RegisterPage(storage: widget.storage),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          // Primary action
+                          FilledButton.icon(
+                            onPressed: () => _open(
+                              _OperationSelectionPage(storage: widget.storage),
+                            ),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size.fromHeight(56),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            icon: const Icon(Icons.add, size: 22),
+                            label: const Text('Новый осмотр'),
+                          ),
+                          const SizedBox(height: 12),
+                          // Secondary actions
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _HomeSecondaryButton(
+                                  label: 'Черновики',
+                                  icon: Icons.folder_open_outlined,
+                                  badge: draftsCount > 0
+                                      ? '$draftsCount'
+                                      : null,
+                                  onTap: () => _open(
+                                    _DraftsPage(storage: widget.storage),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _HomeSecondaryButton(
+                                  label: 'Реестр',
+                                  icon: Icons.list_alt_rounded,
+                                  onTap: () => _open(
+                                    _RegisterPage(storage: widget.storage),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 28),
+                          Text(
+                            'v$_appVersion · $_appBuildStamp',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: cs.onSurfaceVariant.withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

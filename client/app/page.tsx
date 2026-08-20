@@ -213,7 +213,11 @@ export default function Page() {
       }
 
       const inspectionId = result.inspection?.id;
-      setSubmitStatus(inspectionId ? `Заявка прикреплена к осмотру #${inspectionId}` : "Заявка прикреплена к осмотру");
+      setSubmitStatus(
+        inspectionId
+          ? `Заявка отправлена и прикреплена к осмотру #${inspectionId}`
+          : "Заявка отправлена. Будет прикреплена к осмотру автоматически, как только он появится в системе."
+      );
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Не удалось отправить заявку");
     } finally {

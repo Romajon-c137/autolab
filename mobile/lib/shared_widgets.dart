@@ -1,64 +1,125 @@
 part of 'main.dart';
 
-class _HomeSummary extends StatelessWidget {
-  const _HomeSummary({
-    required this.userLabel,
-    required this.version,
-    required this.buildStamp,
+class _HomeStatCard extends StatelessWidget {
+  const _HomeStatCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.onTap,
   });
 
-  final String userLabel;
-  final String version;
-  final String buildStamp;
+  final String label;
+  final int value;
+  final IconData icon;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final cs = Theme.of(context).colorScheme;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(color: colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(8),
-        color: colorScheme.surface,
+    return Material(
+      color: cs.surface,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 20, color: cs.primary),
+              const SizedBox(height: 10),
+              Text(
+                '$value',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
+                  color: cs.onSurface,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            Icon(Icons.account_circle, color: colorScheme.primary),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    userLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium,
+    );
+  }
+}
+
+class _HomeSecondaryButton extends StatelessWidget {
+  const _HomeSecondaryButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    this.badge,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  final String? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Material(
+      color: cs.surface,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: cs.onSurfaceVariant),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Сборка: $buildStamp',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              if (badge != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    badge!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onPrimaryContainer,
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Icon(Icons.info_outline, size: 18, color: colorScheme.secondary),
-            const SizedBox(width: 4),
-            Text(
-              'v$version',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+                )
+              else
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: cs.onSurfaceVariant,
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -80,54 +141,61 @@ class _MenuButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final cs = Theme.of(context).colorScheme;
 
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        alignment: Alignment.centerLeft,
-        backgroundColor: primary
-            ? colorScheme.primaryContainer
-            : colorScheme.surfaceContainerLow,
-        foregroundColor: primary
-            ? colorScheme.onPrimaryContainer
-            : colorScheme.onSurface,
-        side: BorderSide(
-          color: primary ? colorScheme.primary : colorScheme.outlineVariant,
-        ),
-        padding: EdgeInsets.symmetric(
-          horizontal: primary ? 16 : 14,
-          vertical: primary ? 20 : 16,
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    return Material(
+      color: primary ? cs.primary : cs.surface,
+      borderRadius: BorderRadius.circular(10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: primary
+            ? BorderSide.none
+            : BorderSide(color: cs.outlineVariant),
       ),
-      child: Row(
-        children: [
-          if (primary) ...[
-            Icon(Icons.add_circle, size: 30, color: colorScheme.primary),
-            const SizedBox(width: 12),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style:
-                      (primary
-                              ? Theme.of(context).textTheme.titleLarge
-                              : Theme.of(context).textTheme.titleMedium)
-                          ?.copyWith(fontWeight: FontWeight.w800),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: primary ? 16 : 15,
+                        fontWeight: FontWeight.w600,
+                        color: primary ? cs.onPrimary : cs.onSurface,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: primary
+                              ? cs.onPrimary.withValues(alpha: 0.75)
+                              : cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 2),
-                  Text(subtitle!),
-                ],
-              ],
-            ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: primary
+                    ? cs.onPrimary.withValues(alpha: 0.7)
+                    : cs.onSurfaceVariant,
+              ),
+            ],
           ),
-          const Icon(Icons.chevron_right),
-        ],
+        ),
       ),
     );
   }

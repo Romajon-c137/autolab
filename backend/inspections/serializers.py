@@ -5,6 +5,22 @@ def file_url(request, field):
     return request.build_absolute_uri(field.url)
 
 
+def serialize_application(request, application):
+    return {
+        "id": application.id,
+        "applicant_name": application.applicant_name,
+        "inn": application.inn,
+        "phone": application.phone,
+        "vehicle_name": application.vehicle_name,
+        "plate_number": application.plate_number,
+        "year": application.year,
+        "vin": application.vin,
+        "pdf": file_url(request, application.pdf),
+        "created_at": application.created_at.isoformat(),
+        "inspection_id": application.inspection_id,
+    }
+
+
 def serialize_datetime(value):
     return "" if value is None else value.isoformat()
 

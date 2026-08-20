@@ -26,6 +26,7 @@ client/.next/
 client/.env.local
 client/node_modules/
 client/tsconfig.tsbuildinfo
+client/.playwright/
 
 mobile/build/
 mobile/.dart_tool/

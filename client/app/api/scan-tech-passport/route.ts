@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { consumeRateLimit, contentLengthExceeds } from "../security";
 
 type ScanResult = {
   vehicleName: string;
@@ -26,6 +27,12 @@ Rules:
 - For inn keep only digits.`;
 
 export async function POST(request: NextRequest) {
+  if (!consumeRateLimit(request, "passport-scan", 10, 60_000)) {
+    return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 });
+  }
+  if (contentLengthExceeds(request, 16 * 1024 * 1024)) {
+    return NextResponse.json({ ok: false, error: "Request is too large" }, { status: 413 });
+  }
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
     return NextResponse.json({ ok: false, error: "OPENAI_API_KEY is not configured" }, { status: 500 });
@@ -39,6 +46,9 @@ export async function POST(request: NextRequest) {
 
   if (!image.type.startsWith("image/")) {
     return NextResponse.json({ ok: false, error: "Uploaded file must be an image" }, { status: 400 });
+  }
+  if (image.size > 15 * 1024 * 1024) {
+    return NextResponse.json({ ok: false, error: "Image is too large" }, { status: 413 });
   }
 
   const bytes = Buffer.from(await image.arrayBuffer());

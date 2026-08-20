@@ -25,11 +25,13 @@ from .access import (
     require_auth,
 )
 from .application_pdfs import (
-    attach_existing_application_pdf,
-    save_client_application_pdf,
+    link_application_on_inspection_created,
+    link_application_on_submit,
+    save_client_application,
 )
 from .models import (
     Branch,
+    ClientApplication,
     InspectionPrice,
     OpenAIApiKey,
     UserProfile,
@@ -39,6 +41,7 @@ from .models import (
 from .notifications import notify_telegram_inspection_created
 from .serializers import (
     file_url,
+    serialize_application,
     serialize_inspection,
 )
 from .security import (
@@ -806,6 +809,13 @@ def client_application_submit(request):
             "error": "Field 'vin' must be a valid 17-character VIN",
         }, status=400)
 
+    applicant_name = request.POST.get("applicant_name", "").strip()[:200]
+    inn = request.POST.get("inn", "").strip()[:20]
+    phone = request.POST.get("phone", "").strip()[:32]
+    vehicle_name = request.POST.get("vehicle_name", "").strip()[:120]
+    plate_number = request.POST.get("plate_number", "").strip()[:20]
+    year = request.POST.get("year", "").strip()[:10]
+
     uploaded_pdf = request.FILES.get("application_pdf")
     if uploaded_pdf is None:
         return JsonResponse({
@@ -821,26 +831,63 @@ def client_application_submit(request):
             "error": str(error),
         }, status=400)
 
-    inspection = VehicleInspection.objects.filter(vin__iexact=vin).order_by("-created_at").first()
-    if inspection is None:
-        return JsonResponse({
-            "ok": False,
-            "error": "Inspection with this VIN was not found",
-            "vin": vin,
-        }, status=404)
-
-    if inspection.application_pdf:
-        return JsonResponse({
-            "ok": False,
-            "error": "Application PDF has already been submitted",
-        }, status=409)
-
-    save_client_application_pdf(inspection, uploaded_pdf, vin)
-    mirror_inspection(inspection)
+    application = save_client_application(
+        vin,
+        applicant_name,
+        inn,
+        phone,
+        vehicle_name,
+        plate_number,
+        year,
+        uploaded_pdf,
+    )
+    inspection = link_application_on_submit(application)
+    if inspection is not None:
+        mirror_inspection(inspection)
 
     return JsonResponse({
         "ok": True,
-        "inspection": serialize_inspection(request, inspection),
+        "application": serialize_application(request, application),
+        "inspection": None if inspection is None else serialize_inspection(request, inspection),
+    })
+
+
+def client_applications_list(request):
+    auth_error, user = require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    queryset = ClientApplication.objects.select_related("inspection")
+
+    vin_query = request.GET.get("vin", "").strip().upper()
+    query = request.GET.get("q", "").strip()
+
+    if vin_query or query:
+        if vin_query:
+            queryset = queryset.filter(vin__icontains=vin_query)
+        if query:
+            queryset = queryset.filter(
+                applicant_name__icontains=query
+            ) | queryset.filter(
+                inn__icontains=query
+            ) | queryset.filter(
+                phone__icontains=query
+            ) | queryset.filter(
+                vin__icontains=query
+            )
+    else:
+        start, end, error = date_range(request)
+        if error is not None:
+            return error
+
+        queryset = queryset.filter(created_at__gte=start, created_at__lt=end)
+
+    return JsonResponse({
+        "ok": True,
+        "applications": [
+            serialize_application(request, application)
+            for application in queryset.order_by("-created_at")[:300]
+        ],
     })
 
 
@@ -1001,7 +1048,7 @@ def create_inspection(request):
                     image=uploaded_file,
                     taken_at=conversion_photo_taken_at,
                 )
-            attach_existing_application_pdf(inspection)
+            link_application_on_inspection_created(inspection)
             mirror_inspection(inspection)
             transaction.on_commit(lambda: notify_telegram_inspection_created(request, inspection))
     except IntegrityError:

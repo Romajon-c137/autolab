@@ -3,7 +3,7 @@ import { createContext, useContext } from "react";
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://autolab.glasscenter.kg";
 
 export type Role = "operator" | "manager" | "admin";
-export type Section = "inspections" | "reports";
+export type Section = "inspections" | "applications" | "reports";
 
 export type User = {
   id: number;
@@ -49,6 +49,20 @@ export type Inspection = {
   document_pdf?: string;
   application_pdf?: string;
   photo_taken_at?: Record<string, string>;
+};
+
+export type Application = {
+  id: number;
+  applicant_name: string;
+  inn: string;
+  phone: string;
+  vehicle_name: string;
+  plate_number: string;
+  year: string;
+  vin: string;
+  pdf: string;
+  created_at: string;
+  inspection_id: number | null;
 };
 
 export type ReportSummary = {
@@ -157,6 +171,7 @@ export function categoryClassName(category: string) {
 
 export function sectionPath(section: Section) {
   if (section === "reports") return "/reports";
+  if (section === "applications") return "/applications";
   return "/inspections";
 }
 
