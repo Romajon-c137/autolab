@@ -43,6 +43,12 @@ export async function POST(request: NextRequest) {
 
   const data = new FormData();
   data.append("vin", form.vin);
+  data.append("applicant", form.applicant);
+  data.append("inn", form.inn);
+  data.append("phone", form.phone);
+  data.append("vehicle_name", form.vehicleName);
+  data.append("plate_number", form.plateNumber);
+  data.append("year", form.year);
   data.append("application_pdf", new Blob([new Uint8Array(pdf)], { type: "application/pdf" }), applicationPdfName(form));
 
   const response = await fetch(`${backendUrl}/api/client-applications/`, {

@@ -1,9 +1,11 @@
 "use client";
 
-import { ChangeEvent, PointerEvent, ReactNode, useMemo, useRef, useState } from "react";
+import { ChangeEvent, PointerEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { ApplicationFormState, buildApplicationDocument } from "./application-document";
 
 type FormState = ApplicationFormState;
+
+const STORAGE_KEY = "autolab_form";
 
 const emptyForm: FormState = {
   applicant: "",
@@ -14,6 +16,28 @@ const emptyForm: FormState = {
   year: "2026",
   vin: "",
 };
+
+function loadForm(): FormState {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return emptyForm;
+    return { ...emptyForm, ...JSON.parse(raw) };
+  } catch {
+    return emptyForm;
+  }
+}
+
+function saveForm(form: FormState) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+  } catch {}
+}
+
+function clearForm() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {}
+}
 
 const brandSuggestions = [
   "Toyota",
@@ -51,12 +75,21 @@ const requiredFields: Array<keyof FormState> = [
 export default function Page() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [submitted, setSubmitted] = useState(false);
   const [scanStatus, setScanStatus] = useState("");
   const [scanError, setScanError] = useState("");
   const [signatureData, setSignatureData] = useState("");
   const [submitStatus, setSubmitStatus] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
+  useEffect(() => {
+    setForm(loadForm());
+  }, []);
+
+  useEffect(() => {
+    saveForm(form);
+  }, [form]);
+
   const scanInputRef = useRef<HTMLInputElement | null>(null);
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
@@ -212,13 +245,25 @@ export default function Page() {
         throw new Error(result.error || `HTTP ${response.status}`);
       }
 
-      const inspectionId = result.inspection?.id;
-      setSubmitStatus(inspectionId ? `Заявка прикреплена к осмотру #${inspectionId}` : "Заявка прикреплена к осмотру");
+      clearForm();
+      setSubmitted(true);
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Не удалось отправить заявку");
     } finally {
       setSubmitLoading(false);
     }
+  }
+
+  if (submitted) {
+    return (
+      <main className="page">
+        <div className="success-screen">
+          <div className="success-icon">✓</div>
+          <h1>Заявка принята</h1>
+          <p>Мы получили вашу заявку. Ожидайте, с вами свяжутся.</p>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -256,7 +301,7 @@ export default function Page() {
 
             {step === 1 ? (
               <div className="step-panel">
-                <SectionTitle number="1" title="Данные клиента" />
+                <SectionTitle title="Паспортные данные" />
                 <Field
                   label="ФИО"
                   value={form.applicant}
@@ -285,7 +330,6 @@ export default function Page() {
                   type="tel"
                   inputMode="tel"
                   autoComplete="tel"
-                  helper="Введите номер после +996"
                   error={form.phone !== "+996" && !isFieldComplete("phone", form) ? "Номер должен быть в формате +996 555 111 222" : ""}
                   required
                 />
@@ -297,7 +341,7 @@ export default function Page() {
               </div>
             ) : step === 2 ? (
               <div className="step-panel">
-                <SectionTitle number="2" title="Транспортное средство" />
+                <SectionTitle title="Транспортное средство" />
                 <input
                   ref={scanInputRef}
                   className="hidden-file"
@@ -317,7 +361,6 @@ export default function Page() {
                   onChange={updateVehicleName}
                   placeholder="Toyota Camry"
                   list="brand-suggestions"
-                  helper="Выберите марку, затем через пробел напишите модель"
                   required
                 />
                 <datalist id="brand-suggestions">
@@ -368,7 +411,7 @@ export default function Page() {
               </div>
             ) : step === 3 ? (
               <div className="step-panel">
-                <SectionTitle number="3" title="Подпись" />
+                <SectionTitle title="Подпись" />
                 <div className="signature-box">
                   <canvas
                     ref={signatureCanvasRef}
@@ -397,7 +440,7 @@ export default function Page() {
               </div>
             ) : (
               <div className="step-panel">
-                <SectionTitle number="4" title="Предпросмотр документа" />
+                <SectionTitle title="Предпросмотр документа" />
                 <p className="preview-note">Проверьте документ перед отправкой</p>
                 <div className="form-actions two">
                   <button type="button" className="secondary-button" onClick={() => setStep(3)}>
@@ -420,10 +463,9 @@ export default function Page() {
   );
 }
 
-function SectionTitle({ number, title }: { number: string; title: string }) {
+function SectionTitle({ title }: { title: string }) {
   return (
     <div className="section-title">
-      <span>{number}</span>
       <h2>{title}</h2>
     </div>
   );

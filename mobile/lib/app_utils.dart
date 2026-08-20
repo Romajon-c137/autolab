@@ -53,7 +53,7 @@ String _shortExpertName(String value) {
     return value.trim();
   }
 
-  return '${parts.first} ${parts[1].characters.first.toUpperCase()}';
+  return '${parts[1]}.${parts.first.characters.first.toUpperCase()}';
 }
 
 bool _isToday(_SentInspection item) {

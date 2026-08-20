@@ -177,18 +177,18 @@ export function buildApplicationDocument(form: ApplicationFormState, signatureDa
     <div class="result-row">
       <div class="ticket-box">
         <span class="prefix">№</span><input class="boxfill num" readonly value="">
-        <span>"</span><input class="boxfill day" readonly value=""><span>"</span>
-        <input class="boxfill month" readonly value="">
-        <input class="boxfill yy" readonly value="${value(year)}"><span>г.</span>
+        <span>"</span><input class="boxfill day hand" readonly value="${value(day)}"><span>"</span>
+        <input class="boxfill month hand" readonly value="${value(month)}">
+        <input class="boxfill yy hand" readonly value="${value(year)}"><span>г.</span>
       </div>
       <div>Диагностическая карта ТО (номер и дата);</div>
     </div>
     <div class="result-row">
       <div class="ticket-box">
         <span class="prefix">№</span><input class="boxfill num" readonly value="">
-        <span>"</span><input class="boxfill day" readonly value=""><span>"</span>
-        <input class="boxfill month" readonly value="">
-        <input class="boxfill yy" readonly value="${value(year)}"><span>г.</span>
+        <span>"</span><input class="boxfill day hand" readonly value="${value(day)}"><span>"</span>
+        <input class="boxfill month hand" readonly value="${value(month)}">
+        <input class="boxfill yy hand" readonly value="${value(year)}"><span>г.</span>
       </div>
       <div>Талон о прохождении ТО (номер и дата)</div>
     </div>

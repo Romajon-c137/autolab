@@ -12,6 +12,20 @@ class _LoginResult {
   final String userFullName;
 }
 
+class _LoginChallengeResult {
+  const _LoginChallengeResult({
+    required this.challengeId,
+    required this.phoneMasked,
+    required this.expiresIn,
+    this.debugCode,
+  });
+
+  final String challengeId;
+  final String phoneMasked;
+  final int expiresIn;
+  final String? debugCode;
+}
+
 class _UserProfileResult {
   const _UserProfileResult({
     required this.userLabel,
@@ -28,7 +42,7 @@ class _ApiClient {
   final String serverUrl;
   final String? sessionKey;
 
-  Future<_LoginResult> login({
+  Future<_LoginChallengeResult> login({
     required String login,
     required String password,
   }) async {
@@ -40,14 +54,44 @@ class _ApiClient {
         )
         .timeout(const Duration(seconds: 10));
 
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+
     if (response.statusCode < 200 || response.statusCode >= 300) {
       if (response.statusCode == 401) {
         throw _AuthException(response.body);
       }
-      throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      final error = data['error'] as String? ?? response.body;
+      throw Exception(error);
     }
 
+    return _LoginChallengeResult(
+      challengeId: data['challenge_id'] as String,
+      phoneMasked: data['phone_masked'] as String? ?? '',
+      expiresIn: data['expires_in'] as int? ?? 120,
+      debugCode: data['debug_code'] as String?,
+    );
+  }
+
+  Future<_LoginResult> verifyTwoFactor({
+    required String challengeId,
+    required String code,
+    required String login,
+  }) async {
+    final response = await http
+        .post(
+          _uri('/api/auth/verify-2fa/'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'challenge_id': challengeId, 'code': code}),
+        )
+        .timeout(const Duration(seconds: 10));
+
     final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final error = data['error'] as String? ?? response.body;
+      throw Exception(error);
+    }
+
     final sessionKey = data['session_key'] as String?;
     if (sessionKey == null || sessionKey.isEmpty) {
       throw Exception('Сервер не вернул session_key.');
@@ -58,8 +102,7 @@ class _ApiClient {
     final userLabel = branch == null
         ? '${user['login'] ?? login}'
         : '${user['login'] ?? login} / ${branch['name']}';
-    final userFullName = '${user['full_name'] ?? user['login'] ?? login}'
-        .trim();
+    final userFullName = '${user['full_name'] ?? user['login'] ?? login}'.trim();
 
     return _LoginResult(
       sessionKey: sessionKey,

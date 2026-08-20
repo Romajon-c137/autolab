@@ -32,7 +32,7 @@ class _DraftsPageState extends State<_DraftsPage> {
   @override
   Widget build(BuildContext context) {
     final drafts = widget.storage.drafts.toList()
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return Scaffold(
       appBar: AppBar(

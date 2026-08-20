@@ -348,3 +348,37 @@ class VehicleInspectionExtraPhoto(models.Model):
 
     def __str__(self):
         return f"Фото #{self.id} осмотра #{self.inspection_id}"
+
+
+class ClientApplication(models.Model):
+    vin = models.CharField("VIN", max_length=32)
+    applicant = models.CharField("ФИО", max_length=200, blank=True)
+    inn = models.CharField("ИНН", max_length=14, blank=True)
+    phone = models.CharField("Телефон", max_length=32, blank=True)
+    vehicle_name = models.CharField("Марка авто", max_length=200, blank=True)
+    plate_number = models.CharField("Гос. номер", max_length=20, blank=True)
+    year = models.CharField("Год выпуска", max_length=4, blank=True)
+    application_pdf = models.FileField(
+        "PDF заявки",
+        upload_to="applications/pdfs/",
+        max_length=255,
+        null=True,
+        blank=True,
+    )
+    inspection = models.ForeignKey(
+        VehicleInspection,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="client_applications",
+        verbose_name="Осмотр",
+    )
+    created_at = models.DateTimeField("Дата создания", auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Заявка клиента"
+        verbose_name_plural = "Заявки клиентов"
+
+    def __str__(self):
+        return f"{self.applicant or self.vin} / {self.created_at.strftime('%d.%m.%Y %H:%M')}"

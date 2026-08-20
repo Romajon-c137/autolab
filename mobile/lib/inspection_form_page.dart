@@ -61,9 +61,6 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   bool get _isEditingDraft => widget.initialDraft != null;
   bool get _isConversion => _operationCategory == _OperationCategory.conversion;
   List<_VehicleCategory> get _availableVehicleCategories {
-    if (_operationCategory == _OperationCategory.techInspection) {
-      return const [_VehicleCategory.m1, _VehicleCategory.n2];
-    }
     return _VehicleCategory.values;
   }
 
@@ -142,14 +139,6 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   }
 
   String _vehicleCategoryLabel(_VehicleCategory category) {
-    if (_operationCategory == _OperationCategory.techInspection) {
-      return switch (category) {
-        _VehicleCategory.n2 => 'Грузовой',
-        _VehicleCategory.m1 => 'Легковой',
-        _ => category.apiValue,
-      };
-    }
-
     return category.apiValue;
   }
 

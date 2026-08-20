@@ -98,9 +98,8 @@ Future<String> _buildInspectionDocumentHtml({
 
 String _documentAssetName(_InspectionDraft draft) {
   if (draft.operationCategory == _OperationCategory.techInspection) {
-    return draft.vehicleCategory == _VehicleCategory.n2
-        ? 'N2_visual_inspection.html'
-        : 'M1_visual_inspection.html';
+    final isN = draft.vehicleCategory.apiValue.startsWith('N');
+    return isN ? 'N2_visual_inspection.html' : 'M1_visual_inspection.html';
   }
   return '${draft.vehicleCategory.apiValue}_document_clean.html';
 }
