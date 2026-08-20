@@ -8,7 +8,12 @@ export type ApplicationFormState = {
   vin: string;
 };
 
-export function buildApplicationDocument(form: ApplicationFormState, signatureData: string, embeddedFontData = "") {
+export function buildApplicationDocument(
+  form: ApplicationFormState,
+  signatureData: string,
+  embeddedFontData = "",
+  embeddedLatinFontData = ""
+) {
   const plate = splitPlateNumber(form.plateNumber);
   const date = new Date();
   const day = new Intl.DateTimeFormat("ru-RU", { day: "2-digit" }).format(date);
@@ -30,6 +35,17 @@ export function buildApplicationDocument(form: ApplicationFormState, signatureDa
     font-style:normal;
     font-weight:400;
     font-display:block;
+    unicode-range:U+0400-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+  }
+  @font-face {
+    font-family:"Application Hand";
+    src:${embeddedLatinFontData
+      ? `url("data:font/woff2;base64,${embeddedLatinFontData}") format("woff2")`
+      : `url("/api/fonts/caveat-latin") format("woff2")`};
+    font-style:normal;
+    font-weight:400;
+    font-display:block;
+    unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
   }
   * { box-sizing: border-box; }
   html, body { margin:0; padding:0; background:#fff; overflow:hidden; }

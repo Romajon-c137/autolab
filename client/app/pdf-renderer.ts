@@ -3,13 +3,17 @@ import { chromium } from "playwright";
 import { ApplicationFormState, buildApplicationDocument } from "./application-document";
 
 let cachedCaveatFont = "";
+let cachedCaveatLatinFont = "";
 
 export async function renderApplicationPdf(form: ApplicationFormState, signatureData: string) {
   const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || defaultChromiumExecutable();
   const browser = await chromium.launch({ headless: true, executablePath });
   try {
     const page = await browser.newPage({ viewport: { width: 794, height: 1123 }, deviceScaleFactor: 1 });
-    await page.setContent(buildApplicationDocument(form, signatureData, caveatFontBase64()), { waitUntil: "networkidle" });
+    await page.setContent(
+      buildApplicationDocument(form, signatureData, caveatFontBase64(), caveatLatinFontBase64()),
+      { waitUntil: "networkidle" }
+    );
     await page.evaluate(() => document.fonts.ready);
     await page.emulateMedia({ media: "print" });
     return await page.pdf({
@@ -21,6 +25,14 @@ export async function renderApplicationPdf(form: ApplicationFormState, signature
   } finally {
     await browser.close();
   }
+}
+
+function caveatLatinFontBase64() {
+  if (!cachedCaveatLatinFont) {
+    const path = `${process.cwd()}/node_modules/@fontsource/caveat/files/caveat-latin-400-normal.woff2`;
+    cachedCaveatLatinFont = readFileSync(path).toString("base64");
+  }
+  return cachedCaveatLatinFont;
 }
 
 export function applicationPdfName(form: ApplicationFormState) {
