@@ -8,7 +8,7 @@ export type ApplicationFormState = {
   vin: string;
 };
 
-export function buildApplicationDocument(form: ApplicationFormState, signatureData: string) {
+export function buildApplicationDocument(form: ApplicationFormState, signatureData: string, embeddedFontData = "") {
   const plate = splitPlateNumber(form.plateNumber);
   const date = new Date();
   const day = new Intl.DateTimeFormat("ru-RU", { day: "2-digit" }).format(date);
@@ -22,6 +22,15 @@ export function buildApplicationDocument(form: ApplicationFormState, signatureDa
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
+  @font-face {
+    font-family:"Application Hand";
+    src:${embeddedFontData
+      ? `url("data:font/woff2;base64,${embeddedFontData}") format("woff2")`
+      : `url("/api/fonts/caveat") format("woff2")`};
+    font-style:normal;
+    font-weight:400;
+    font-display:block;
+  }
   * { box-sizing: border-box; }
   html, body { margin:0; padding:0; background:#fff; overflow:hidden; }
   body { font-family:"Times New Roman", Times, serif; color:#000; }
@@ -44,9 +53,9 @@ export function buildApplicationDocument(form: ApplicationFormState, signatureDa
   }
   .hand {
     color:#21327f;
-    font-family:"Segoe Print","Bradley Hand","Comic Sans MS",cursive;
-    font-size:13.5pt;
-    font-weight:600;
+    font-family:"Application Hand",cursive;
+    font-size:15pt;
+    font-weight:400;
     line-height:1;
   }
   .first-fill {

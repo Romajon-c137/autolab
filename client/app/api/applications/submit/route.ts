@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { isIP } from "node:net";
 import { chromium } from "playwright";
 import { ApplicationFormState, buildApplicationDocument } from "../../../application-document";
@@ -9,6 +9,7 @@ export const runtime = "nodejs";
 
 const backendUrl = (process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
 const vinPattern = /^[A-HJ-NPR-Z0-9]{17}$/;
+let cachedCaveatFont = "";
 
 type SubmitBody = {
   form?: Partial<ApplicationFormState>;
@@ -141,7 +142,8 @@ async function renderApplicationPdf(form: ApplicationFormState, signatureData: s
       viewport: { width: 794, height: 1123 },
       deviceScaleFactor: 1,
     });
-    await page.setContent(buildApplicationDocument(form, signatureData), { waitUntil: "networkidle" });
+    await page.setContent(buildApplicationDocument(form, signatureData, caveatFontBase64()), { waitUntil: "networkidle" });
+    await page.evaluate(() => document.fonts.ready);
     await page.emulateMedia({ media: "print" });
 
     return await page.pdf({
@@ -153,6 +155,17 @@ async function renderApplicationPdf(form: ApplicationFormState, signatureData: s
   } finally {
     await browser.close();
   }
+}
+
+function caveatFontBase64() {
+  if (!cachedCaveatFont) {
+    cachedCaveatFont = readFileSync(caveatFontPath()).toString("base64");
+  }
+  return cachedCaveatFont;
+}
+
+function caveatFontPath() {
+  return `${process.cwd()}/node_modules/@fontsource/caveat/files/caveat-cyrillic-400-normal.woff2`;
 }
 
 function applicationPdfName(form: ApplicationFormState) {
