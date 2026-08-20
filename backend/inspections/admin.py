@@ -4,7 +4,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import path
+from django.urls import path, reverse
 from django.utils.crypto import get_random_string
 from django.utils.html import format_html
 from django.utils.decorators import method_decorator
@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST
 
 from .models import (
     Branch,
+    ClientApplication,
     InspectionPrice,
     LoginChallenge,
     OpenAIApiKey,
@@ -19,6 +20,100 @@ from .models import (
     VehicleInspection,
     VehicleInspectionExtraPhoto,
 )
+
+
+class ApplicationLinkStatusFilter(admin.SimpleListFilter):
+    title = "статус привязки"
+    parameter_name = "link_status"
+
+    def lookups(self, request, model_admin):
+        return (("linked", "Привязана"), ("unlinked", "Не привязана"))
+
+    def queryset(self, request, queryset):
+        if self.value() == "linked":
+            return queryset.filter(inspection__isnull=False)
+        if self.value() == "unlinked":
+            return queryset.filter(inspection__isnull=True)
+        return queryset
+
+
+@admin.register(ClientApplication)
+class ClientApplicationAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "applicant_name",
+        "inn",
+        "phone",
+        "vehicle_name",
+        "plate_number",
+        "vin",
+        "link_status",
+        "inspection_link",
+        "pdf_link",
+        "created_at",
+    )
+    list_filter = (ApplicationLinkStatusFilter, "created_at")
+    search_fields = ("applicant_name", "inn", "phone", "vehicle_name", "plate_number", "vin")
+    list_select_related = ("inspection",)
+    date_hierarchy = "created_at"
+    ordering = ("-created_at",)
+    readonly_fields = (
+        "applicant_name",
+        "inn",
+        "phone",
+        "vehicle_name",
+        "plate_number",
+        "year",
+        "vin",
+        "inspection_link",
+        "pdf_link",
+        "signature_preview",
+        "created_at",
+    )
+    fields = (
+        "applicant_name",
+        "inn",
+        "phone",
+        "vehicle_name",
+        "plate_number",
+        "year",
+        "vin",
+        "inspection_link",
+        "pdf_link",
+        "signature_preview",
+        "created_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    @admin.display(description="Статус", boolean=True, ordering="inspection")
+    def link_status(self, obj):
+        return obj.inspection_id is not None
+
+    @admin.display(description="Осмотр", ordering="inspection__id")
+    def inspection_link(self, obj):
+        if not obj.inspection_id:
+            return "-"
+        url = reverse("admin:inspections_vehicleinspection_change", args=[obj.inspection_id])
+        return format_html('<a href="{}">Осмотр #{}</a>', url, obj.inspection_id)
+
+    @admin.display(description="PDF заявки")
+    def pdf_link(self, obj):
+        if not obj.pdf:
+            return "-"
+        return format_html('<a href="{}" target="_blank" rel="noopener">Открыть PDF</a>', obj.pdf.url)
+
+    @admin.display(description="Подпись")
+    def signature_preview(self, obj):
+        if not obj.signature:
+            return "Не сохранена"
+        return format_html(
+            '<a href="{0}" target="_blank" rel="noopener">'
+            '<img src="{0}" style="max-width:320px;max-height:150px;object-fit:contain;border:1px solid #ddd;" />'
+            '</a>',
+            obj.signature.url,
+        )
 
 
 class UserProfileInline(admin.StackedInline):
