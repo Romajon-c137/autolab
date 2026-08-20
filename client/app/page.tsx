@@ -298,7 +298,7 @@ export default function Page() {
         <header className="topbar">
           <div>
             <p className="eyebrow">Авто лаборатория</p>
-            <h1>Заявка на техосмотр</h1>
+            <h1>Онлайн заявка</h1>
           </div>
           <div className="progress" aria-label={`Заполнено ${completed}%`}>
             <span>{completed}%</span>
