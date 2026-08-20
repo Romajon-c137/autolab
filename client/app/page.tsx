@@ -78,6 +78,7 @@ export default function Page() {
   const [submitted, setSubmitted] = useState(false);
   const [scanStatus, setScanStatus] = useState("");
   const [scanError, setScanError] = useState("");
+  const [scanWarning, setScanWarning] = useState("");
   const [signatureData, setSignatureData] = useState("");
   const [submitStatus, setSubmitStatus] = useState("");
   const [submitError, setSubmitError] = useState("");
@@ -153,6 +154,7 @@ export default function Page() {
     if (!file) return;
 
     setScanError("");
+    setScanWarning("");
     setScanStatus("Сканируем техпаспорт...");
 
     const requestData = new FormData();
@@ -177,8 +179,14 @@ export default function Page() {
         vin: data.vin || current.vin,
       }));
       setScanStatus("Данные из техпаспорта заполнены");
+      setScanWarning(
+        data.vin
+          ? "Обязательно сверьте VIN с техпаспортом перед продолжением."
+          : "VIN не удалось распознать полностью. Введите все 17 символов вручную и сверьте их с техпаспортом."
+      );
     } catch (error) {
       setScanStatus("");
+      setScanWarning("");
       setScanError(error instanceof Error ? error.message : "Не удалось распознать техпаспорт");
     }
   }
@@ -364,10 +372,17 @@ export default function Page() {
                   onChange={scanTechPassport}
                 />
                 <button type="button" className="scan-button" onClick={() => scanInputRef.current?.click()}>
-                  Сканировать техпаспорт
+                  <span className="scan-button-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <path d="M8.5 5.5 10 3.5h4l1.5 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-10a2 2 0 0 1 2-2h3.5Z" />
+                      <circle cx="12" cy="12.5" r="4" />
+                    </svg>
+                  </span>
+                  <span>Сканировать техпаспорт</span>
                 </button>
                 {scanStatus ? <p className="scan-status">{scanStatus}</p> : null}
                 {scanError ? <p className="scan-error">{scanError}</p> : null}
+                {scanWarning ? <p className="scan-warning">{scanWarning}</p> : null}
                 <Field
                   label="Марка авто"
                   value={form.vehicleName}

@@ -153,17 +153,58 @@ h1 {
 
 .scan-button {
   width: 100%;
-  min-height: 50px;
+  min-height: 64px;
   margin: 0 0 14px;
-  border: 1px solid #bfe8d4;
-  border-radius: 6px;
-  background: #eef8f3;
-  color: var(--primary-dark);
+  border: 0;
+  border-radius: 10px;
+  background: var(--primary);
+  color: #fff;
   font-weight: 800;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  padding: 12px 18px;
+  box-shadow: 0 5px 14px rgb(23 169 111 / 24%);
+  transition: background 150ms ease, box-shadow 150ms ease, transform 100ms ease;
+}
+
+.scan-button:hover {
+  background: var(--primary-dark);
+  box-shadow: 0 7px 18px rgb(13 138 89 / 28%);
+}
+
+.scan-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 7px rgb(13 138 89 / 22%);
+}
+
+.scan-button:focus-visible {
+  outline: 3px solid rgb(23 169 111 / 28%);
+  outline-offset: 3px;
+}
+
+.scan-button-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.scan-button-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .scan-status,
-.scan-error {
+.scan-error,
+.scan-warning {
   margin: -2px 0 14px;
   border-radius: 6px;
   padding: 10px 12px;
@@ -179,6 +220,13 @@ h1 {
 .scan-error {
   background: #fff2f2;
   color: #ba1a1a;
+}
+
+.scan-warning {
+  margin-top: -4px;
+  border: 1px solid #f2c678;
+  background: #fff7e7;
+  color: #a65300;
 }
 
 .section-title {
