@@ -841,8 +841,9 @@ def client_application_submit(request):
 
     return JsonResponse({
         "ok": True,
-        "application": serialize_application(request, application),
-        "inspection": None if inspection is None else serialize_inspection(request, inspection),
+        # This endpoint is public through the client application. Never expose
+        # inspection or applicant details: the UI only needs the match result.
+        "inspection": None if inspection is None else {"id": inspection.id},
     })
 
 

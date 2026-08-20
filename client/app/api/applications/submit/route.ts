@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { existsSync } from "node:fs";
+import { isIP } from "node:net";
 import { chromium } from "playwright";
 import { ApplicationFormState, buildApplicationDocument } from "../../../application-document";
 import { acquirePdfRenderSlot, consumeRateLimit, contentLengthExceeds } from "../../security";
@@ -31,6 +32,10 @@ export async function POST(request: NextRequest) {
 
   const form = normalizeForm(body.form);
   const signatureData = typeof body.signatureData === "string" ? body.signatureData : "";
+  const formError = validateForm(form);
+  if (formError) {
+    return NextResponse.json({ ok: false, error: formError }, { status: 400 });
+  }
   if (!vinPattern.test(form.vin)) {
     return NextResponse.json({ ok: false, error: "VIN должен состоять из 17 допустимых символов" }, { status: 400 });
   }
@@ -51,10 +56,8 @@ export async function POST(request: NextRequest) {
   try {
     pdf = await renderApplicationPdf(form, signatureData);
   } catch (error) {
-    return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "Не удалось создать PDF" },
-      { status: 500 }
-    );
+    console.error("Application PDF rendering failed", error);
+    return NextResponse.json({ ok: false, error: "Не удалось подготовить документ. Повторите позже." }, { status: 500 });
   } finally {
     releaseRenderSlot();
   }
@@ -73,6 +76,7 @@ export async function POST(request: NextRequest) {
     method: "POST",
     headers: {
       "X-Client-Application-Key": process.env.CLIENT_APPLICATION_API_KEY || "",
+      "X-Forwarded-For": trustedClientIp(request),
     },
     body: data,
   });
@@ -95,6 +99,11 @@ export async function POST(request: NextRequest) {
   });
 }
 
+function trustedClientIp(request: NextRequest) {
+  const realIp = request.headers.get("x-real-ip")?.trim() || "";
+  return isIP(realIp) ? realIp : "unknown";
+}
+
 function normalizeForm(form: SubmitBody["form"]): ApplicationFormState {
   return {
     applicant: clean(form?.applicant),
@@ -109,6 +118,16 @@ function normalizeForm(form: SubmitBody["form"]): ApplicationFormState {
 
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function validateForm(form: ApplicationFormState) {
+  if (form.applicant.length < 2 || form.applicant.length > 200) return "Проверьте ФИО";
+  if (!/^\d{14}$/.test(form.inn)) return "ИНН должен состоять из 14 цифр";
+  if (!/^\+996\s?\d{3}\s?\d{3}\s?\d{3}$/.test(form.phone)) return "Проверьте номер телефона";
+  if (!form.vehicleName || form.vehicleName.length > 120) return "Проверьте марку авто";
+  if (!form.plateNumber || form.plateNumber.length > 20) return "Проверьте номер авто";
+  if (!/^\d{4}$/.test(form.year)) return "Проверьте год выпуска";
+  return "";
 }
 
 async function renderApplicationPdf(form: ApplicationFormState, signatureData: string) {

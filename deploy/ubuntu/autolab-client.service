@@ -1,0 +1,25 @@
+[Unit]
+Description=Auto Laboratory Next.js client (zayavka)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/autolab/client
+Environment=NODE_ENV=production
+Environment=PORT=3100
+Environment=HOSTNAME=0.0.0.0
+Environment=PLAYWRIGHT_BROWSERS_PATH=/opt/autolab/client/.playwright
+RuntimeDirectory=autolab-client
+RuntimeDirectoryMode=0700
+Environment=HOME=/run/autolab-client
+Environment=XDG_CONFIG_HOME=/run/autolab-client/config
+Environment=XDG_CACHE_HOME=/run/autolab-client/cache
+EnvironmentFile=-/opt/autolab/client/.env
+ExecStart=/usr/bin/node /opt/autolab/client/.next/standalone/server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
