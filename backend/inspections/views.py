@@ -34,13 +34,13 @@ from .application_pdfs import (
 from .models import (
     Branch,
     ClientApplication,
-    InspectionPrice,
     OpenAIApiKey,
     UserProfile,
     VehicleInspection,
     VehicleInspectionExtraPhoto,
 )
 from .notifications import notify_telegram_inspection_created
+from .pricing import current_inspection_amount
 from .serializers import (
     file_url,
     serialize_application,
@@ -767,28 +767,6 @@ def reports_summary(request):
     })
 
 
-def _current_inspection_amount(operation_type, vehicle_category):
-    price_category = (
-        vehicle_category
-        if operation_type in {
-            VehicleInspection.OPERATION_TECH_INSPECTION,
-            VehicleInspection.OPERATION_SBGTS,
-        }
-        else ""
-    )
-    price = (
-        InspectionPrice.objects.filter(
-            operation_type=operation_type,
-            vehicle_category=price_category,
-            is_active=True,
-            effective_from__lte=timezone.localdate(),
-        )
-        .order_by("-effective_from", "-id")
-        .first()
-    )
-    return 0 if price is None else price.amount
-
-
 @csrf_exempt
 def client_application_submit(request):
     if request.method != "POST":
@@ -1106,7 +1084,7 @@ def create_inspection(request):
                 brand=brand,
                 country=country,
                 vehicle_category=vehicle_category,
-                amount=_current_inspection_amount(operation_type, vehicle_category),
+                amount=current_inspection_amount(operation_type, vehicle_category),
                 branch=branch,
                 created_by=user,
                 vin=vin,

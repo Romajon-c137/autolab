@@ -20,6 +20,7 @@ from .models import (
     VehicleInspection,
     VehicleInspectionExtraPhoto,
 )
+from .pricing import current_inspection_amount
 
 
 class ApplicationLinkStatusFilter(admin.SimpleListFilter):
@@ -356,6 +357,18 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
             ),
         }),
     )
+
+    def save_model(self, request, obj, form, change):
+        pricing_fields_changed = {
+            "operation_type",
+            "vehicle_category",
+        }.intersection(form.changed_data)
+        if not change or pricing_fields_changed:
+            obj.amount = current_inspection_amount(
+                obj.operation_type,
+                obj.vehicle_category,
+            )
+        super().save_model(request, obj, form, change)
 
     @admin.display(description="Пробег")
     def mileage_preview(self, obj):
