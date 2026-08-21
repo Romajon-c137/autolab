@@ -119,6 +119,63 @@ class TwoFactorTests(TestCase):
 
 
 @override_settings(SECURE_SSL_REDIRECT=False)
+class RolePermissionTests(TestCase):
+    def setUp(self):
+        self.branch = Branch.objects.create(name="Role test branch")
+        self.other_branch = Branch.objects.create(name="Other branch")
+        self.user = get_user_model().objects.create_user(
+            "role-user",
+            password="A-safe-password-123",
+        )
+        self.user.profile.branch = self.branch
+        self.user.profile.save(update_fields=["branch"])
+        self.inspection = VehicleInspection.objects.create(
+            title="Test car",
+            brand="Test car",
+            vin="XMB4A11CDAA290161",
+            amount=1000,
+            branch=self.other_branch,
+        )
+        self.client.force_login(self.user)
+
+    def set_role(self, role):
+        self.user.profile.role = role
+        self.user.profile.save(update_fields=["role"])
+
+    def test_mvd_has_global_read_only_registry_without_sensitive_fields(self):
+        self.set_role(UserProfile.ROLE_MVD)
+
+        response = self.client.get("/api/inspections/", {"vin": self.inspection.vin})
+
+        self.assertEqual(response.status_code, 200)
+        item = response.json()["inspections"][0]
+        self.assertEqual(item["id"], self.inspection.id)
+        self.assertNotIn("amount", item)
+        self.assertNotIn("application_pdf", item)
+        self.assertEqual(self.client.get("/api/reports/summary/").status_code, 403)
+        self.assertEqual(self.client.get("/api/client-applications/list/").status_code, 403)
+        self.assertEqual(self.client.post("/api/inspections/", {}).status_code, 403)
+
+    def test_operator_can_see_count_reports_and_manage_applications_without_amounts(self):
+        self.set_role(UserProfile.ROLE_OPERATOR)
+        own_inspection = VehicleInspection.objects.create(
+            title="Own car",
+            brand="Own car",
+            vin="KNAG6412BLA015238",
+            amount=850,
+            branch=self.branch,
+            created_by=self.user,
+        )
+
+        list_response = self.client.get("/api/inspections/", {"vin": own_inspection.vin})
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertNotIn("amount", list_response.json()["inspections"][0])
+        self.assertEqual(self.client.get("/api/reports/summary/").status_code, 200)
+        self.assertEqual(self.client.get("/api/client-applications/list/").status_code, 200)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
 class AdminPasswordTests(TestCase):
     def test_password_generation_rejects_get(self):
         admin = get_user_model().objects.create_superuser(

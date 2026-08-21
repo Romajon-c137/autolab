@@ -26,8 +26,14 @@ def serialize_datetime(value):
     return "" if value is None else value.isoformat()
 
 
-def serialize_inspection(request, inspection):
-    return {
+def serialize_inspection(
+    request,
+    inspection,
+    *,
+    include_amount=True,
+    include_application=True,
+):
+    data = {
         "id": inspection.id,
         "title": inspection.title,
         "operation_type": inspection.operation_type,
@@ -36,7 +42,6 @@ def serialize_inspection(request, inspection):
         "brand": inspection.brand,
         "country": inspection.country,
         "vehicle_category": inspection.vehicle_category,
-        "amount": inspection.amount,
         "vin": inspection.vin,
         "created_at": inspection.created_at.isoformat(),
         "branch": None if inspection.branch is None else {
@@ -68,7 +73,6 @@ def serialize_inspection(request, inspection):
             for photo in inspection.extra_photos.all()
         ],
         "document_pdf": file_url(request, inspection.document_pdf),
-        "application_pdf": file_url(request, inspection.application_pdf),
         "photo_taken_at": {
             "front_photo": serialize_datetime(inspection.front_photo_taken_at),
             "rear_photo": serialize_datetime(inspection.rear_photo_taken_at),
@@ -78,3 +82,8 @@ def serialize_inspection(request, inspection):
             "vin_photo": serialize_datetime(inspection.vin_photo_taken_at),
         },
     }
+    if include_amount:
+        data["amount"] = inspection.amount
+    if include_application:
+        data["application_pdf"] = file_url(request, inspection.application_pdf)
+    return data

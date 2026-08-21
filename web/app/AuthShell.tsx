@@ -85,7 +85,10 @@ export function AuthShell({ children }: { children: ReactNode }) {
     );
   }
 
-  const canReports = user.role === "manager" || user.role === "admin";
+  const canReports = true;
+  const canReportTotals = user.role !== "mvd";
+  const canApplications = user.role !== "mvd";
+  const canViewAmounts = user.role === "manager" || user.role === "admin";
   const section: Section = pathname.startsWith("/reports")
     ? "reports"
     : pathname.startsWith("/applications")
@@ -149,14 +152,16 @@ export function AuthShell({ children }: { children: ReactNode }) {
             <ListChecks className="nav-item-icon" aria-hidden="true" />
             <span className="nav-label">Осмотры и печать</span>
           </button>
-          <button
-            className={section === "applications" ? "active" : ""}
-            onClick={() => goToSection("applications")}
-            title="Заявки"
-          >
-            <FileText className="nav-item-icon" aria-hidden="true" />
-            <span className="nav-label">Заявки</span>
-          </button>
+          {canApplications && (
+            <button
+              className={section === "applications" ? "active" : ""}
+              onClick={() => goToSection("applications")}
+              title="Заявки"
+            >
+              <FileText className="nav-item-icon" aria-hidden="true" />
+              <span className="nav-label">Заявки</span>
+            </button>
+          )}
           {canReports && (
             <button
               className={section === "reports" ? "active" : ""}
@@ -174,7 +179,16 @@ export function AuthShell({ children }: { children: ReactNode }) {
         </button>
       </aside>
       <main className="main">
-        <SessionContext.Provider value={{ serverUrl, sessionKey, user, canReports, logout }}>
+        <SessionContext.Provider value={{
+          serverUrl,
+          sessionKey,
+          user,
+          canReports,
+          canReportTotals,
+          canApplications,
+          canViewAmounts,
+          logout,
+        }}>
           {children}
         </SessionContext.Provider>
       </main>

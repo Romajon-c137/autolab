@@ -20,10 +20,12 @@ class Branch(models.Model):
 
 class UserProfile(models.Model):
     ROLE_OPERATOR = "operator"
+    ROLE_MVD = "mvd"
     ROLE_MANAGER = "manager"
     ROLE_ADMIN = "admin"
     ROLE_CHOICES = (
         (ROLE_OPERATOR, "Оператор"),
+        (ROLE_MVD, "МВД"),
         (ROLE_MANAGER, "Руководитель"),
         (ROLE_ADMIN, "Администратор"),
     )

@@ -20,6 +20,9 @@ import requests
 
 from .access import (
     allowed_inspections,
+    can_create_inspections,
+    can_manage_applications,
+    can_view_amounts,
     date_range,
     is_report_user,
     profile_for,
@@ -671,6 +674,7 @@ def inspections_list(request):
     query = request.GET.get("q", "").strip()
     vin_query = request.GET.get("vin", "").strip().upper()
     queryset = allowed_inspections(user)
+    profile = profile_for(user)
 
     if vin_query:
         queryset = queryset.filter(vin__icontains=vin_query)
@@ -695,7 +699,12 @@ def inspections_list(request):
     return JsonResponse({
         "ok": True,
         "inspections": [
-            serialize_inspection(request, inspection)
+            serialize_inspection(
+                request,
+                inspection,
+                include_amount=can_view_amounts(user),
+                include_application=profile.role != UserProfile.ROLE_MVD,
+            )
             for inspection in queryset.order_by("-created_at")[:300]
         ],
     })
@@ -715,7 +724,12 @@ def inspection_detail(request, inspection_id):
 
     return JsonResponse({
         "ok": True,
-        "inspection": serialize_inspection(request, inspection),
+        "inspection": serialize_inspection(
+            request,
+            inspection,
+            include_amount=can_view_amounts(user),
+            include_application=profile_for(user).role != UserProfile.ROLE_MVD,
+        ),
     })
 
 
@@ -839,6 +853,8 @@ def client_applications_list(request):
     auth_error, user = require_auth(request)
     if auth_error is not None:
         return auth_error
+    if not can_manage_applications(user):
+        return JsonResponse({"ok": False, "error": "Applications access denied"}, status=403)
 
     queryset = ClientApplication.objects.select_related("inspection")
 
@@ -876,9 +892,11 @@ def client_applications_list(request):
 
 @csrf_exempt
 def client_application_rebuild(request, application_id):
-    auth_error, _user = require_auth(request)
+    auth_error, user = require_auth(request)
     if auth_error is not None:
         return auth_error
+    if not can_manage_applications(user):
+        return JsonResponse({"ok": False, "error": "Applications access denied"}, status=403)
     if request.method != "POST":
         return JsonResponse({"ok": False, "error": "Only POST is allowed"}, status=405)
     if not rate_limit(request, "client-application-rebuild", 20, 60):
@@ -961,6 +979,8 @@ def create_inspection(request):
     auth_error, user = require_auth(request)
     if auth_error is not None:
         return auth_error
+    if not can_create_inspections(user):
+        return JsonResponse({"ok": False, "error": "Read-only access"}, status=403)
     if not rate_limit(request, "create-inspection", 30, 60):
         return JsonResponse({"ok": False, "error": "Too many requests"}, status=429)
 
@@ -1075,7 +1095,7 @@ def create_inspection(request):
         with transaction.atomic():
             existing = VehicleInspection.objects.filter(request_fingerprint=fingerprint).first()
             if existing is not None:
-                return _inspection_created_response(request, existing, status=200, duplicate=True)
+                return _inspection_created_response(request, existing, user, status=200, duplicate=True)
 
             inspection = VehicleInspection.objects.create(
                 title=title,
@@ -1118,14 +1138,14 @@ def create_inspection(request):
             transaction.on_commit(lambda: notify_telegram_inspection_created(request, inspection))
     except IntegrityError:
         inspection = VehicleInspection.objects.get(request_fingerprint=fingerprint)
-        return _inspection_created_response(request, inspection, status=200, duplicate=True)
+        return _inspection_created_response(request, inspection, user, status=200, duplicate=True)
 
-    return _inspection_created_response(request, inspection, status=201)
+    return _inspection_created_response(request, inspection, user, status=201)
 
 
-def _inspection_created_response(request, inspection, status, duplicate=False):
+def _inspection_created_response(request, inspection, user, status, duplicate=False):
     branch = inspection.branch
-    return JsonResponse({
+    data = {
         "ok": True,
         "duplicate": duplicate,
         "id": inspection.id,
@@ -1136,7 +1156,6 @@ def _inspection_created_response(request, inspection, status, duplicate=False):
         "brand": inspection.brand,
         "country": inspection.country,
         "vehicle_category": inspection.vehicle_category,
-        "amount": inspection.amount,
         "vin": inspection.vin,
         "document_pdf": file_url(request, inspection.document_pdf),
         "branch": {
@@ -1144,7 +1163,10 @@ def _inspection_created_response(request, inspection, status, duplicate=False):
             "name": branch.name,
         },
         "admin_url": f"/admin/inspections/vehicleinspection/{inspection.id}/change/",
-    }, status=status)
+    }
+    if can_view_amounts(user):
+        data["amount"] = inspection.amount
+    return JsonResponse(data, status=status)
 
 
 def _is_image_file(uploaded_file):

@@ -853,6 +853,10 @@ button:disabled {
   --inspection-columns: minmax(170px, 1.1fr) minmax(170px, 0.95fr) minmax(260px, 1.5fr) 126px minmax(160px, 0.9fr) 100px 58px;
 }
 
+.report-inspection-list.without-amount {
+  --inspection-columns: minmax(170px, 1.1fr) minmax(170px, 0.95fr) minmax(300px, 1.6fr) 126px minmax(160px, 0.9fr) 58px;
+}
+
 .application-list {
   --inspection-columns: minmax(150px, 1fr) minmax(115px, 0.65fr) minmax(140px, 0.75fr) minmax(210px, 1.25fr) 130px 330px;
 }

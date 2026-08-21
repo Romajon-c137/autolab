@@ -1,12 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Application, Inspection, apiFetch, humanError, isoDate, useSession } from "./lib";
 import { InspectionDetail } from "./InspectionDetail";
 import { Spinner } from "./Spinner";
 
 export function ApplicationsView() {
-  const { serverUrl, sessionKey } = useSession();
+  const { serverUrl, sessionKey, canApplications } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!canApplications) router.replace("/inspections");
+  }, [canApplications, router]);
+
+  if (!canApplications) return null;
+
+  return <ApplicationsContent serverUrl={serverUrl} sessionKey={sessionKey} />;
+}
+
+function ApplicationsContent({ serverUrl, sessionKey }: { serverUrl: string; sessionKey: string }) {
   const today = isoDate(new Date());
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);

@@ -2,7 +2,7 @@ import { createContext, useContext } from "react";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://autolab.glasscenter.kg";
 
-export type Role = "operator" | "manager" | "admin";
+export type Role = "operator" | "mvd" | "manager" | "admin";
 export type Section = "inspections" | "applications" | "reports";
 
 export type User = {
@@ -34,7 +34,7 @@ export type Inspection = {
   plate_number: string;
   brand: string;
   vehicle_category: string;
-  amount: number;
+  amount?: number;
   vin: string;
   created_at: string;
   branch: null | { id: number; name: string };
@@ -95,6 +95,9 @@ export type SessionValue = {
   sessionKey: string;
   user: User;
   canReports: boolean;
+  canReportTotals: boolean;
+  canApplications: boolean;
+  canViewAmounts: boolean;
   logout: () => void;
 };
 
@@ -142,6 +145,7 @@ export function normalizeServerUrl(value: string) {
 export function roleLabel(role: Role) {
   if (role === "admin") return "Администратор";
   if (role === "manager") return "Руководитель";
+  if (role === "mvd") return "МВД";
   return "Оператор";
 }
 

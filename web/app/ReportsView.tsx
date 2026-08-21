@@ -23,7 +23,7 @@ import { InspectionDetail } from "./InspectionDetail";
 import { Spinner } from "./Spinner";
 
 export function ReportsView() {
-  const { serverUrl, sessionKey, canReports } = useSession();
+  const { serverUrl, sessionKey, canReports, canReportTotals, canViewAmounts } = useSession();
   const router = useRouter();
 
   useEffect(() => {
@@ -32,10 +32,25 @@ export function ReportsView() {
 
   if (!canReports) return null;
 
-  return <ReportsContent serverUrl={serverUrl} sessionKey={sessionKey} />;
+  return <ReportsContent
+    serverUrl={serverUrl}
+    sessionKey={sessionKey}
+    canReportTotals={canReportTotals}
+    canViewAmounts={canViewAmounts}
+  />;
 }
 
-function ReportsContent({ serverUrl, sessionKey }: { serverUrl: string; sessionKey: string }) {
+function ReportsContent({
+  serverUrl,
+  sessionKey,
+  canReportTotals,
+  canViewAmounts,
+}: {
+  serverUrl: string;
+  sessionKey: string;
+  canReportTotals: boolean;
+  canViewAmounts: boolean;
+}) {
   const today = isoDate(new Date());
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);
@@ -56,8 +71,11 @@ function ReportsContent({ serverUrl, sessionKey }: { serverUrl: string; sessionK
     setError("");
     try {
       const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+      const summaryRequest = canReportTotals
+        ? apiFetch<ReportSummary>(serverUrl, sessionKey, `/api/reports/summary/?${params}`)
+        : Promise.resolve(null);
       const [summaryData, inspectionsData] = await Promise.all([
-        apiFetch<ReportSummary>(serverUrl, sessionKey, `/api/reports/summary/?${params}`),
+        summaryRequest,
         apiFetch<{ inspections: Inspection[] }>(serverUrl, sessionKey, `/api/inspections/?${params}`),
       ]);
       setSummary(summaryData);
@@ -177,9 +195,9 @@ function ReportsContent({ serverUrl, sessionKey }: { serverUrl: string; sessionK
         <div className="card empty">
           <Spinner label="Загрузка отчета..." />
         </div>
-      ) : summary && (
+      ) : (summary || !canReportTotals) && (
         <>
-          <div className="report-totals">
+          {canReportTotals && <div className="report-totals">
             <div className="primary-total">
               <span>{isTodayPeriod ? "Сегодня" : "За выбранный период"}</span>
               <strong>{totals?.period ?? 0}</strong>
@@ -238,8 +256,8 @@ function ReportsContent({ serverUrl, sessionKey }: { serverUrl: string; sessionK
               <strong>{visibleInspections.length}</strong>
               <small>{vinSearchActive ? "Вся база" : filterLabel}</small>
             </div>
-          </div>
-          <div className="inspection-list report-inspection-list">
+          </div>}
+          <div className={`inspection-list report-inspection-list${canViewAmounts ? "" : " without-amount"}`}>
             {visibleInspections.length === 0 ? (
               <div className="card empty">
                 {vinSearchActive ? "По VIN ничего не найдено" : "Осмотры за период не найдены"}
@@ -252,7 +270,7 @@ function ReportsContent({ serverUrl, sessionKey }: { serverUrl: string; sessionK
                   <span>VIN</span>
                   <span>Дата</span>
                   <span>Оператор</span>
-                  <span>Сумма</span>
+                  {canViewAmounts && <span>Сумма</span>}
                   <span />
                 </div>
                 {visibleInspections.map((inspection) => (
@@ -285,10 +303,12 @@ function ReportsContent({ serverUrl, sessionKey }: { serverUrl: string; sessionK
                       <span>Оператор</span>
                       <strong>{operatorName(inspection.created_by)}</strong>
                     </div>
-                    <div className="inspection-cell">
-                      <span>Сумма</span>
-                      <strong>{formatMoney(inspection.amount)}</strong>
-                    </div>
+                    {canViewAmounts && (
+                      <div className="inspection-cell">
+                        <span>Сумма</span>
+                        <strong>{formatMoney(inspection.amount)}</strong>
+                      </div>
+                    )}
                     <div className="actions">
                       <button
                         className="icon-button"

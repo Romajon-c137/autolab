@@ -35,9 +35,26 @@ def profile_for(user):
 def is_report_user(user):
     profile = profile_for(user)
     return user.is_superuser or profile.role in (
+        UserProfile.ROLE_OPERATOR,
         UserProfile.ROLE_MANAGER,
         UserProfile.ROLE_ADMIN,
     )
+
+
+def can_view_amounts(user):
+    profile = profile_for(user)
+    return user.is_superuser or profile.role in (
+        UserProfile.ROLE_MANAGER,
+        UserProfile.ROLE_ADMIN,
+    )
+
+
+def can_manage_applications(user):
+    return profile_for(user).role != UserProfile.ROLE_MVD or user.is_superuser
+
+
+def can_create_inspections(user):
+    return profile_for(user).role != UserProfile.ROLE_MVD or user.is_superuser
 
 
 def allowed_inspections(user):
@@ -47,7 +64,10 @@ def allowed_inspections(user):
         "created_by",
     ).prefetch_related("extra_photos")
 
-    if user.is_superuser or profile.role == UserProfile.ROLE_ADMIN:
+    if user.is_superuser or profile.role in (
+        UserProfile.ROLE_ADMIN,
+        UserProfile.ROLE_MVD,
+    ):
         return queryset
 
     if profile.branch_id is None:
