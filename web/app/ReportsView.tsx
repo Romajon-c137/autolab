@@ -138,6 +138,10 @@ function ReportsContent({
       ? filteredByType.filter((item) => item.vehicle_category === categoryFilter)
       : filteredByType;
   const visibleInspections = vinSearchActive ? vinResults : filteredInspections;
+  const visibleAmount = visibleInspections.reduce(
+    (total, inspection) => total + Number(inspection.amount ?? 0),
+    0
+  );
   const typeLabel = REPORT_TYPE_OPTIONS.find((option) => option.value === typeFilter)?.label ?? "Все";
   const filterLabel =
     typeHasCategoryFilter && categoryFilter !== "all"
@@ -197,7 +201,7 @@ function ReportsContent({
         </div>
       ) : (summary || !canReportTotals) && (
         <>
-          {canReportTotals && <div className="report-totals">
+          {canReportTotals && <div className={`report-totals${canViewAmounts ? "" : " without-sum"}`}>
             <div className="primary-total">
               <span>{isTodayPeriod ? "Сегодня" : "За выбранный период"}</span>
               <strong>{totals?.period ?? 0}</strong>
@@ -251,11 +255,13 @@ function ReportsContent({
                 </div>
               )}
             </div>
-            <div className="primary-total report-filter-sum">
-              <span>{vinSearchActive ? "Найдено по VIN" : "Итого"}</span>
-              <strong>{visibleInspections.length}</strong>
-              <small>{vinSearchActive ? "Вся база" : filterLabel}</small>
-            </div>
+            {canViewAmounts && (
+              <div className="primary-total report-filter-sum">
+                <span>Итого сумма</span>
+                <strong>{formatMoney(visibleAmount)} сом</strong>
+                <small>{vinSearchActive ? "По найденному VIN" : filterLabel}</small>
+              </div>
+            )}
           </div>}
           <div className={`inspection-list report-inspection-list${canViewAmounts ? "" : " without-amount"}`}>
             {visibleInspections.length === 0 ? (

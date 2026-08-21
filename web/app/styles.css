@@ -774,6 +774,10 @@ button:disabled {
   background: var(--surface);
 }
 
+.report-totals.without-sum {
+  grid-template-columns: minmax(200px, 1fr) minmax(280px, 1.5fr);
+}
+
 .report-totals div {
   padding: 12px 14px;
   border-right: 1px solid var(--border);
