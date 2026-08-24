@@ -1,3 +1,6 @@
+from .photo_previews import preview_file_url
+
+
 def file_url(request, field):
     if not field:
         return ""
@@ -57,17 +60,17 @@ def serialize_inspection(
             or inspection.created_by.get_username(),
         },
         "photos": {
-            "front_photo": file_url(request, inspection.front_photo),
-            "rear_photo": file_url(request, inspection.rear_photo),
-            "left_photo": file_url(request, inspection.left_photo),
-            "right_photo": file_url(request, inspection.right_photo),
-            "mileage_photo": file_url(request, inspection.mileage_photo),
-            "vin_photo": file_url(request, inspection.vin_photo),
+            "front_photo": preview_file_url(request, inspection.front_photo),
+            "rear_photo": preview_file_url(request, inspection.rear_photo),
+            "left_photo": preview_file_url(request, inspection.left_photo),
+            "right_photo": preview_file_url(request, inspection.right_photo),
+            "mileage_photo": preview_file_url(request, inspection.mileage_photo),
+            "vin_photo": preview_file_url(request, inspection.vin_photo),
         },
         "extra_photos": [
             {
                 "id": photo.id,
-                "image": file_url(request, photo.image),
+                "image": preview_file_url(request, photo.image),
                 "taken_at": serialize_datetime(photo.taken_at),
             }
             for photo in inspection.extra_photos.all()

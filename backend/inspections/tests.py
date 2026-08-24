@@ -119,6 +119,27 @@ class TwoFactorTests(TestCase):
 
 
 @override_settings(SECURE_SSL_REDIRECT=False)
+class PhotoPreviewTests(TestCase):
+    def test_preview_is_full_hd_sized_webp_and_keeps_original(self):
+        with tempfile.TemporaryDirectory() as media_root:
+            source = Path(media_root) / "inspections" / "front" / "large.jpg"
+            source.parent.mkdir(parents=True)
+            Image.new("RGB", (3000, 2000), "white").save(source, "JPEG", quality=95)
+            original_size = source.stat().st_size
+
+            with override_settings(MEDIA_ROOT=media_root):
+                response = self.client.get("/api/photo-preview/inspections/front/large.jpg")
+                preview_bytes = b"".join(response.streaming_content)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response["Content-Type"], "image/webp")
+            with Image.open(io.BytesIO(preview_bytes)) as preview:
+                self.assertEqual(preview.format, "WEBP")
+                self.assertLessEqual(max(preview.size), 1920)
+            self.assertEqual(source.stat().st_size, original_size)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
 class RolePermissionTests(TestCase):
     def setUp(self):
         self.branch = Branch.objects.create(name="Role test branch")
