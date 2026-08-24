@@ -5,6 +5,7 @@ import json
 import os
 import re
 import secrets
+import threading
 
 from django.contrib.auth import authenticate, login, logout
 from django.conf import settings
@@ -44,6 +45,7 @@ from .models import (
 )
 from .notifications import notify_telegram_inspection_created
 from .pricing import current_inspection_amount
+from .pdf_previews import warm_pdf_preview
 from .serializers import (
     file_url,
     serialize_application,
@@ -1136,6 +1138,15 @@ def create_inspection(request):
             link_application_on_inspection_created(inspection)
             mirror_inspection(inspection)
             transaction.on_commit(lambda: notify_telegram_inspection_created(request, inspection))
+            if inspection.document_pdf:
+                pdf_name = inspection.document_pdf.name
+                transaction.on_commit(
+                    lambda: threading.Thread(
+                        target=warm_pdf_preview,
+                        args=(pdf_name,),
+                        daemon=True,
+                    ).start()
+                )
     except IntegrityError:
         inspection = VehicleInspection.objects.get(request_fingerprint=fingerprint)
         return _inspection_created_response(request, inspection, user, status=200, duplicate=True)

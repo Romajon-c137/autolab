@@ -1,4 +1,5 @@
 from .photo_previews import preview_file_url
+from .pdf_previews import optimized_pdf_url
 
 
 def file_url(request, field):
@@ -18,7 +19,7 @@ def serialize_application(request, application):
         "plate_number": application.plate_number,
         "year": application.year,
         "vin": application.vin,
-        "pdf": file_url(request, application.pdf),
+        "pdf": optimized_pdf_url(request, application.pdf),
         "created_at": application.created_at.isoformat(),
         "inspection_id": application.inspection_id,
         "can_rebuild": bool(application.signature),
@@ -75,7 +76,7 @@ def serialize_inspection(
             }
             for photo in inspection.extra_photos.all()
         ],
-        "document_pdf": file_url(request, inspection.document_pdf),
+        "document_pdf": optimized_pdf_url(request, inspection.document_pdf),
         "photo_taken_at": {
             "front_photo": serialize_datetime(inspection.front_photo_taken_at),
             "rear_photo": serialize_datetime(inspection.rear_photo_taken_at),
@@ -88,5 +89,5 @@ def serialize_inspection(
     if include_amount:
         data["amount"] = inspection.amount
     if include_application:
-        data["application_pdf"] = file_url(request, inspection.application_pdf)
+        data["application_pdf"] = optimized_pdf_url(request, inspection.application_pdf)
     return data

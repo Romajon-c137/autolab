@@ -25,6 +25,7 @@ from django.urls import path
 from django.views.decorators.csrf import csrf_exempt
 from inspections.access import require_auth
 from inspections.photo_previews import photo_preview
+from inspections.pdf_previews import pdf_preview
 from inspections.security import UploadValidationError, rate_limit, validate_image
 from inspections.views import (
     branches_view,
@@ -108,6 +109,7 @@ urlpatterns = [
     path('api/inspections/', inspections_collection, name='inspections-collection'),
     path('api/inspections/<int:inspection_id>/', inspection_detail, name='inspection-detail'),
     path('api/photo-preview/<path:photo_path>', photo_preview, name='photo-preview'),
+    path('api/pdf-preview/<path:pdf_path>', pdf_preview, name='pdf-preview'),
     path('api/reports/summary/', reports_summary, name='reports-summary'),
     path('api/client-applications/', client_application_submit, name='client-application-submit'),
     path('api/client-applications/list/', client_applications_list, name='client-applications-list'),
