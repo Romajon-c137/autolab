@@ -4,10 +4,7 @@ import os
 import requests
 from django.utils import timezone
 
-from .serializers import file_url
-
-
-def notify_telegram_inspection_created(request, inspection):
+def notify_telegram_inspection_created(base_url, inspection):
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
     if not token or not chat_id:
@@ -19,10 +16,12 @@ def notify_telegram_inspection_created(request, inspection):
 
     branch = inspection.branch.name if inspection.branch_id else "-"
     created_at = timezone.localtime(inspection.created_at).strftime("%d.%m.%Y %H:%M")
-    admin_url = request.build_absolute_uri(
-        f"/admin/inspections/vehicleinspection/{inspection.id}/change/"
+    admin_url = f"{base_url}/admin/inspections/vehicleinspection/{inspection.id}/change/"
+    document_url = (
+        f"{base_url}{inspection.document_pdf.url}"
+        if inspection.document_pdf
+        else ""
     )
-    document_url = file_url(request, inspection.document_pdf)
 
     lines = [
         "<b>Новый осмотр</b>",

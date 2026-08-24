@@ -12,11 +12,10 @@ export function InspectionsView() {
   const [dateTo, setDateTo] = useState(today);
   const [items, setItems] = useState<Inspection[]>([]);
   const [selected, setSelected] = useState<Inspection | null>(null);
+  const [openingId, setOpeningId] = useState<number | null>(null);
   const [autoSync, setAutoSync] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const selectedRef = useRef(selected);
-  selectedRef.current = selected;
   const lastSignature = useRef("");
 
   useEffect(() => {
@@ -58,10 +57,6 @@ export function InspectionsView() {
       if (sig !== lastSignature.current) {
         lastSignature.current = sig;
         setItems(data.inspections);
-        if (selectedRef.current) {
-          const fresh = data.inspections.find((item) => item.id === selectedRef.current?.id);
-          setSelected(fresh ?? null);
-        }
       }
     } catch (err) {
       setError(humanError(err));
@@ -73,7 +68,7 @@ export function InspectionsView() {
   useEffect(() => {
     if (!autoSync) return;
     load();
-    const timer = setInterval(load, 5000);
+    const timer = setInterval(load, 15000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoSync, dateFrom, dateTo]);
@@ -82,6 +77,23 @@ export function InspectionsView() {
     load(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function openInspection(inspection: Inspection) {
+    setOpeningId(inspection.id);
+    setError("");
+    try {
+      const data = await apiFetch<{ inspection: Inspection }>(
+        serverUrl,
+        sessionKey,
+        `/api/inspections/${inspection.id}/`
+      );
+      setSelected(data.inspection);
+    } catch (err) {
+      setError(humanError(err));
+    } finally {
+      setOpeningId(null);
+    }
+  }
 
   return (
     <>
@@ -142,7 +154,8 @@ export function InspectionsView() {
                 <InspectionCard
                   key={item.id}
                   inspection={item}
-                  onOpen={() => setSelected(item)}
+                  opening={openingId === item.id}
+                  onOpen={() => openInspection(item)}
                 />
               ))}
             </>
@@ -155,9 +168,11 @@ export function InspectionsView() {
 
 function InspectionCard({
   inspection,
+  opening,
   onOpen,
 }: {
   inspection: Inspection;
+  opening: boolean;
   onOpen: () => void;
 }) {
   return (
@@ -183,8 +198,8 @@ function InspectionCard({
         <strong>{inspection.created_by?.login ?? "-"}</strong>
       </div>
       <div className="actions">
-        <button className="btn secondary" onClick={onOpen}>
-          Открыть
+        <button className="btn secondary" onClick={onOpen} disabled={opening}>
+          {opening ? "Загрузка..." : "Открыть"}
         </button>
       </div>
     </article>

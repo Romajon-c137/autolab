@@ -80,7 +80,11 @@ class SecurityTests(TestCase):
         )
         response = self.client.post(
             "/api/client-applications/",
-            {"vin": inspection.vin, "application_pdf": uploaded_pdf("replacement.pdf")},
+            {
+                "vin": inspection.vin,
+                "application_pdf": uploaded_pdf("replacement.pdf"),
+                "signature": uploaded_image("signature.png"),
+            },
             HTTP_X_CLIENT_APPLICATION_KEY="client-secret",
         )
         self.assertEqual(response.status_code, 409)
@@ -91,10 +95,12 @@ class SecurityTests(TestCase):
             "title": "Honda Fit", "brand": "Honda Fit",
             "vin": "JHMGD17507S202261", "operation_type": "tech_inspection",
             "vehicle_category": "M1", "front_photo": uploaded_image(),
+            "request_id": "inspection-request-123",
         }
         first = self.client.post("/api/inspections/", data)
         self.assertEqual(first.status_code, 201, first.content)
         data["front_photo"] = uploaded_image()
+        data["brand"] = "Changed on retry"
         second = self.client.post("/api/inspections/", data)
         self.assertEqual(second.status_code, 200, second.content)
         self.assertTrue(second.json()["duplicate"])

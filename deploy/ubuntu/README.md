@@ -120,13 +120,6 @@ sudo systemctl restart autolab-backend autolab-web
 
 ## 8. Mobile APK for production server
 
-The backend uses Ghostscript to create lightweight cached PDF previews for the
-web interface. Install it on the server:
-
-```bash
-sudo apt-get install -y ghostscript
-```
-
 Build with server URL baked as default:
 
 ```bash

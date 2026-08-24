@@ -25,10 +25,11 @@ DOCUMENT_FIELDS = (
 
 
 def mirror_inspection(inspection):
+    inspection_id = inspection if isinstance(inspection, int) else inspection.id
     inspection = (
         VehicleInspection.objects.select_related("branch", "created_by")
         .prefetch_related("extra_photos")
-        .get(id=inspection.id)
+        .get(id=inspection_id)
     )
 
     vehicle_key = inspection.vin or f"NO_VIN_{inspection.id}"

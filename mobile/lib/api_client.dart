@@ -155,6 +155,7 @@ class _ApiClient {
       'country': draft.country,
       'vehicle_category': draft.vehicleCategory.apiValue,
       'vin': draft.vin,
+      'request_id': draft.id,
       if (draft.mileage != null) 'mileage': draft.mileage.toString(),
     });
 
@@ -189,9 +190,11 @@ class _ApiClient {
     }
 
     final streamedResponse = await request.send().timeout(
-      const Duration(seconds: 60),
+      const Duration(seconds: 180),
     );
-    final response = await http.Response.fromStream(streamedResponse);
+    final response = await http.Response.fromStream(
+      streamedResponse,
+    ).timeout(const Duration(seconds: 30));
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       if (response.statusCode == 401) {

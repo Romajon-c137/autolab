@@ -77,9 +77,13 @@ def validate_pdf(uploaded_file):
         uploaded_file.seek(position)
 
 
-def inspection_fingerprint(user_id, fields, uploaded_files):
+def inspection_fingerprint(user_id, fields, uploaded_files, request_id=""):
     digest = hashlib.sha256()
     digest.update(str(user_id).encode())
+    if request_id:
+        digest.update(b"\0request-id\0")
+        digest.update(request_id.encode("utf-8"))
+        return digest.hexdigest()
     for value in fields:
         digest.update(b"\0")
         digest.update(str(value).strip().encode("utf-8"))

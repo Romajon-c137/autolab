@@ -57,12 +57,14 @@ def can_create_inspections(user):
     return profile_for(user).role != UserProfile.ROLE_MVD or user.is_superuser
 
 
-def allowed_inspections(user):
+def allowed_inspections(user, include_files=True):
     profile = profile_for(user)
     queryset = VehicleInspection.objects.select_related(
         "branch",
         "created_by",
-    ).prefetch_related("extra_photos")
+    )
+    if include_files:
+        queryset = queryset.prefetch_related("extra_photos")
 
     if user.is_superuser or profile.role in (
         UserProfile.ROLE_ADMIN,

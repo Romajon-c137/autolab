@@ -57,6 +57,7 @@ function ReportsContent({
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [selected, setSelected] = useState<Inspection | null>(null);
+  const [openingId, setOpeningId] = useState<number | null>(null);
   const [typeFilter, setTypeFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [vinQuery, setVinQuery] = useState("");
@@ -117,6 +118,23 @@ function ReportsContent({
     setVinQuery("");
     setVinResults([]);
     setVinSearchActive(false);
+  }
+
+  async function openInspection(inspection: Inspection) {
+    setOpeningId(inspection.id);
+    setError("");
+    try {
+      const data = await apiFetch<{ inspection: Inspection }>(
+        serverUrl,
+        sessionKey,
+        `/api/inspections/${inspection.id}/`
+      );
+      setSelected(data.inspection);
+    } catch (err) {
+      setError(humanError(err));
+    } finally {
+      setOpeningId(null);
+    }
   }
 
   useEffect(() => {
@@ -318,7 +336,8 @@ function ReportsContent({
                     <div className="actions">
                       <button
                         className="icon-button"
-                        onClick={() => setSelected(inspection)}
+                        onClick={() => openInspection(inspection)}
+                        disabled={openingId === inspection.id}
                         title="Открыть осмотр"
                         aria-label="Открыть осмотр"
                       >

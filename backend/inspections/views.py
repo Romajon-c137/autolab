@@ -5,7 +5,6 @@ import json
 import os
 import re
 import secrets
-import threading
 
 from django.contrib.auth import authenticate, login, logout
 from django.conf import settings
@@ -35,6 +34,7 @@ from .application_pdfs import (
     link_application_on_submit,
     save_client_application,
 )
+from .background_tasks import schedule_inspection_postprocessing
 from .models import (
     Branch,
     ClientApplication,
@@ -43,9 +43,7 @@ from .models import (
     VehicleInspection,
     VehicleInspectionExtraPhoto,
 )
-from .notifications import notify_telegram_inspection_created
 from .pricing import current_inspection_amount
-from .pdf_previews import warm_pdf_preview
 from .serializers import (
     file_url,
     serialize_application,
@@ -675,7 +673,7 @@ def inspections_list(request):
 
     query = request.GET.get("q", "").strip()
     vin_query = request.GET.get("vin", "").strip().upper()
-    queryset = allowed_inspections(user)
+    queryset = allowed_inspections(user, include_files=False)
     profile = profile_for(user)
 
     if vin_query:
@@ -706,6 +704,7 @@ def inspections_list(request):
                 inspection,
                 include_amount=can_view_amounts(user),
                 include_application=profile.role != UserProfile.ROLE_MVD,
+                include_files=False,
             )
             for inspection in queryset.order_by("-created_at")[:300]
         ],
@@ -827,6 +826,19 @@ def client_application_submit(request):
         validate_image(signature)
     except UploadValidationError as error:
         return JsonResponse({"ok": False, "error": str(error)}, status=400)
+
+    existing_inspection = (
+        VehicleInspection.objects
+        .filter(vin__iexact=vin, application_pdf__isnull=False)
+        .exclude(application_pdf="")
+        .order_by("-created_at")
+        .first()
+    )
+    if existing_inspection is not None:
+        return JsonResponse({
+            "ok": False,
+            "error": "An application is already attached to this VIN",
+        }, status=409)
 
     application = save_client_application(
         vin,
@@ -1002,6 +1014,7 @@ def create_inspection(request):
     country = request.POST.get("country", "").strip()
     vin = request.POST.get("vin", "").strip().upper()
     vehicle_category = request.POST.get("vehicle_category", VehicleInspection.CATEGORY_M1).strip().upper()
+    request_id = request.POST.get("request_id", "").strip()
     profile = getattr(user, "profile", None)
     branch = None if profile is None else profile.branch
 
@@ -1025,6 +1038,9 @@ def create_inspection(request):
             "ok": False,
             "error": "Field 'operation_type' is invalid",
         }, status=400)
+
+    if request_id and not re.fullmatch(r"[A-Za-z0-9_-]{8,64}", request_id):
+        return JsonResponse({"ok": False, "error": "Field 'request_id' has an invalid format"}, status=400)
 
     if not title:
         title = f"{brand} {plate_number}".strip() or "Осмотр авто"
@@ -1091,6 +1107,7 @@ def create_inspection(request):
         [request.FILES.get(field) for field in REQUIRED_PHOTO_FIELDS]
         + list(conversion_photos)
         + [document_pdf],
+        request_id=request_id,
     )
 
     try:
@@ -1136,17 +1153,11 @@ def create_inspection(request):
                     taken_at=conversion_photo_taken_at,
                 )
             link_application_on_inspection_created(inspection)
-            mirror_inspection(inspection)
-            transaction.on_commit(lambda: notify_telegram_inspection_created(request, inspection))
-            if inspection.document_pdf:
-                pdf_name = inspection.document_pdf.name
-                transaction.on_commit(
-                    lambda: threading.Thread(
-                        target=warm_pdf_preview,
-                        args=(pdf_name,),
-                        daemon=True,
-                    ).start()
-                )
+            inspection_id = inspection.id
+            base_url = request.build_absolute_uri("/").rstrip("/")
+            transaction.on_commit(
+                lambda: schedule_inspection_postprocessing(inspection_id, base_url)
+            )
     except IntegrityError:
         inspection = VehicleInspection.objects.get(request_fingerprint=fingerprint)
         return _inspection_created_response(request, inspection, user, status=200, duplicate=True)
