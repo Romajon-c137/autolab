@@ -142,7 +142,6 @@ function ReportsContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const totals = summary?.totals;
   const isTodayPeriod = dateFrom === today && dateTo === today;
   const periodLabel = dateFrom === dateTo
     ? formatDateOnly(dateFrom)
@@ -221,9 +220,17 @@ function ReportsContent({
         <>
           {canReportTotals && <div className={`report-totals${canViewAmounts ? "" : " without-sum"}`}>
             <div className="primary-total">
-              <span>{isTodayPeriod ? "Сегодня" : "За выбранный период"}</span>
-              <strong>{totals?.period ?? 0}</strong>
-              <small>{periodLabel}</small>
+              <span>
+                {vinSearchActive
+                  ? "Найдено по VIN"
+                  : isTodayPeriod
+                    ? "Сегодня"
+                    : "За выбранный период"}
+              </span>
+              <strong>{visibleInspections.length}</strong>
+              <small>
+                {vinSearchActive ? "Вся база" : `${periodLabel} · ${filterLabel}`}
+              </small>
             </div>
             <div className="report-type-filter">
               <span>Тип осмотра</span>
