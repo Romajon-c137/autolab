@@ -138,6 +138,24 @@ class PhotoPreviewTests(TestCase):
                 self.assertLessEqual(max(preview.size), 1920)
             self.assertEqual(source.stat().st_size, original_size)
 
+    def test_preview_supports_mirrored_vehicle_photos(self):
+        with tempfile.TemporaryDirectory() as media_root:
+            relative_path = (
+                "vehicles/KMFXKS7BPVU138887/inspections/"
+                "2026-08-24_092231_conversion_720/photos/front_photo.jpg"
+            )
+            source = Path(media_root) / relative_path
+            source.parent.mkdir(parents=True)
+            Image.new("RGB", (1600, 1200), "white").save(source, "JPEG", quality=85)
+
+            with override_settings(MEDIA_ROOT=media_root):
+                response = self.client.get(f"/api/photo-preview/{relative_path}")
+                preview_bytes = b"".join(response.streaming_content)
+
+            self.assertEqual(response.status_code, 200)
+            with Image.open(io.BytesIO(preview_bytes)) as preview:
+                self.assertEqual(preview.format, "WEBP")
+
 
 @override_settings(SECURE_SSL_REDIRECT=False)
 class RolePermissionTests(TestCase):

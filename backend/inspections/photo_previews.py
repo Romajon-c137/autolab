@@ -22,9 +22,12 @@ def preview_file_url(request, field):
 def photo_preview(request, photo_path):
     media_root = Path(settings.MEDIA_ROOT).resolve()
     source = (media_root / photo_path).resolve()
-    inspections_root = (media_root / "inspections").resolve()
+    allowed_roots = (
+        (media_root / "inspections").resolve(),
+        (media_root / "vehicles").resolve(),
+    )
     if (
-        not source.is_relative_to(inspections_root)
+        not any(source.is_relative_to(root) for root in allowed_roots)
         or not source.is_file()
         or source.suffix.lower() not in SUPPORTED_IMAGE_SUFFIXES
     ):
