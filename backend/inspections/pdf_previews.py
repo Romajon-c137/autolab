@@ -106,4 +106,5 @@ def _pdf_response(path):
     response = FileResponse(path.open("rb"), content_type="application/pdf")
     response["Cache-Control"] = "public, max-age=604800"
     response["X-Content-Type-Options"] = "nosniff"
+    response["X-Frame-Options"] = "SAMEORIGIN"
     return response
