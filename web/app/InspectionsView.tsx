@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { Inspection, apiFetch, formatDate, humanError, isoDate, operationLabel, useSession } from "./lib";
 import { InspectionDetail } from "./InspectionDetail";
 import { Spinner } from "./Spinner";
@@ -113,11 +114,16 @@ export function InspectionsView() {
       </div>
       {selected ? (
         <div className="detail-actions-line no-print">
-          <button className="btn secondary" onClick={() => setSelected(null)}>
-            Назад
-          </button>
           <button className="btn" onClick={() => window.print()}>
-            Печать
+            Печать фото
+          </button>
+          <button
+            className="icon-button"
+            onClick={() => setSelected(null)}
+            title="Назад к списку"
+            aria-label="Назад к списку"
+          >
+            <ArrowLeft aria-hidden="true" />
           </button>
         </div>
       ) : (
@@ -179,7 +185,15 @@ function InspectionCard({
     <article className="inspection-row">
       <div className="inspection-cell">
         <span>Марка / модель</span>
-        <strong>{inspection.brand || "-"}</strong>
+        <button
+          type="button"
+          className="inspection-name-button"
+          onClick={onOpen}
+          disabled={opening}
+          title="Открыть осмотр"
+        >
+          {opening ? "Загрузка..." : inspection.brand || "-"}
+        </button>
       </div>
       <div className="inspection-cell">
         <span>Тип операции</span>

@@ -456,6 +456,34 @@ button:disabled {
   font-weight: 600;
 }
 
+.inspection-name-button {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--primary-dark);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--primary) 55%, transparent);
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.inspection-name-button:hover {
+  color: var(--primary);
+  text-decoration-color: currentColor;
+}
+
+.inspection-name-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .vin-cell strong {
   font-family: Arial, Helvetica, sans-serif;
   letter-spacing: 0;

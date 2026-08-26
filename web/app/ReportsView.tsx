@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import {
   Inspection,
   REPORT_TYPE_OPTIONS,
@@ -175,11 +175,16 @@ function ReportsContent({
       </div>
       {selected ? (
         <div className="detail-actions-line no-print">
-          <button className="btn secondary" onClick={() => setSelected(null)}>
-            Назад
-          </button>
           <button className="btn" onClick={() => window.print()}>
-            Печать
+            Печать фото
+          </button>
+          <button
+            className="icon-button"
+            onClick={() => setSelected(null)}
+            title="Назад к списку"
+            aria-label="Назад к списку"
+          >
+            <ArrowLeft aria-hidden="true" />
           </button>
         </div>
       ) : (
@@ -308,7 +313,15 @@ function ReportsContent({
                   <article className="inspection-row" key={inspection.id}>
                     <div className="inspection-cell">
                       <span>Марка / модель</span>
-                      <strong>{inspection.brand || "-"}</strong>
+                      <button
+                        type="button"
+                        className="inspection-name-button"
+                        onClick={() => openInspection(inspection)}
+                        disabled={openingId === inspection.id}
+                        title="Открыть осмотр"
+                      >
+                        {openingId === inspection.id ? "Загрузка..." : inspection.brand || "-"}
+                      </button>
                     </div>
                     <div className="inspection-cell">
                       <span>Тип операции</span>
