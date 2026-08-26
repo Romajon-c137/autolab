@@ -351,9 +351,15 @@ button:disabled {
 
 .detail-actions-line {
   display: flex;
+  align-items: stretch;
   justify-content: flex-start;
   gap: 10px;
   margin-bottom: 16px;
+}
+
+.detail-actions-line .icon-button {
+  width: 42px;
+  height: 42px;
 }
 
 .auto-sync-toggle {
@@ -382,10 +388,6 @@ button:disabled {
   margin: 0;
   accent-color: var(--primary);
   cursor: pointer;
-}
-
-.detail-actions-line .btn:not(.secondary) {
-  margin-left: auto;
 }
 
 .card {
