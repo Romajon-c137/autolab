@@ -10,7 +10,8 @@ from django.contrib.auth import authenticate, login, logout
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.core.files.base import ContentFile
-from django.db.models import Count
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncDate
 from django.http import JsonResponse
 from django.utils.dateparse import parse_datetime
 from django.utils import timezone
@@ -749,35 +750,127 @@ def reports_summary(request):
     if error is not None:
         return error
 
+    show_amounts = can_view_amounts(user)
+
+    def money(value):
+        return int(value or 0) if show_amounts else None
+
     queryset = allowed_inspections(user).filter(created_at__gte=start, created_at__lt=end)
+
     branch_counts = queryset.values("branch_id", "branch__name").annotate(
-        inspections_count=Count("id")
+        inspections_count=Count("id"),
+        inspections_amount=Sum("amount"),
     ).order_by("branch__name")
+
+    operation_labels = dict(VehicleInspection.OPERATION_CHOICES)
+    operation_counts = queryset.values("operation_type").annotate(
+        count=Count("id"),
+        amount=Sum("amount"),
+    ).order_by("-count")
+
+    category_counts = queryset.exclude(vehicle_category="").values("vehicle_category").annotate(
+        count=Count("id"),
+        amount=Sum("amount"),
+    ).order_by("vehicle_category")
+
+    operator_counts = queryset.values(
+        "created_by_id",
+        "created_by__first_name",
+        "created_by__last_name",
+        "created_by__username",
+    ).annotate(
+        count=Count("id"),
+        amount=Sum("amount"),
+    ).order_by("-count")[:12]
+
+    day_counts = queryset.annotate(day=TruncDate("created_at")).values("day").annotate(
+        count=Count("id"),
+        amount=Sum("amount"),
+    ).order_by("day")
 
     today = timezone.localdate()
     week_start = today - timedelta(days=6)
     month_start = today.replace(day=1)
     base = allowed_inspections(user)
 
+    def totals_for(qs):
+        row = qs.aggregate(count=Count("id"), amount=Sum("amount"))
+        return row["count"] or 0, money(row["amount"])
+
+    period_count, period_amount = totals_for(queryset)
+    today_count, today_amount = totals_for(base.filter(created_at__date=today))
+    week_count, week_amount = totals_for(base.filter(created_at__date__gte=week_start))
+    month_count, month_amount = totals_for(base.filter(created_at__date__gte=month_start))
+    all_time_count = base.count()
+
+    def operator_name(item):
+        name = " ".join(
+            part for part in [item["created_by__last_name"], item["created_by__first_name"]] if part
+        ).strip()
+        return name or item["created_by__username"] or "Без оператора"
+
     return JsonResponse({
         "ok": True,
+        "can_view_amounts": show_amounts,
         "period": {
             "date_from": start.date().isoformat(),
             "date_to": (end - timedelta(days=1)).date().isoformat(),
         },
         "totals": {
-            "period": queryset.count(),
-            "today": base.filter(created_at__date=today).count(),
-            "week": base.filter(created_at__date__gte=week_start).count(),
-            "month": base.filter(created_at__date__gte=month_start).count(),
+            "period": period_count,
+            "today": today_count,
+            "week": week_count,
+            "month": month_count,
+            "all_time": all_time_count,
+            "period_amount": period_amount,
+            "today_amount": today_amount,
+            "week_amount": week_amount,
+            "month_amount": month_amount,
         },
         "branches": [
             {
                 "id": item["branch_id"],
                 "name": item["branch__name"] or "Без филиала",
                 "inspections_count": item["inspections_count"],
+                "inspections_amount": money(item["inspections_amount"]),
             }
             for item in branch_counts
+        ],
+        "by_operation": [
+            {
+                "operation_type": item["operation_type"],
+                "label": operation_labels.get(
+                    item["operation_type"], item["operation_type"] or "Без типа"
+                ),
+                "count": item["count"],
+                "amount": money(item["amount"]),
+            }
+            for item in operation_counts
+        ],
+        "by_category": [
+            {
+                "category": item["vehicle_category"],
+                "count": item["count"],
+                "amount": money(item["amount"]),
+            }
+            for item in category_counts
+        ],
+        "by_operator": [
+            {
+                "id": item["created_by_id"],
+                "name": operator_name(item),
+                "count": item["count"],
+                "amount": money(item["amount"]),
+            }
+            for item in operator_counts
+        ],
+        "by_day": [
+            {
+                "date": item["day"].isoformat(),
+                "count": item["count"],
+                "amount": money(item["amount"]),
+            }
+            for item in day_counts
         ],
     })
 

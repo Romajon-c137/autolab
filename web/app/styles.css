@@ -964,6 +964,360 @@ button:disabled {
   display: none;
 }
 
+/* ---------- Dashboard ---------- */
+.dash-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.kpi-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.kpi-tile.accent {
+  background: #f4fbf6;
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+}
+
+.kpi-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.kpi-value {
+  color: var(--primary-dark);
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.kpi-money {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.kpi-sub {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.milestone-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  overflow: hidden;
+  background: rgba(5, 35, 28, 0.82);
+  backdrop-filter: blur(7px);
+}
+
+.milestone-modal {
+  position: relative;
+  z-index: 2;
+  width: min(520px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 36px 32px 28px;
+  border: 2px solid #f8c94b;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #ffffff 0%, #fff9df 58%, #eafaf1 100%);
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.42), 0 0 42px rgba(248, 201, 75, 0.45);
+  text-align: center;
+}
+
+.milestone-confetti-canvas {
+  position: fixed !important;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: none;
+}
+
+.milestone-icon {
+  width: 54px;
+  height: 54px;
+  color: #d97706;
+  stroke-width: 1.8;
+}
+
+.milestone-kicker {
+  color: #b35b00;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.milestone-modal h2 {
+  max-width: 430px;
+  margin: 0;
+  color: var(--primary-dark);
+  font-size: clamp(25px, 5vw, 38px);
+  line-height: 1.08;
+}
+
+.milestone-number {
+  color: #d97706;
+  font-size: clamp(58px, 14vw, 92px);
+  line-height: 0.95;
+  text-shadow: 0 4px 0 #ffe49a;
+}
+
+.milestone-modal p {
+  max-width: 410px;
+  margin: 0 0 4px;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.milestone-confirm {
+  min-width: 250px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  box-shadow: 0 8px 22px rgba(16, 108, 78, 0.28);
+}
+
+.milestone-modal small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.dash-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dash-card.wide {
+  grid-column: 1 / -1;
+}
+
+.dash-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.dash-card-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.dash-card-icon {
+  display: inline-flex;
+  color: var(--primary-dark);
+}
+
+.dash-card-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.dash-card-hint {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dash-card-body {
+  padding: 16px;
+  flex: 1;
+}
+
+.dash-empty {
+  color: var(--muted);
+  font-size: 14px;
+  padding: 18px 0;
+  text-align: center;
+}
+
+.donut-block {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.donut {
+  width: 190px;
+  height: 190px;
+  flex-shrink: 0;
+}
+
+.donut-total {
+  font-size: 30px;
+  font-weight: 800;
+  fill: var(--text);
+}
+
+.donut-total-label {
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--muted);
+  text-transform: uppercase;
+}
+
+.donut-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  min-width: 200px;
+  flex: 1;
+}
+
+.donut-legend li {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  align-items: baseline;
+  column-gap: 8px;
+  row-gap: 2px;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  align-self: center;
+}
+
+.legend-label {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.legend-value {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bar-list {
+  display: grid;
+  gap: 12px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(70px, 120px) 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar-label {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-track {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.bar-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+}
+
+.bar-value {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.day-trend {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 150px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+
+.day-bar {
+  flex: 1 0 14px;
+  min-width: 14px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.day-bar-fill {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 3px 3px 0 0;
+  background: var(--primary);
+}
+
+.day-bar-label {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.dash-filters {
+  grid-template-columns: 160px 160px auto;
+  justify-content: start;
+}
+
+@media (max-width: 900px) {
+  .dash-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .donut-block {
+    justify-content: center;
+  }
+
+  .dash-filters {
+    grid-template-columns: 132px 132px 86px;
+  }
+}
+
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;

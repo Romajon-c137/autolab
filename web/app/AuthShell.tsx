@@ -9,6 +9,7 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
+  PieChart,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -89,11 +90,13 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const canReportTotals = user.role !== "mvd";
   const canApplications = user.role !== "mvd";
   const canViewAmounts = user.role === "manager" || user.role === "admin";
-  const section: Section = pathname.startsWith("/reports")
-    ? "reports"
-    : pathname.startsWith("/applications")
-      ? "applications"
-      : "inspections";
+  const section: Section = pathname.startsWith("/dashboard")
+    ? "dashboard"
+    : pathname.startsWith("/reports")
+      ? "reports"
+      : pathname.startsWith("/applications")
+        ? "applications"
+        : "inspections";
 
   function goToSection(nextSection: Section) {
     setMobileMenuOpen(false);
@@ -170,6 +173,16 @@ export function AuthShell({ children }: { children: ReactNode }) {
             >
               <ChartColumn className="nav-item-icon" aria-hidden="true" />
               <span className="nav-label">Статистика</span>
+            </button>
+          )}
+          {canReportTotals && (
+            <button
+              className={section === "dashboard" ? "active" : ""}
+              onClick={() => goToSection("dashboard")}
+              title="Аналитика"
+            >
+              <PieChart className="nav-item-icon" aria-hidden="true" />
+              <span className="nav-label">Аналитика</span>
             </button>
           )}
         </nav>

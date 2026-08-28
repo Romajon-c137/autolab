@@ -2,7 +2,18 @@ import html
 import os
 
 import requests
+from django.db.models import Q
 from django.utils import timezone
+
+from .models import VehicleInspection
+
+
+def inspection_sequence_number(inspection):
+    """Return the inspection's position among records that still exist."""
+    return VehicleInspection.objects.filter(
+        Q(created_at__lt=inspection.created_at)
+        | Q(created_at=inspection.created_at, id__lte=inspection.id)
+    ).count()
 
 def notify_telegram_inspection_created(base_url, inspection):
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
@@ -16,6 +27,7 @@ def notify_telegram_inspection_created(base_url, inspection):
 
     branch = inspection.branch.name if inspection.branch_id else "-"
     created_at = timezone.localtime(inspection.created_at).strftime("%d.%m.%Y %H:%M")
+    sequence_number = inspection_sequence_number(inspection)
     admin_url = f"{base_url}/admin/inspections/vehicleinspection/{inspection.id}/change/"
     document_url = (
         f"{base_url}{inspection.document_pdf.url}"
@@ -25,7 +37,7 @@ def notify_telegram_inspection_created(base_url, inspection):
 
     lines = [
         "<b>Новый осмотр</b>",
-        f"<b>ID:</b> {inspection.id}",
+        f"<b>Осмотр №:</b> {sequence_number}",
         f"<b>Филиал:</b> {html.escape(branch)}",
         f"<b>Операция:</b> {html.escape(inspection.get_operation_type_display() or '-')}",
         f"<b>Категория:</b> {html.escape(inspection.vehicle_category or '-')}",

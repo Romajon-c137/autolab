@@ -3,7 +3,7 @@ import { createContext, useContext } from "react";
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://autolab.glasscenter.kg";
 
 export type Role = "operator" | "mvd" | "manager" | "admin";
-export type Section = "inspections" | "applications" | "reports";
+export type Section = "inspections" | "applications" | "reports" | "dashboard";
 
 export type User = {
   id: number;
@@ -66,11 +66,55 @@ export type Application = {
   can_rebuild: boolean;
 };
 
-export type ReportSummary = {
-  period: { date_from: string; date_to: string };
-  totals: { period: number; today: number; week: number; month: number };
-  branches: Array<{ id: number | null; name: string; inspections_count: number }>;
+export type ReportBucket = {
+  count: number;
+  amount: number | null;
 };
+
+export type ReportSummary = {
+  can_view_amounts?: boolean;
+  period: { date_from: string; date_to: string };
+  totals: {
+    period: number;
+    today: number;
+    week: number;
+    month: number;
+    all_time: number;
+    period_amount: number | null;
+    today_amount: number | null;
+    week_amount: number | null;
+    month_amount: number | null;
+  };
+  branches: Array<{
+    id: number | null;
+    name: string;
+    inspections_count: number;
+    inspections_amount: number | null;
+  }>;
+  by_operation: Array<{
+    operation_type: string;
+    label: string;
+    count: number;
+    amount: number | null;
+  }>;
+  by_category: Array<{ category: string; count: number; amount: number | null }>;
+  by_operator: Array<{
+    id: number | null;
+    name: string;
+    count: number;
+    amount: number | null;
+  }>;
+  by_day: Array<{ date: string; count: number; amount: number | null }>;
+};
+
+export const OPERATION_COLORS: Record<string, string> = {
+  tech_inspection: "#17a96f",
+  sbgts: "#17437a",
+  legalization: "#d97706",
+  conversion: "#7b61c9",
+};
+
+export const CHART_FALLBACK_COLOR = "#6b7775";
 
 export const photoLabels: Record<string, string> = {
   front_photo: "Спереди",
@@ -175,6 +219,7 @@ export function categoryClassName(category: string) {
 }
 
 export function sectionPath(section: Section) {
+  if (section === "dashboard") return "/dashboard";
   if (section === "reports") return "/reports";
   if (section === "applications") return "/applications";
   return "/inspections";
