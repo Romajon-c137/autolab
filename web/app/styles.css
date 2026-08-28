@@ -1048,6 +1048,35 @@ button:disabled {
   pointer-events: none;
 }
 
+.milestone-preview-trigger {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 80;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  opacity: 0.16;
+}
+
+.milestone-preview-trigger:hover,
+.milestone-preview-trigger:focus-visible {
+  border-color: #f8c94b;
+  background: #fff9df;
+  color: #b35b00;
+  opacity: 1;
+}
+
+.milestone-preview-trigger svg {
+  width: 15px;
+  height: 15px;
+}
+
 .milestone-icon {
   width: 54px;
   height: 54px;

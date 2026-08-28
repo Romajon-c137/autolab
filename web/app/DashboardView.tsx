@@ -2,7 +2,7 @@
 
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, CalendarRange, PartyPopper, PieChart, Users } from "lucide-react";
+import { Building2, CalendarRange, PartyPopper, PieChart, Sparkles, Users } from "lucide-react";
 import ReactConfetti from "react-confetti";
 import {
   CHART_FALLBACK_COLOR,
@@ -54,6 +54,7 @@ function DashboardContent({
   const [error, setError] = useState("");
   const [milestoneClicks, setMilestoneClicks] = useState(0);
   const [milestoneDismissed, setMilestoneDismissed] = useState(false);
+  const [milestonePreview, setMilestonePreview] = useState(false);
 
   useEffect(() => {
     try {
@@ -113,13 +114,19 @@ function DashboardContent({
   const branchRows = summary?.branches ?? [];
   const showBranchCard = branchRows.length > 1;
   const showMilestone = Boolean(
-    summary && summary.totals.all_time >= 1000 && !milestoneDismissed
+    milestonePreview || (summary && summary.totals.all_time >= 1000 && !milestoneDismissed)
   );
 
   function confirmMilestone() {
     const nextClicks = milestoneClicks + 1;
     if (nextClicks < 10) {
       setMilestoneClicks(nextClicks);
+      return;
+    }
+
+    if (milestonePreview) {
+      setMilestonePreview(false);
+      setMilestoneClicks(0);
       return;
     }
 
@@ -140,6 +147,18 @@ function DashboardContent({
           onConfirm={confirmMilestone}
         />
       )}
+      <button
+        className="milestone-preview-trigger"
+        type="button"
+        onClick={() => {
+          setMilestoneClicks(0);
+          setMilestonePreview(true);
+        }}
+        title="Предпросмотр праздника"
+        aria-label="Предпросмотр поздравления"
+      >
+        <Sparkles aria-hidden="true" />
+      </button>
       <div className="topbar">
         <div className="page-title">
           <h1>Аналитика</h1>
