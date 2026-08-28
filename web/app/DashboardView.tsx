@@ -316,21 +316,27 @@ function MilestoneCelebration({
     <div className="milestone-overlay" role="dialog" aria-modal="true" aria-labelledby="milestone-title">
       <ReactConfetti
         className="milestone-confetti-canvas"
-        numberOfPieces={260}
+        numberOfPieces={480}
         recycle
-        gravity={0.12}
-        colors={["#f8c94b", "#17a96f", "#17437a", "#ef476f", "#ffffff"]}
+        gravity={0.1}
+        initialVelocityY={18}
+        colors={["#ffd166", "#17a96f", "#17437a", "#ef476f", "#9b5de5", "#00bbf9", "#ffffff"]}
       />
       <section className="milestone-modal">
+        <div className="milestone-emoji-row" aria-hidden="true">🎈 🎊 🏆 🎊 🎈</div>
         <PartyPopper className="milestone-icon" aria-hidden="true" />
         <span className="milestone-kicker">У нас праздник!</span>
         <h2 id="milestone-title">Мы достигли отметки 1000 осмотров!</h2>
         <strong className="milestone-number">{total}</strong>
         <p>Спасибо всей команде AutoLab. Это наша общая большая победа!</p>
         <button className="btn milestone-confirm" type="button" onClick={onConfirm} autoFocus>
-          {remaining === 1 ? "ОК — закрыть праздник" : `ОК · осталось нажатий: ${remaining}`}
+          ОК
         </button>
-        <small>Чтобы закрыть праздничное окно, нажмите «ОК» 10 раз 🎉</small>
+        <small>
+          {remaining === 1
+            ? "Последнее нажатие — и праздничное окно закроется 🎉"
+            : `Чтобы закрыть праздничное окно, нажмите «ОК» ещё ${remaining} раз 🎉`}
+        </small>
       </section>
     </div>
   );
