@@ -126,6 +126,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
 
   const canReports = true;
   const canReportTotals = user.role !== "mvd";
+  const canDashboard = user.role === "admin";
   const canApplications = user.role !== "mvd";
   const canViewAmounts = user.role === "manager" || user.role === "admin";
   const section: Section = pathname.startsWith("/dashboard")
@@ -220,7 +221,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
               <span className="nav-label">Статистика</span>
             </button>
           )}
-          {canReportTotals && (
+          {canDashboard && (
             <button
               className={section === "dashboard" ? "active" : ""}
               onClick={() => goToSection("dashboard")}
@@ -243,6 +244,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
           user,
           canReports,
           canReportTotals,
+          canDashboard,
           canApplications,
           canViewAmounts,
           logout,

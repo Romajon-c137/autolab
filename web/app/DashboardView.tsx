@@ -18,14 +18,14 @@ import { Spinner } from "./Spinner";
 import { MilestoneCelebration } from "./MilestoneCelebration";
 
 export function DashboardView() {
-  const { serverUrl, sessionKey, canReportTotals, canViewAmounts } = useSession();
+  const { serverUrl, sessionKey, canDashboard, canViewAmounts } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (!canReportTotals) router.replace("/inspections");
-  }, [canReportTotals, router]);
+    if (!canDashboard) router.replace("/inspections");
+  }, [canDashboard, router]);
 
-  if (!canReportTotals) return null;
+  if (!canDashboard) return null;
 
   return (
     <DashboardContent

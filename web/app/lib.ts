@@ -140,6 +140,7 @@ export type SessionValue = {
   user: User;
   canReports: boolean;
   canReportTotals: boolean;
+  canDashboard: boolean;
   canApplications: boolean;
   canViewAmounts: boolean;
   logout: () => void;
