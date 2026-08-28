@@ -25,6 +25,14 @@ import {
   sectionPath,
 } from "./lib";
 import { FullPageSpinner } from "./Spinner";
+import { MilestoneCelebration } from "./MilestoneCelebration";
+
+type MilestoneStatus = {
+  total: number;
+  reached: boolean;
+  acknowledged: boolean;
+  show: boolean;
+};
 
 export function AuthShell({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -36,6 +44,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const [error, setError] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [milestoneTotal, setMilestoneTotal] = useState<number | null>(null);
+  const [milestoneClicks, setMilestoneClicks] = useState(0);
 
   useEffect(() => {
     const storedSessionKey = localStorage.getItem("session_key") ?? "";
@@ -57,6 +67,34 @@ export function AuthShell({ children }: { children: ReactNode }) {
       })
       .finally(() => setAuthChecked(true));
   }, []);
+
+  useEffect(() => {
+    if (!sessionKey || !user) return;
+
+    apiFetch<MilestoneStatus>(serverUrl, sessionKey, "/api/milestones/1000/")
+      .then((data) => {
+        if (data.show) setMilestoneTotal(data.total);
+      })
+      .catch(() => null);
+  }, [serverUrl, sessionKey, user]);
+
+  async function confirmMilestone() {
+    const nextClicks = milestoneClicks + 1;
+    if (nextClicks < 10) {
+      setMilestoneClicks(nextClicks);
+      return;
+    }
+
+    try {
+      await apiFetch<MilestoneStatus>(serverUrl, sessionKey, "/api/milestones/1000/", {
+        method: "POST",
+      });
+      setMilestoneTotal(null);
+      setMilestoneClicks(0);
+    } catch {
+      setMilestoneClicks(9);
+    }
+  }
 
   function logout() {
     apiFetch(serverUrl, sessionKey, "/api/auth/logout/", { method: "POST" }).catch(() => null);
@@ -105,6 +143,13 @@ export function AuthShell({ children }: { children: ReactNode }) {
 
   return (
     <div className={sidebarCollapsed ? "app-shell sidebar-collapsed" : "app-shell"}>
+      {milestoneTotal !== null && (
+        <MilestoneCelebration
+          clicks={milestoneClicks}
+          total={milestoneTotal}
+          onConfirm={confirmMilestone}
+        />
+      )}
       <div className="mobile-appbar">
         <button
           className="mobile-menu-button"

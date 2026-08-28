@@ -735,6 +735,35 @@ def inspection_detail(request, inspection_id):
     })
 
 
+@csrf_exempt
+def milestone_1000(request):
+    auth_error, user = require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    if request.method not in ("GET", "POST"):
+        return JsonResponse({"ok": False, "error": "Method not allowed"}, status=405)
+
+    total = VehicleInspection.objects.count()
+    reached = total >= 1000
+    profile = profile_for(user)
+
+    if request.method == "POST":
+        if not reached:
+            return JsonResponse({"ok": False, "error": "Milestone is not reached"}, status=400)
+        if profile.milestone_1000_acknowledged_at is None:
+            profile.milestone_1000_acknowledged_at = timezone.now()
+            profile.save(update_fields=["milestone_1000_acknowledged_at"])
+
+    return JsonResponse({
+        "ok": True,
+        "total": total,
+        "reached": reached,
+        "acknowledged": profile.milestone_1000_acknowledged_at is not None,
+        "show": reached and profile.milestone_1000_acknowledged_at is None,
+    })
+
+
 def reports_summary(request):
     auth_error, user = require_auth(request)
     if auth_error is not None:

@@ -2,6 +2,7 @@ import io
 import tempfile
 from datetime import timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 from PIL import Image
 from django.contrib.auth import get_user_model
@@ -218,6 +219,17 @@ class RolePermissionTests(TestCase):
         self.assertNotIn("amount", list_response.json()["inspections"][0])
         self.assertEqual(self.client.get("/api/reports/summary/").status_code, 200)
         self.assertEqual(self.client.get("/api/client-applications/list/").status_code, 200)
+
+    def test_milestone_is_acknowledged_per_user(self):
+        with patch.object(VehicleInspection.objects, "count", return_value=1000):
+            first = self.client.get("/api/milestones/1000/")
+            acknowledged = self.client.post("/api/milestones/1000/")
+            after = self.client.get("/api/milestones/1000/")
+
+        self.assertTrue(first.json()["show"])
+        self.assertFalse(acknowledged.json()["show"])
+        self.assertTrue(acknowledged.json()["acknowledged"])
+        self.assertFalse(after.json()["show"])
 
 
 @override_settings(SECURE_SSL_REDIRECT=False)

@@ -2,8 +2,7 @@
 
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, CalendarRange, PartyPopper, PieChart, Sparkles, Users } from "lucide-react";
-import ReactConfetti from "react-confetti";
+import { Building2, CalendarRange, PieChart, Sparkles, Users } from "lucide-react";
 import {
   CHART_FALLBACK_COLOR,
   OPERATION_COLORS,
@@ -16,6 +15,7 @@ import {
   useSession,
 } from "./lib";
 import { Spinner } from "./Spinner";
+import { MilestoneCelebration } from "./MilestoneCelebration";
 
 export function DashboardView() {
   const { serverUrl, sessionKey, canReportTotals, canViewAmounts } = useSession();
@@ -53,16 +53,7 @@ function DashboardContent({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [milestoneClicks, setMilestoneClicks] = useState(0);
-  const [milestoneDismissed, setMilestoneDismissed] = useState(false);
   const [milestonePreview, setMilestonePreview] = useState(false);
-
-  useEffect(() => {
-    try {
-      setMilestoneDismissed(localStorage.getItem("autolab-milestone-1000-dismissed") === "1");
-    } catch {
-      // localStorage can be unavailable in restricted browser modes.
-    }
-  }, []);
 
   async function load() {
     setLoading(true);
@@ -113,9 +104,6 @@ function DashboardContent({
 
   const branchRows = summary?.branches ?? [];
   const showBranchCard = branchRows.length > 1;
-  const showMilestone = Boolean(
-    milestonePreview || (summary && summary.totals.all_time >= 1000 && !milestoneDismissed)
-  );
 
   function confirmMilestone() {
     const nextClicks = milestoneClicks + 1;
@@ -124,23 +112,13 @@ function DashboardContent({
       return;
     }
 
-    if (milestonePreview) {
-      setMilestonePreview(false);
-      setMilestoneClicks(0);
-      return;
-    }
-
-    setMilestoneDismissed(true);
-    try {
-      localStorage.setItem("autolab-milestone-1000-dismissed", "1");
-    } catch {
-      // The modal still closes for the current page when storage is unavailable.
-    }
+    setMilestonePreview(false);
+    setMilestoneClicks(0);
   }
 
   return (
     <>
-      {showMilestone && (
+      {milestonePreview && (
         <MilestoneCelebration
           clicks={milestoneClicks}
           total={summary?.totals.all_time ?? 1000}
@@ -298,47 +276,6 @@ function DashboardContent({
         </>
       ) : null}
     </>
-  );
-}
-
-function MilestoneCelebration({
-  clicks,
-  total,
-  onConfirm,
-}: {
-  clicks: number;
-  total: number;
-  onConfirm: () => void;
-}) {
-  const remaining = 10 - clicks;
-
-  return (
-    <div className="milestone-overlay" role="dialog" aria-modal="true" aria-labelledby="milestone-title">
-      <ReactConfetti
-        className="milestone-confetti-canvas"
-        numberOfPieces={480}
-        recycle
-        gravity={0.1}
-        initialVelocityY={18}
-        colors={["#ffd166", "#17a96f", "#17437a", "#ef476f", "#9b5de5", "#00bbf9", "#ffffff"]}
-      />
-      <section className="milestone-modal">
-        <div className="milestone-emoji-row" aria-hidden="true">🎈 🎊 🏆 🎊 🎈</div>
-        <PartyPopper className="milestone-icon" aria-hidden="true" />
-        <span className="milestone-kicker">У нас праздник!</span>
-        <h2 id="milestone-title">Мы достигли отметки 1000 осмотров!</h2>
-        <strong className="milestone-number">{total}</strong>
-        <p>Спасибо всей команде AutoLab. Это наша общая большая победа!</p>
-        <button className="btn milestone-confirm" type="button" onClick={onConfirm} autoFocus>
-          ОК
-        </button>
-        <small>
-          {remaining === 1
-            ? "Последнее нажатие — и праздничное окно закроется 🎉"
-            : `Чтобы закрыть праздничное окно, нажмите «ОК» ещё ${remaining} раз 🎉`}
-        </small>
-      </section>
-    </div>
   );
 }
 

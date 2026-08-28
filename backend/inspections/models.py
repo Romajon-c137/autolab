@@ -66,6 +66,12 @@ class UserProfile(models.Model):
         default=True,
         help_text="Если выключено, пользователь не сможет войти в web/mobile API.",
     )
+    milestone_1000_acknowledged_at = models.DateTimeField(
+        "Поздравление 1000 осмотров просмотрено",
+        null=True,
+        blank=True,
+        editable=False,
+    )
 
     class Meta:
         verbose_name = "Профиль пользователя"
