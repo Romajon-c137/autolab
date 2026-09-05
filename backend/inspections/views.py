@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import base64
 from io import BytesIO
 import json
+import logging
 import os
 import re
 import secrets
@@ -64,6 +65,21 @@ from .two_factor import (
     mask_phone,
     verify_login_challenge,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def normalize_vehicle_category(raw_value):
+    value = str(raw_value or "").strip().upper().translate(str.maketrans({
+        "М": "M",
+        "Н": "N",
+    }))
+    if value in dict(VehicleInspection.CATEGORY_CHOICES):
+        return value
+
+    # Compatibility with older mobile serialization formats.
+    matches = re.findall(r"(?<![A-Z0-9])([MN][123])(?![A-Z0-9])", value)
+    return matches[0] if len(set(matches)) == 1 else ""
 
 REQUIRED_PHOTO_FIELDS = (
     "front_photo",
@@ -1135,7 +1151,11 @@ def create_inspection(request):
     brand = request.POST.get("brand", "").strip()
     country = request.POST.get("country", "").strip()
     vin = request.POST.get("vin", "").strip().upper()
-    vehicle_category = request.POST.get("vehicle_category", VehicleInspection.CATEGORY_M1).strip().upper()
+    raw_vehicle_category = request.POST.get(
+        "vehicle_category",
+        VehicleInspection.CATEGORY_M1,
+    )
+    vehicle_category = normalize_vehicle_category(raw_vehicle_category)
     request_id = request.POST.get("request_id", "").strip()
     profile = getattr(user, "profile", None)
     branch = None if profile is None else profile.branch
@@ -1149,10 +1169,27 @@ def create_inspection(request):
     if not VEHICLE_IDENTIFIER_PATTERN.fullmatch(vin):
         return JsonResponse({"ok": False, "error": "Field 'vin' has an invalid format"}, status=400)
 
+    if not vehicle_category and operation_type in {
+        VehicleInspection.OPERATION_LEGALIZATION,
+        VehicleInspection.OPERATION_CONVERSION,
+    }:
+        # Category does not affect the price or document for these operations.
+        vehicle_category = VehicleInspection.CATEGORY_M1
+
     if vehicle_category not in dict(VehicleInspection.CATEGORY_CHOICES):
+        logger.warning(
+            "Invalid vehicle category user=%s operation=%s value=%r request_id=%r",
+            user.id,
+            operation_type,
+            raw_vehicle_category,
+            request_id,
+        )
         return JsonResponse({
             "ok": False,
-            "error": "Field 'vehicle_category' must be M1, M2, M3, N1, N2 or N3",
+            "error": (
+                "Выберите категорию авто заново: M1, M2, M3, N1, N2 или N3 "
+                f"(получено: {str(raw_vehicle_category)[:24]})"
+            ),
         }, status=400)
 
     if operation_type not in dict(VehicleInspection.OPERATION_CHOICES):

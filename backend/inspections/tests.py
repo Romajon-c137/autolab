@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from .models import Branch, LoginChallenge, UserProfile, VehicleInspection
 from .two_factor import TwoFactorError, verify_login_challenge
+from .views import normalize_vehicle_category
 
 
 def image_bytes():
@@ -28,6 +29,16 @@ def uploaded_image(name="photo.png"):
 
 def uploaded_pdf(name="document.pdf"):
     return SimpleUploadedFile(name, b"%PDF-1.4\n%%EOF\n", content_type="application/pdf")
+
+
+class VehicleCategoryNormalizationTests(TestCase):
+    def test_accepts_current_and_legacy_mobile_values(self):
+        self.assertEqual(normalize_vehicle_category("n2"), "N2")
+        self.assertEqual(normalize_vehicle_category("_VehicleCategory.n2"), "N2")
+        self.assertEqual(normalize_vehicle_category("Категория Н1"), "N1")
+
+    def test_does_not_guess_unknown_category(self):
+        self.assertEqual(normalize_vehicle_category("03-4"), "")
 
 
 @override_settings(
