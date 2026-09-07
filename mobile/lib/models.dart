@@ -23,7 +23,8 @@ enum _VehicleCategory {
   m3('M3'),
   n1('N1'),
   n2('N2'),
-  n3('N3');
+  n3('N3'),
+  o3O4('O3-O4');
 
   const _VehicleCategory(this.apiValue);
 
@@ -36,6 +37,7 @@ enum _VehicleCategory {
       'N1' => _VehicleCategory.n1,
       'N2' => _VehicleCategory.n2,
       'N3' => _VehicleCategory.n3,
+      'O3-O4' => _VehicleCategory.o3O4,
       _ => _VehicleCategory.m1,
     };
   }

@@ -72,7 +72,7 @@ body { padding:14px 0 44px; }
   input { -webkit-appearance:none; appearance:none; }
   .result-cell:focus, input:focus { box-shadow:none; background:transparent; }
 }
-</style>
+@media (max-width:850px) { html:not([data-pdf="1"]) body { overflow-x:auto; } html:not([data-pdf="1"]) .page { width:100vw; min-width:100vw; margin-left:0; margin-right:0; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; } html:not([data-pdf="1"]) .main-table { min-width:210mm; } html:not([data-pdf="1"]) .main-table .col-actual, html:not([data-pdf="1"]) .main-table th:last-child { position:sticky; right:0; z-index:4; background:#fff; box-shadow:-1px 0 0 #777; } html:not([data-pdf="1"]) .main-table th:last-child { z-index:5; } }</style>
 </head>
 <body>
 <section class="page page-2" data-page="2">

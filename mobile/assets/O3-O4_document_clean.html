@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>Протокол технической экспертизы О3-О4</title>
+<style>
+  :root { --paper-width:210mm; --paper-height:297mm; --line:#222; --ui:#0f172a; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; padding:0; background:#e7e9ed; color:#000; font-family:"Times New Roman", Times, serif; }
+  body { padding:16px 0 48px; }
+  .toolbar { position:sticky; top:0; z-index:50; display:flex; gap:8px; align-items:center; justify-content:center; padding:10px 12px; margin:0 auto 14px; width:min(1100px,calc(100% - 20px)); background:rgba(15,23,42,.94); border-radius:10px; box-shadow:0 5px 20px rgba(0,0,0,.2); font-family:Arial,sans-serif; }
+  .toolbar button,.toolbar label { border:0; border-radius:7px; padding:9px 13px; background:white; color:#111827; cursor:pointer; font-size:14px; font-weight:600; }
+  .toolbar button:hover,.toolbar label:hover { background:#e2e8f0; }
+  .toolbar .danger { background:#fee2e2; }
+  .toolbar-status { color:#cbd5e1; font-size:12px; min-width:120px; }
+  #jsonFile { display:none; }
+
+  .page { position:relative; width:var(--paper-width); min-height:var(--paper-height); height:var(--paper-height); margin:0 auto 16px; padding:7.5mm 7.5mm 12.5mm 27.5mm; background:#fff; box-shadow:0 4px 22px rgba(0,0,0,.18); overflow:hidden; page-break-after:always; break-after:page; }
+  .page:last-of-type { page-break-after:auto; break-after:auto; }
+
+  .doc-header { position:relative; min-height:34mm; }
+  .accreditation-mark { position:absolute; left:-22mm; top:0; width:37mm; height:19mm; border:1px solid #111; border-radius:50%; display:flex; align-items:center; justify-content:center; text-align:center; font-size:8.65pt; line-height:1.065; }
+  .header-copy { text-align:center; font-weight:700; font-size:10.4pt; line-height:1.15; }
+  .org-title { margin-top:0; }
+  .place { margin-top:2.2mm; font-size:9.9pt; }
+  .certificate { margin-top:1mm; font-size:10.4pt; }
+  .protocol-title { text-align:center; font-weight:700; font-size:11.5pt; margin:2.3mm 0 .7mm; }
+  .protocol-meta { text-align:center; font-size:11.5pt; margin-bottom:1.4mm; white-space:nowrap; }
+
+  input,textarea,select { font:inherit; color:#000; background:transparent; }
+  .inline-input { border:0; border-bottom:1px solid #111; outline:none; text-align:center; height:5.5mm; padding:0 1mm; }
+  .number-input { width:20mm; }
+  .date-text { width:27mm; }
+
+  table { border-collapse:collapse; table-layout:fixed; width:100%; }
+  .info-table { font-family:Arial,sans-serif; font-size:10.1pt; line-height:1.12; margin-bottom:1mm; width:calc(100% + 10mm); margin-left:-15mm; }
+  .info-table .label-col { width:61%; }
+  .info-table .value-col { width:39%; }
+  .info-table td { border:.55px solid #333; padding:.42mm .8mm; vertical-align:middle; height:5.8mm; font-weight:400; }
+  .info-table tr { height:auto; }
+  .info-table textarea,.info-table input:not(.short-input) { display:block; width:100%; height:4.55mm; min-height:4.55mm; resize:none; overflow:hidden; border:0; outline:none; padding:.05mm .6mm; line-height:1.08; }
+  .info-table textarea:focus,.info-table input:focus,.notes-area textarea:focus,.expert-input:focus { background:#fffbe6; box-shadow:inset 0 0 0 1px #d8b100; }
+  .fixed-row td:last-child { font-weight:400; text-align:center; }
+  .conditions td { padding-top:.5mm; padding-bottom:.5mm; }
+  .conditions td:last-child { line-height:1.08; }
+  .conditions label { display:flex; align-items:center; gap:1mm; white-space:nowrap; min-height:4.4mm; }
+  .short-input { flex:0 0 14mm; width:14mm; height:4.2mm; border:0; border-bottom:1px solid #666; outline:none; padding:0 .8mm; }
+
+  .category { width:calc(100% + 10mm); margin:.5mm 0 .6mm -15mm; text-align:left; font-family:"Times New Roman", Times, serif; font-size:8.9pt; font-weight:700; }
+  .main-table { font-family:"Times New Roman", Times, serif; font-size:7.15pt; line-height:1.055; width:calc(100% + 10mm); margin-left:-15mm; }
+  .main-table .w-n { width:4.2%; }
+  .main-table .w-name { width:33.5%; }
+  .main-table .w-method { width:15.0%; }
+  .main-table .w-norm { width:32.8%; }
+  .main-table .w-actual { width:14.5%; }
+  .main-table th,.main-table td { border:.45px solid var(--line); padding:.28mm .44mm; vertical-align:top; overflow-wrap:anywhere; hyphens:auto; }
+  .main-table th { text-align:center; vertical-align:middle; font-size:7.2pt; line-height:1.05; font-weight:700; padding:.62mm .35mm; }
+  .main-table .col-n { text-align:center; white-space:nowrap; }
+  .main-table .col-method { text-align:center; font-size:5.85pt; line-height:1.0; }
+  .main-table .col-actual { white-space:pre-line; }
+  .main-table strong { font-weight:700; }
+  .main-table tr.section-row td { border-top-width:1px; }
+
+  .page-1 .main-table { font-size:7.85pt; line-height:1.045; }
+  .page-1 .main-table .col-method { font-size:6.05pt; line-height:1.0; }
+  .page.page-2 .main-table { font-size:8.15pt; line-height:1.04; }
+  .page.page-2 .main-table .col-method { font-size:6.25pt; line-height:1.0; }
+  .page.page-3 .main-table { font-size:8.15pt; line-height:1.04; }
+  .page.page-3 .main-table .col-method { font-size:6.25pt; line-height:1.0; }
+  .page.page-4 .main-table { font-size:8.0pt; line-height:1.035; }
+  .page.page-4 .main-table .col-method { font-size:6.05pt; line-height:1.0; }
+
+  .page-2,.page-3,.page-4 { padding-top:8mm; }
+  .note-title { text-align:left; font-family:"Times New Roman", Times, serif; font-size:9.4pt; font-weight:700; margin-top:2mm; }
+  .notes-area { min-height:15mm; border-bottom:0; font-family:"Times New Roman", Times, serif; }
+  .notes-area textarea { width:100%; height:14mm; border:0; resize:none; outline:none; padding:1mm; font-size:8.4pt; }
+  .conclusion { margin-top:6mm; font-family:"Times New Roman", Times, serif; font-size:9.9pt; font-weight:700; line-height:1.25; }
+  .conclusion-result { white-space:nowrap; }
+  .signature-line { display:grid; grid-template-columns:42mm 38mm minmax(0,1fr); column-gap:7mm; align-items:end; margin-top:5mm; font-family:"Times New Roman", Times, serif; font-size:10.4pt; font-weight:700; }
+  .signature-space { border-bottom:1px solid #111; height:5mm; }
+  .expert-input { border:0; border-bottom:1px solid #111; outline:none; text-align:center; height:5mm; width:100%; }
+  .signature-caption { display:grid; grid-template-columns:42mm 38mm minmax(0,1fr); column-gap:7mm; font-family:"Times New Roman", Times, serif; font-size:8.4pt; text-align:center; margin-top:.8mm; }
+  .signature-caption span:first-child { grid-column:2; }
+  .signature-caption span:last-child { grid-column:3; }
+
+  @media (max-width:850px) {
+    body { padding-top:8px; }
+    .toolbar { position:relative; flex-wrap:wrap; }
+    .page { transform-origin:top left; margin-left:auto; margin-right:auto; }
+  }
+  @media print {
+    @page { size:A4 portrait; margin:0; }
+    html,body { background:#fff; padding:0; }
+    .toolbar { display:none !important; }
+    .page { margin:0; box-shadow:none; width:210mm; height:297mm; min-height:297mm; transform:none !important; zoom:1; }
+    body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    input,textarea,select { -webkit-appearance:none; appearance:none; }
+    textarea { overflow:hidden; }
+    .info-table textarea:focus,.info-table input:focus,.notes-area textarea:focus,.expert-input:focus { background:transparent; box-shadow:none; }
+  }
+@media (max-width:850px) { html:not([data-pdf="1"]) body { overflow-x:auto; } html:not([data-pdf="1"]) .page { width:100vw; min-width:100vw; margin-left:0; margin-right:0; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; } html:not([data-pdf="1"]) .main-table { min-width:210mm; } html:not([data-pdf="1"]) .main-table .col-actual, html:not([data-pdf="1"]) .main-table th:last-child { position:sticky; right:0; z-index:4; background:#fff; box-shadow:-1px 0 0 #777; } html:not([data-pdf="1"]) .main-table th:last-child { z-index:5; } }</style>
+</head>
+<body>
+<!-- Text source: О3-4.docx. Wording and source typos are preserved; layout follows the approved N2 HTML style. -->
+<div aria-label="Управление документом" class="toolbar" role="toolbar">
+<button id="printBtn" type="button">Печать / PDF</button>
+<button id="saveBtn" type="button">Скачать данные JSON</button>
+<label for="jsonFile">Загрузить JSON</label><input accept="application/json,.json" id="jsonFile" type="file"/>
+<button class="danger" id="clearBtn" type="button">Очистить поля</button>
+<span class="toolbar-status" id="status">Автосохранение включено</span>
+</div>
+<section class="page page-1" data-page="1">
+<div class="doc-header">
+<div class="accreditation-mark">Знак<br/>аккредитации</div>
+<div class="header-copy">
+<div class="org-title">Органа контроля Государственного Предприятия «Центр технического назначения Главного управления по обеспечению безопасности дорожного движения МВД Кыргызской Республики»</div>
+<div class="place">Место проведения испытаний: Кыргызстан, г. Ош, ул. Навои 2а</div>
+<div class="certificate">АТТЕСТАТ АККРЕДИТАЦИИ № KG</div>
+</div>
+</div>
+<div class="protocol-title">ПРОТОКОЛ ТЕХНИЧЕСКОЙ ЭКСПЕРТИЗЫ</div>
+<div class="protocol-meta">№ <input aria-label="Номер протокола" class="inline-input number-input" data-field="protocol_number"/> от <input aria-label="Дата протокола" class="inline-input date-text" data-field="protocol_date" value="10.07.2026"/>г.</div>
+<table class="info-table"><colgroup><col class="label-col"/><col class="value-col"/></colgroup><tbody>
+<tr><td>Заказчик</td><td><textarea aria-label="Заказчик" data-field="customer"></textarea></td></tr><tr><td>Наименование объекта испытаний</td><td><textarea aria-label="Наименование объекта испытаний" data-field="object_name"></textarea></td></tr><tr><td>Тип транспортного средства</td><td><textarea aria-label="Тип транспортного средства" data-field="vehicle_type"></textarea></td></tr><tr><td>Изготовитель (страна, фирма)</td><td><textarea aria-label="Изготовитель (страна, фирма)" data-field="manufacturer"></textarea></td></tr><tr class="tall"><td>Идентификационный номер (VIN) или номерных агрегатов и отсутствии VIN</td><td><textarea aria-label="Идентификационный номер (VIN) или номерных агрегатов и отсутствии VIN" data-field="vin"></textarea></td></tr><tr><td>Основание для испытаний (протокол идентификации ТС №/дата)</td><td><textarea aria-label="Основание для испытаний (протокол идентификации ТС №/дата)" data-field="test_basis"></textarea></td></tr><tr><td>Дата поступления образцов</td><td><input aria-label="Дата поступления образцов" data-field="sample_received"/></td></tr><tr><td>Начало проведения испытаний</td><td><input aria-label="Начало проведения испытаний" data-field="test_started"/></td></tr><tr><td>Окончание проведения  испытаний</td><td><input aria-label="Окончание проведения  испытаний" data-field="test_finished"/></td></tr><tr class="fixed-row"><td>Нормативный док мент</td><td>ТР ТС № 018/2011, ГОСТ 33670-2015, ГОСТ 33997-2016</td></tr><tr class="fixed-row"><td>Вид испытаний</td><td>Контрольные</td></tr><tr class="conditions"><td>Условия проведения испытаний</td><td><label>Температура С, <input aria-label="Температура" class="short-input" data-field="temperature"/></label><br/><label>Относительная влажность&nbsp; % <input aria-label="Относительная влажность" class="short-input" data-field="humidity"/></label></td></tr>
+</tbody></table>
+<div class="category">(категории О3-О4)</div>
+<table class="main-table page-table-1">
+<colgroup><col class="w-n"/><col class="w-name"/><col class="w-method"/><col class="w-norm"/><col class="w-actual"/></colgroup>
+<thead><tr><th>№<br/>п/п</th><th>Наименование показателей</th><th>НД на методы испытаний</th><th>Значение по НД</th><th>Фактическое значение</th></tr></thead><tbody><tr class="" data-row="1">
+<td class="col-n">1.</td>
+<td class="col-name">Обеспечение возможности идентификации транспортных средств</td>
+<td class="col-method">п.4 приложение №7 ТР ТС 018/2011<br/>ГОСТ 33670-2015 А 1.1</td>
+<td class="col-norm">Должен соответствовать</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="2">
+<td class="col-n">2.</td>
+<td class="col-name">Наличие предусмотренных мест установки одного заднего государственного регистрационного знака установленных размеров</td>
+<td class="col-method">п. 4.1 приложение №7 ТР ТС 018/2011<br/>ГОСТ 33670—2015 А 1.2-1.3</td>
+<td class="col-norm">Должны бытьНа каждом транспортном средстве категорий М и N</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="3">
+<td class="col-n">3.</td>
+<td class="col-name"><strong>Устройство освещения и световой сигнализации </strong></td>
+<td class="col-method">Правила ЕЭК ООН №48приложение №4п. 1.3 ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 8</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="4">
+<td class="col-n">4.</td>
+<td class="col-name">- фонарь заднего хода  (кол-во приборов)</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Белый 1-2шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="5">
+<td class="col-n">5.</td>
+<td class="col-name">- указатель поворота задний  (кол-во приборов)</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Автожелтый, 2шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="6">
+<td class="col-n">6.</td>
+<td class="col-name">- аварийная сигнализация</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Автожелтый</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="7">
+<td class="col-n">7.</td>
+<td class="col-name">- сигнал торможения основной</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Красный, 2шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="8">
+<td class="col-n">8.</td>
+<td class="col-name">- передний светоотражающее устройство не треугольной формы</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Желтый, 2шт обязательно более 1600мм, факультативно при ширине менее 1600</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="9">
+<td class="col-n">9.</td>
+<td class="col-name">- задний габаритный огонь</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011ГОСТ 33670—2015 Таблица А8.3</td>
+<td class="col-norm">Красный, 2шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="10">
+<td class="col-n">10.</td>
+<td class="col-name">-задний противотуманный фонарь</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Красный, 1-2 </td>
+<td class="col-actual">&nbsp;</td>
+</tr></tbody></table>
+</section><section class="page page-2" data-page="2"><table class="main-table page-table-2">
+<colgroup><col class="w-n"/><col class="w-name"/><col class="w-method"/><col class="w-norm"/><col class="w-actual"/></colgroup>
+<tbody><tr class="" data-row="11">
+<td class="col-n">11.</td>
+<td class="col-name">- стояночный габаритный огонь<br/>Задний<br/>Боковой</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Факультативно <br/>Красный, 1-2шт<br/>Автожелтый1-2</td>
+<td class="col-actual">Передний  ____  шт<br/>Задний       ____  шт<br/>Боковой    _____ шт</td>
+</tr><tr class="" data-row="12">
+<td class="col-n">12.</td>
+<td class="col-name">- контурный огонь <br/>Передний<br/>Задний </td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Факультаивно<br/>Белый, 2шт<br/>Красный, 2 шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="13">
+<td class="col-n">13.</td>
+<td class="col-name">- фонарь освещения заднего государственного регистрационного знака</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Белый </td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="14">
+<td class="col-n">14.</td>
+<td class="col-name">- боковое светоотражающее устройство не треугольной формы </td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">ТС длиной 6м для кат. О,<br/>Желтый, 1-2шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="15">
+<td class="col-n">15.</td>
+<td class="col-name">- задний светоотражающее устройство<br/>треугольной формы</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011ГОСТ 33670—2015 Таблица А.8.1; 8.2; 8.3</td>
+<td class="col-norm">Красный,2 шт</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="16">
+<td class="col-n">16.</td>
+<td class="col-name">Направление излучения белого и красного света, за  исключением света от фонаря заднего хода и внутреннего освещения ТС</td>
+<td class="col-method">приложение №4 Таблица 1.3.1 ТР ТС 018/2011ГОСТ 33670—2015 Таблица А8.1; 8.2; 8.3</td>
+<td class="col-norm">Вперед – белый<br/>Назад - красный</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="17">
+<td class="col-n">17.</td>
+<td class="col-name"><strong>Требования к размещению сигналов торможения</strong></td>
+<td class="col-method">приложение №4п. 1.3.10 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.12</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="18">
+<td class="col-n">18.</td>
+<td class="col-name">- По ширине кат.  </td>
+<td class="col-method">приложение №4п. 1.3.10<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.12.1</td>
+<td class="col-norm">Не более 400мм   от края габаритной ширины ТС</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="19">
+<td class="col-n">19.</td>
+<td class="col-name">- габаритная ширина ТС менее 1300 мм.</td>
+<td class="col-method">приложение №4п. 1.3.10 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.12.1</td>
+<td class="col-norm">&nbsp;Не менее 400 мм</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="20">
+<td class="col-n">20.</td>
+<td class="col-name">- по высоте над опорной поверхностью </td>
+<td class="col-method">приложение №4п. 1.3.10<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.12.2</td>
+<td class="col-norm">в пределах от 350 мм до 1500 мм (максимум 2100 мм, если соблюдение указанного требования невозможно из-за формы кузова, если факультативные огни не установлены)</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="21">
+<td class="col-n">21.</td>
+<td class="col-name">- Если факультативные огни установлены</td>
+<td class="col-method">приложение №4п. 1.3.10<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.12.2</td>
+<td class="col-norm"> то они должны располагаться симметрично на как можно большем расстоянии по вертикали, которое допускается контуром кузова, но не менее чем 600 мм над обязательными огнями&nbsp;(кроме транспортных средств категорий L</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="22">
+<td class="col-n">22.</td>
+<td class="col-name">Дополнительные сигналы торможения</td>
+<td class="col-method">приложение №4п. 1.3.10<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.12.3</td>
+<td class="col-norm">не более 150 мм от нижнего края внешней поверхности или покрытия заднего стекла, и не менее 850 мм от уровня опорной поверхности</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="23">
+<td class="col-n">23.</td>
+<td class="col-name"><strong>Требования к размещению задних противотуманных фонарей</strong></td>
+<td class="col-method">приложение №4п. 1.3.10 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.13</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="24">
+<td class="col-n">24.</td>
+<td class="col-name">- По ширине если имеется только один задний противотуманный фонарь</td>
+<td class="col-method">приложение №4п. 1.3.10<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.13.1</td>
+<td class="col-norm">должен находиться с левой стороны от средней продольной плоскости транспортного средства по отношению к направлению движения, либо на этой плоскости</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="25">
+<td class="col-n">25.</td>
+<td class="col-name">- &nbsp;По высоте над опорной поверхностью</td>
+<td class="col-method">приложение №4п. 1.3.10<br/>ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.8.13.2</td>
+<td class="col-norm">минимум 250 мм, максимум - 1000 мм<br/>Для ТС кат.  N<sub>3</sub>G максимальная высота может быть увеличена до 1200 мм</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="26">
+<td class="col-n">26.</td>
+<td class="col-name"><strong>Электрооборудование и электропроводка</strong></td>
+<td class="col-method">приложение №4п. 1.4.2 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.9.2</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="27">
+<td class="col-n">27.</td>
+<td class="col-name">- требование к электрооборудованию и электропроводке</td>
+<td class="col-method">приложение №4<br/>п. 1.4.2ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.9.2.1</td>
+<td class="col-norm">&nbsp;Должны быть надежно изолированы<br/>выдерживать воздействие температуры и влажностизащищены и прочно прикреплены</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="28">
+<td class="col-n">28.</td>
+<td class="col-name">- расположение электрических кабелей</td>
+<td class="col-method">приложение №4<br/>п. 1.4.2 ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А.9.2.2</td>
+<td class="col-norm">исключение соприкосновение с топливо проводом или любой другой деталью системы выпуска, а также  подверганию чрезмерному нагреву</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="29">
+<td class="col-n">29.</td>
+<td class="col-name"><strong>Требования к тормозным системам</strong></td>
+<td class="col-method">приложение №4<br/>п .2.1.1.  ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.5</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="30">
+<td class="col-n">30.</td>
+<td class="col-name">оснащенность тормозными системами</td>
+<td class="col-method">приложение №4<br/>п .2.1.1. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А 5.1.1</td>
+<td class="col-norm">ТС оснащаются тормозными системами, способными выполнять функции торможения</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="31">
+<td class="col-n">31.</td>
+<td class="col-name">&nbsp;Рабочая тормозная система</td>
+<td class="col-method">приложение №4<br/>п .2.1.1.1.                              ТР ТС 018/2011<br/>ГОСТ 33670—2015 А 5.1.1.3</td>
+<td class="col-norm">Действует на все колеса от одного органа управления (кроме транспортных средств категорий L<sub>1</sub>&nbsp;- L<sub>4</sub>)</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="32">
+<td class="col-n">32.</td>
+<td class="col-name">Запасная тормозная система</td>
+<td class="col-method">приложение №4<br/>п .2.1.1.2.   п .2.1.1.2.1.                      ТР ТС 018/2011<br/>ГОСТ 33670—2015 А 5.1.2</td>
+<td class="col-norm">Для транспортных средств с четырьмя и более колесами - воздействовать на тормозные механизмы посредством, по крайней мере, половины двухконтурной рабочей тормозной системы, по крайней мере, на два колеса (на каждой из сторон транспортного средства) в случае отказа в рабочей тормозной системы или усилителя тормозной системы;</td>
+<td class="col-actual">&nbsp;</td>
+</tr></tbody></table></section><section class="page page-3" data-page="3"><table class="main-table page-table-3">
+<colgroup><col class="w-n"/><col class="w-name"/><col class="w-method"/><col class="w-norm"/><col class="w-actual"/></colgroup>
+<tbody><tr class="" data-row="33">
+<td class="col-n">33.</td>
+<td class="col-name">Стояночная тормозная система</td>
+<td class="col-method">приложение №4<br/>п .2.1.1.3; п .2.1.1.3.1.                     ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А 5.1.3</td>
+<td class="col-norm">Должен затормаживать все колеса, по крайней мере, одной из осей</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="34">
+<td class="col-n">34.</td>
+<td class="col-name">Тормозные силы на колесах</td>
+<td class="col-method">приложение №4<br/>п .2.1.2. ТР ТС /2011<br/>ГОСТ 33670—2015 А 5.2</td>
+<td class="col-norm">не должны возникать, если органы управления тормозными системами не задействованы</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="35">
+<td class="col-n">35.</td>
+<td class="col-name">Действие рабочей и запасной тормозных систем&nbsp;</td>
+<td class="col-method">приложение №4<br/>п .2.1.3. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А 5.3</td>
+<td class="col-norm">Должен обеспечивает плавное, адекватное уменьшение или увеличение тормозных сил (замедление транспортного средства) при уменьшении или увеличении, соответственно, усилия воздействия на орган управления тормозной системой.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="36">
+<td class="col-n">36.</td>
+<td class="col-name">транспортные средства, имеющие четыре колеса и более, гидравлическим тормозным системой </td>
+<td class="col-method">приложение №4<br/>п .2.1.4.. ТР ТС 018 /2011<br/>ГОСТ 33670—2015 А.5.4</td>
+<td class="col-norm">оборудуется красным сигнальным индикатором, который включается по сигналу от датчика давления, информирующему о неисправности любой части гидравлической тормозной системы, связанной с утечкой тормозной жидкости.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="37">
+<td class="col-n">37.</td>
+<td class="col-name">АБС устанавливается</td>
+<td class="col-method">приложение №4<br/>п 2.2; п 2.2.1;<br/>п 2.2.1.2   ТР ТС 018/2011<br/>ГОСТ 33670—2015 А.10</td>
+<td class="col-norm">АБс должно быть комплектным и работоспособном состоянии<br/>Транспортные средства категорий M<sub>2</sub>, М<sub>3</sub>, N<sub>2</sub>, N<sub>3</sub>, О<sub>3</sub>&nbsp;и О<sub>4</sub>&nbsp;с<br/>количеством осей не более четырех оборудуются антиблокировочными тормозными системами (АБС)</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="38">
+<td class="col-n">38.</td>
+<td class="col-name"><strong>Требования к шинам и колесам</strong></td>
+<td class="col-method">приложение №4<br/>п 2.2; п 2.2.1;<br/>п 2.2.1.2   ТР ТС 018/2011<br/>ГОСТ 33670—2015 А.10</td>
+<td class="col-norm">Каждая установленная на транспортном средстве шина<br/>имеет отформованную маркировку хотя бы одним из знаков соответствия «Е», «е» или «DOT».<br/>Имеет отформованную маркировку обозначения размера шины, индекса несущей способности и индекса категории скорости.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="39">
+<td class="col-n">39.</td>
+<td class="col-name">Колеса, гайки или болты крепления колес, колпаки ступиц и колесные колпаки</td>
+<td class="col-method">приложение №4<br/>п 3.6.3; п 3.6.4.                                                                                             ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.3</td>
+<td class="col-norm">Не должны иметь остроконечных или режущих кромок, выступающих за поверхность обода колеса.<br/>Колеса не имеют барашковых гаек</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="40">
+<td class="col-n">40.</td>
+<td class="col-name">пределы наружного&nbsp;выступления колес</td>
+<td class="col-method">приложение №4<br/>п 3.6.5.ТР ТС 018/2011<br/>ГОСТ 33670—2015 Таблица А 16.5</td>
+<td class="col-norm">&nbsp;Колеса не выступают за пределы наружного контура кузова в плане, за исключением шин, колпаков колес и гаек крепления колес</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="41">
+<td class="col-n">41.</td>
+<td class="col-name"><strong>Требования к задним и боковым защитным устройствам</strong></td>
+<td class="col-method">приложение №4<br/>п 3.6.15.ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 19.11</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="42">
+<td class="col-n">42.</td>
+<td class="col-name">задние и боковые защитные устройства</td>
+<td class="col-method">приложение №4<br/>п 3.6.15.ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 19.2</td>
+<td class="col-norm">категорий N1, N<sub>2</sub>&nbsp;(за исключением седельных тягачей), О<sub>3</sub>&nbsp;и О<sub>4</sub>&nbsp;устанавливаются задние и боковые защитные устройства,</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="43">
+<td class="col-n">43.</td>
+<td class="col-name">Заднее защитное устройство</td>
+<td class="col-method">приложение №4<br/>п 3.6.15.ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 19.3</td>
+<td class="col-norm">по ширине должно быть не более ширины задней оси и не короче ее более чем на 100 мм с каждой стороны</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="44">
+<td class="col-n">44.</td>
+<td class="col-name">Высота заднего защитного устройства&nbsp;</td>
+<td class="col-method">приложение №4<br/>п 3.6.15.ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 19.4</td>
+<td class="col-norm">должна быть не менее 100 мм</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="45">
+<td class="col-n">45.</td>
+<td class="col-name">Концы заднего защитного устройства</td>
+<td class="col-method">приложение №4<br/>п 3.6.15.ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 19.5</td>
+<td class="col-norm">не должны быть загнуты назад</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="46">
+<td class="col-n">46.</td>
+<td class="col-name">&nbsp;Задняя поверхность заднего защитного устройства</td>
+<td class="col-method">приложение №4<br/>п 3.6.15.ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 19.6</td>
+<td class="col-norm">должна отстоять от заднего габарита транспортного средства не более чем на 400 мм.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="47">
+<td class="col-n">47.</td>
+<td class="col-name">Кромки заднего защитного устройства</td>
+<td class="col-method">приложение №4<br/>п 3.6.15.ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 19.7</td>
+<td class="col-norm">закругляются радиусом не менее 2,5 мм</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="48">
+<td class="col-n">48.</td>
+<td class="col-name">Расстояние от опорной поверхности до нижнего края заднего защитного устройства на всем его протяжении</td>
+<td class="col-method">приложение №4<br/>п 3.6.15.ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 19.8</td>
+<td class="col-norm">не превышает 550 мм.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="49">
+<td class="col-n">49.</td>
+<td class="col-name">Боковое защитное устройство</td>
+<td class="col-method">приложение №4<br/>п 3.6.15.ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 19.9</td>
+<td class="col-norm">не должно выступать за габариты транспортного средства по ширине</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="50">
+<td class="col-n">50.</td>
+<td class="col-name">Внешняя поверхность бокового защитного устройства&nbsp;</td>
+<td class="col-method">приложение №4<br/>п 3.6.15.ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 19.11</td>
+<td class="col-norm">должна отстоять от бокового габарита транспортного средства внутрь не более чем на 120 мм. В задней части на протяжении не менее 250 мм наружная поверхность бокового защитного устройства должна отстоять от внешнего края наружной задней шины внутрь не более чем на 30 мм (без учета прогиба шины в нижней части под весом транспортного средства). Болты, заклепки и другие детали крепления могут выступать на расстояние до 10 мм от внешней поверхности</td>
+<td class="col-actual">&nbsp;</td>
+</tr></tbody></table></section><section class="page page-4" data-page="4"><table class="main-table page-table-4">
+<colgroup><col class="w-n"/><col class="w-name"/><col class="w-method"/><col class="w-norm"/><col class="w-actual"/></colgroup>
+<tbody><tr class="" data-row="51">
+<td class="col-n">51.</td>
+<td class="col-name">расстояние&nbsp;боковых защитных устройство состоящих из горизонтальных профилей</td>
+<td class="col-method">приложение №4<br/>п 3.6.15.ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 19.10</td>
+<td class="col-norm">должно быть не более 300 мм,                          -высота их должна быть не менее 50 мм для транспортных средств категорий N<sub>2</sub>&nbsp;и О3<br/>- 100 мм для транспортных средств категорий N<sub>3</sub>&nbsp;и О4</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="52">
+<td class="col-n">52.</td>
+<td class="col-name">Замок седельно-сцепного устройства</td>
+<td class="col-method">приложение №4<br/>п 3.6.15.ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 25,1</td>
+<td class="col-norm">Должен закрытася автоматический после сцепки</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="53">
+<td class="col-n">53.</td>
+<td class="col-name">Крепление дышла и сцепной петли</td>
+<td class="col-method">приложение №4<br/>п 3.6.16.ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 25,2<br/>Таблица А 25,3</td>
+<td class="col-norm">Ослабление болтовых соединений а также продольный люфт не допускается</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="54">
+<td class="col-n">54.</td>
+<td class="col-name">Требования к размерам сцепных устройств</td>
+<td class="col-method">приложение №4<br/>п 3.6.16.ТР ТС 018/2011<br/>ГОСТ 33670—2015<br/>Таблица А 25,4</td>
+<td class="col-norm">Диаметр шкворня до 40т--50,9мм-48,3мм<br/>До 55т--50мм-49мм<br/>Диаметр зева тягового крюка 48мм-53мм<br/>Диаметр шкворня без зазорный 40мм--40мм- 36,2мм<br/>                                                       50мм—50мм-47,2мм<br/>Диаметр шара тягово-сцепного уст. 50-49,6</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="55">
+<td class="col-n">55.</td>
+<td class="col-name"><strong>Требования к весовым параметрам транспортных средств категорий М</strong><sub>3</sub><strong>, N</strong><sub>3</sub><strong>&nbsp;и О</strong></td>
+<td class="col-method">п 2.<br/>п 2. 1.<br/><br/>ТР ТС 018/2011</td>
+<td class="col-norm">-количество осей 2<br/>Категории М<sub>3</sub>, N<sub>3</sub>-18т<br/>- количество осей 3 за исключением сочлененных автобусов категории М<sub>3 </sub>-25т<br/>- количество осей 3 сочлененные автобусы категории М<sub>3  </sub>-28т<br/>- с двумя управляемыми осями-32<br/>- Автопоезда:<br/>количество осей 3-28<br/>количество осей 4-36<br/>5 и более-40</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="56">
+<td class="col-n">56.</td>
+<td class="col-name">Максимальная масса, приходящаяся на ось (группу осей) транспортных средств</td>
+<td class="col-method">п 2.2.<br/>ТР ТС 018/2011</td>
+<td class="col-norm">Расстояние между сближенными осями<br/>Свыше 2м- 11,5 (10)т<br/>-От 1,65 до 2м(включительно)- 10,5 (9)т<br/>- От 1,35 до 1,65м (включительно)- 9 (8)т<br/>- От 1 до 1,35м (включительно)- 8 (7) <br/>-До 1м- 7 (6)т</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="57">
+<td class="col-n">57.</td>
+<td class="col-name">Вертикальная статическая нагрузка на тяговое устройство автомобиля от сцепной петли одноосного прицепа (прицепа-роспуска) в снаряженном состоянии</td>
+<td class="col-method">п 2.3.<br/>ТР ТС 018/2011</td>
+<td class="col-norm">не должна быть более 490 Н. При вертикальной статической нагрузке от сцепной петли прицепа более 490 Н передняя опорная стойка должна быть оборудована механизмом подъема-опускания, обеспечивающим установку сцепной петли в положение сцепки (расцепки) прицепа с тягачом.</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="section-row" data-row="58">
+<td class="col-n">58.</td>
+<td class="col-name"><strong>Требования к размерам транспортных средств</strong></td>
+<td class="col-method">приложение №5п 1.<br/>ТР ТС 018/2011</td>
+<td class="col-norm">&nbsp;</td>
+<td class="col-actual">&nbsp;</td>
+</tr><tr class="" data-row="59">
+<td class="col-n">59.</td>
+<td class="col-name">Максимальная длина</td>
+<td class="col-method">приложение №5п 1.1.<br/>ТР ТС 018/2011</td>
+<td class="col-norm">-категорий М<sub>1</sub>, N и О (прицепа) - 12 м<br/>- одиночного двухосного категорий М<sub>2</sub>&nbsp;и М<sub>3</sub>&nbsp;- 13,5 м</td>
+<td class="col-actual">мм</td>
+</tr><tr class="" data-row="60">
+<td class="col-n">60.</td>
+<td class="col-name">Максимальная ширина</td>
+<td class="col-method">приложение №5п 1.2.<br/>ТР ТС 018/2011</td>
+<td class="col-norm">категорий М, N, О не должна превышать 2,55 м. Для изотермических кузовов транспортных средств допускается максимальная ширина 2,6 м</td>
+<td class="col-actual">мм</td>
+</tr><tr class="" data-row="61">
+<td class="col-n">61.</td>
+<td class="col-name">Максимальная высота</td>
+<td class="col-method">приложение №5п 1.3.<br/>ТР ТС 018/2011</td>
+<td class="col-norm">категорий М, N, О не должна превышать 4 м</td>
+<td class="col-actual">мм</td>
+</tr></tbody></table>
+<div class="note-title">Примечание</div>
+<div class="notes-area"><textarea aria-label="Примечание" data-field="notes"></textarea></div>
+<div class="conclusion"><span class="conclusion-result">Соответствует/ не соответствует</span>&nbsp;&nbsp;&nbsp;&nbsp;требованиям Технического Регламента Таможенного Союза «О безопасности колесных транспортных средств» ТР ТС 018/2011.</div>
+<div class="signature-line"><span>Технический эксперт</span><span class="signature-space"></span><input aria-label="ФИО технического эксперта" class="expert-input" data-field="expert_name"/></div>
+<div class="signature-caption"><span>Подпись</span><span>Ф.И.О.</span></div>
+</section>
+<script>
+(() => {
+  'use strict';
+  const STORAGE_KEY = 'o3-o4-protocol-form-v1';
+  const fields = [...document.querySelectorAll('[data-field]')];
+  const status = document.getElementById('status');
+  function getData() { const data = {}; for (const el of fields) data[el.dataset.field] = el.value; return data; }
+  function setData(data = {}) { for (const el of fields) if (Object.prototype.hasOwnProperty.call(data, el.dataset.field)) el.value = data[el.dataset.field] ?? ''; autoResizeAll(); }
+  function saveLocal() { localStorage.setItem(STORAGE_KEY, JSON.stringify(getData())); status.textContent = 'Сохранено ' + new Date().toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'}); }
+  function autoResize(el) { if (el.tagName !== 'TEXTAREA') return; el.style.height = 'auto'; el.style.height = Math.max(el.parentElement.clientHeight - 2, el.scrollHeight) + 'px'; }
+  function autoResizeAll() { fields.forEach(autoResize); }
+  let timer;
+  fields.forEach(el => el.addEventListener('input', () => { autoResize(el); clearTimeout(timer); status.textContent = 'Сохранение…'; timer = setTimeout(saveLocal, 250); }));
+  document.getElementById('printBtn').addEventListener('click', () => { saveLocal(); window.print(); });
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(getData(), null, 2)], {type:'application/json;charset=utf-8'});
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'O3-O4_protocol_data.json'; a.click(); URL.revokeObjectURL(url);
+  });
+  document.getElementById('jsonFile').addEventListener('change', async event => {
+    const file = event.target.files?.[0]; if (!file) return;
+    try { setData(JSON.parse(await file.text())); saveLocal(); status.textContent = 'JSON загружен'; }
+    catch (e) { alert('Не удалось прочитать JSON: ' + e.message); }
+    event.target.value = '';
+  });
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    if (!confirm('Очистить все введённые данные?')) return;
+    setData({ protocol_date: '10.07.2026' }); saveLocal();
+  });
+  window.getProtocolData = getData;
+  window.setProtocolData = data => { setData(data); saveLocal(); };
+  try { const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); if (saved) setData(saved); } catch (_) {}
+  requestAnimationFrame(autoResizeAll);
+  window.addEventListener('resize', autoResizeAll);
+})();
+</script>
+<script>
+(() => {
+  'use strict';
+  const params = new URLSearchParams(window.location.search);
+  const fields = [...document.querySelectorAll('[data-field]')];
+  const today = () => {
+    const now = new Date();
+    return String(now.getDate()).padStart(2, '0') + '.' +
+      String(now.getMonth() + 1).padStart(2, '0') + '.' + now.getFullYear();
+  };
+  const field = name => document.querySelector('[data-field="' + name + '"]');
+  const setValue = (name, value, overwrite = false) => {
+    const element = field(name);
+    if (element && (overwrite || !String(element.value || '').trim())) {
+      element.value = value || '';
+    }
+    return element;
+  };
+  const mark = element => {
+    if (!element) return;
+    const update = () => element.classList.toggle('needs-fill', !String(element.value || '').trim());
+    update();
+    element.addEventListener('input', () => { update(); notifyStateChanged(); });
+  };
+  const setToggle = (button, state) => {
+    button.dataset.state = state || '';
+    button.textContent = state === 'check' ? '✓' : state === 'dash' ? '-' : state === 'cross' ? '✕' : '';
+  };
+  const cells = [...document.querySelectorAll('.col-actual')];
+  cells.forEach((cell, index) => {
+    const row = cell.closest('tr')?.dataset.row || String(index + 1);
+    cell.dataset.result = 'o3o4_r' + row;
+    const text = cell.textContent.replace(/\u00a0/g, ' ').trim();
+    if (text === 'мм') {
+      cell.innerHTML = '<span class="actual-mm"><input type="text" inputmode="decimal" aria-label="Фактическое значение, мм"><span>мм</span></span>';
+    } else if (!text) {
+      cell.innerHTML = '<button type="button" class="actual-toggle" data-state="check" aria-label="Фактическое значение">✓</button>';
+    }
+  });
+  const style = document.createElement('style');
+  style.textContent = '.toolbar{display:none!important}.actual-toggle{display:flex;align-items:center;justify-content:center;width:100%;min-height:5mm;border:0;background:transparent;color:#000;font:700 11pt "Times New Roman",serif;cursor:pointer}.actual-mm{display:flex;align-items:stretch;justify-content:center;gap:.5mm;min-height:100%;height:100%;white-space:nowrap}.actual-mm input{width:14mm;height:100%;border:0;border-bottom:1px solid #111;outline:none;text-align:center;font:700 9pt "Times New Roman",serif}.needs-fill{background:#fff39a!important}.signature-button{width:100%;min-height:13mm;border:1px solid #16805b;border-radius:2mm;background:#1f9d6a;color:#fff;font:700 11pt Arial,sans-serif}.signature-space.signed{display:flex;align-items:end;justify-content:center;height:13mm}.signature-space.signed img{max-width:100%;max-height:13mm;object-fit:contain}';
+  document.head.appendChild(style);
+  if (params.get('pdf') === '1') style.textContent = style.textContent.replace('.needs-fill{background:#fff39a!important}', '');
+  const collectDocumentState = () => ({
+    fields: fields.map(element => ({name: element.dataset.field, value: element.value || ''})),
+    actual: cells.map(cell => ({
+      name: cell.dataset.result,
+      state: cell.querySelector('.actual-toggle')?.dataset.state || null,
+      value: cell.querySelector('.actual-mm input')?.value ?? null,
+    })),
+  });
+  window.AutolabCollectDocumentState = collectDocumentState;
+  let notifyTimer;
+  function notifyStateChanged() {
+    clearTimeout(notifyTimer);
+    notifyTimer = setTimeout(() => {
+      if (window.DocumentState?.postMessage) window.DocumentState.postMessage(JSON.stringify(collectDocumentState()));
+    }, 80);
+  }
+  document.querySelectorAll('.actual-toggle').forEach(button => button.addEventListener('click', () => {
+    const state = button.dataset.state || '';
+    setToggle(button, state === '' ? 'check' : state === 'check' ? 'dash' : state === 'dash' ? 'cross' : '');
+    notifyStateChanged();
+  }));
+  document.querySelectorAll('.actual-mm input').forEach(input => input.addEventListener('input', notifyStateChanged));
+  const date = today();
+  setValue('protocol_date', date, true);
+  setValue('sample_received', date, true);
+  setValue('object_name', params.get('brand'), false);
+  setValue('manufacturer', params.get('country'), false);
+  setValue('vehicle_type', params.get('vehicle_category') || 'O3-O4', false);
+  setValue('vin', params.get('vin'), false);
+  setValue('expert_name', params.get('expert_name'), false);
+  ['object_name', 'manufacturer', 'vehicle_type', 'vin', 'temperature', 'humidity', 'expert_name'].forEach(name => mark(field(name)));
+  const signatureSpace = document.querySelector('.signature-space');
+  const signature = params.get('signature');
+  if (signatureSpace && signature) {
+    signatureSpace.classList.add('signed');
+    signatureSpace.innerHTML = '<img alt="Подпись" src="data:image/svg+xml;charset=utf-8,' + encodeURIComponent(signature) + '">';
+  } else if (signatureSpace) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'signature-button';
+    button.textContent = 'Подписать';
+    button.addEventListener('click', () => {
+      notifyStateChanged();
+      if (window.SignDocument?.postMessage) window.SignDocument.postMessage('sign');
+    });
+    signatureSpace.appendChild(button);
+  }
+  function applyState(raw) {
+    if (!raw) return;
+    try {
+      const state = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      (state.fields || []).forEach(item => {
+        const element = field(item.name);
+        if (element) { element.value = item.value || ''; element.classList.toggle('needs-fill', !String(element.value || '').trim()); }
+      });
+      (state.actual || []).forEach(item => {
+        const cell = document.querySelector('[data-result="' + item.name + '"]');
+        if (!cell) return;
+        const button = cell.querySelector('.actual-toggle');
+        if (button) setToggle(button, item.state || '');
+        const input = cell.querySelector('.actual-mm input');
+        if (input && item.value != null) input.value = item.value;
+      });
+    } catch (_) {}
+  }
+  applyState(params.get('state'));
+  fields.forEach(element => element.addEventListener('input', notifyStateChanged));
+  notifyStateChanged();
+})();
+</script>
+</body>
+</html>

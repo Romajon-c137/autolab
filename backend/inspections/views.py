@@ -1187,9 +1187,18 @@ def create_inspection(request):
         return JsonResponse({
             "ok": False,
             "error": (
-                "Выберите категорию авто заново: M1, M2, M3, N1, N2 или N3 "
+                "Выберите категорию авто заново: M1, M2, M3, N1, N2, N3 или O3-O4 "
                 f"(получено: {str(raw_vehicle_category)[:24]})"
             ),
+        }, status=400)
+
+    if (
+        vehicle_category == VehicleInspection.CATEGORY_O3_O4
+        and operation_type != VehicleInspection.OPERATION_SBGTS
+    ):
+        return JsonResponse({
+            "ok": False,
+            "error": "Category O3-O4 is available only for СБКТС",
         }, status=400)
 
     if operation_type not in dict(VehicleInspection.OPERATION_CHOICES):

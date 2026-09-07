@@ -32,8 +32,8 @@ const _defaultServerUrl = String.fromEnvironment(
   'SERVER_URL',
   defaultValue: 'https://autolab.glasscenter.kg',
 );
-const _appVersion = '1.0.9';
-const _appBuildStamp = '2026-08-19 15:10 +06';
+const _appVersion = '1.0.14';
+const _appBuildStamp = '2026-08-29 16:32 +06';
 const _appTitle = 'Авто лаборатория v$_appVersion';
 const _pdfChannel = MethodChannel('autolab/pdf');
 void main() {

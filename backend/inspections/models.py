@@ -165,6 +165,7 @@ class VehicleInspection(models.Model):
     CATEGORY_N1 = "N1"
     CATEGORY_N2 = "N2"
     CATEGORY_N3 = "N3"
+    CATEGORY_O3_O4 = "O3-O4"
     CATEGORY_CHOICES = (
         (CATEGORY_M1, "M1"),
         (CATEGORY_M2, "M2"),
@@ -172,6 +173,7 @@ class VehicleInspection(models.Model):
         (CATEGORY_N1, "N1"),
         (CATEGORY_N2, "N2"),
         (CATEGORY_N3, "N3"),
+        (CATEGORY_O3_O4, "O3-O4"),
     )
 
     title = models.CharField("Название", max_length=120, blank=True)
@@ -186,7 +188,7 @@ class VehicleInspection(models.Model):
     country = models.CharField("Страна", max_length=80, blank=True)
     vehicle_category = models.CharField(
         "Категория авто",
-        max_length=2,
+        max_length=5,
         choices=CATEGORY_CHOICES,
         default=CATEGORY_M1,
     )
@@ -308,7 +310,7 @@ class InspectionPrice(models.Model):
     )
     vehicle_category = models.CharField(
         "Категория авто",
-        max_length=2,
+        max_length=5,
         choices=VehicleInspection.CATEGORY_CHOICES,
         blank=True,
         help_text="Заполняется для СБКТС и техосмотра. Для остальных операций оставить пустым.",

@@ -107,9 +107,12 @@ class _DocumentHtmlViewState extends State<DocumentHtmlView> {
 
   String _documentAssetName(String operationType, String vehicleCategory) {
     if (operationType == 'tech_inspection') {
-      return vehicleCategory == 'N2'
+      return vehicleCategory.startsWith('N')
           ? 'N2_visual_inspection.html'
           : 'M1_visual_inspection.html';
+    }
+    if (vehicleCategory == 'O3-O4') {
+      return 'O3-O4_document_clean.html';
     }
     return '${vehicleCategory}_document_clean.html';
   }

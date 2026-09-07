@@ -75,6 +75,7 @@ Future<String> _buildInspectionDocumentHtml({
       // ignore: use_null_aware_elements
       if (signatureSvg case final svg?) 'signature': svg,
       if (documentStateJson.isNotEmpty) 'state': documentStateJson,
+      'pdf': '1',
     },
   ).query;
   const pdfCss = '''
@@ -91,6 +92,10 @@ Future<String> _buildInspectionDocumentHtml({
   return source
       .replaceFirst('</style>', '$pdfCss</style>')
       .replaceFirst(
+        '</head>',
+        '<script>document.documentElement.dataset.pdf="1";</script></head>',
+      )
+      .replaceFirst(
         'new URLSearchParams(window.location.search)',
         'new URLSearchParams(${jsonEncode(params)})',
       );
@@ -100,6 +105,9 @@ String _documentAssetName(_InspectionDraft draft) {
   if (draft.operationCategory == _OperationCategory.techInspection) {
     final isN = draft.vehicleCategory.apiValue.startsWith('N');
     return isN ? 'N2_visual_inspection.html' : 'M1_visual_inspection.html';
+  }
+  if (draft.vehicleCategory == _VehicleCategory.o3O4) {
+    return 'O3-O4_document_clean.html';
   }
   return '${draft.vehicleCategory.apiValue}_document_clean.html';
 }

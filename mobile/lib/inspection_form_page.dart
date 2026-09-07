@@ -61,13 +61,16 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
   bool get _isEditingDraft => widget.initialDraft != null;
   bool get _isConversion => _operationCategory == _OperationCategory.conversion;
   List<_VehicleCategory> get _availableVehicleCategories {
-    return _VehicleCategory.values;
+    if (_operationCategory == _OperationCategory.sbgts) {
+      return _VehicleCategory.values;
+    }
+    return _VehicleCategory.values
+        .where((category) => category != _VehicleCategory.o3O4)
+        .toList();
   }
 
   List<_PhotoKind> get _visiblePhotoKinds {
-    final hidden = <_PhotoKind>{
-      if (_isConversion) _PhotoKind.mileage,
-    };
+    final hidden = <_PhotoKind>{if (_isConversion) _PhotoKind.mileage};
 
     return _PhotoKind.values.where((kind) => !hidden.contains(kind)).toList();
   }
@@ -242,7 +245,8 @@ class _InspectionFormPageState extends State<_InspectionFormPage> {
     }
 
     return prefixes.where(
-      (prefix) => prefix.startsWith(normalized) || normalized.startsWith(prefix),
+      (prefix) =>
+          prefix.startsWith(normalized) || normalized.startsWith(prefix),
     );
   }
 

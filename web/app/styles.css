@@ -960,6 +960,10 @@ button:disabled {
   color: #d97706;
 }
 
+.category-mark-o {
+  color: #0f766e;
+}
+
 .print-only {
   display: none;
 }

@@ -125,7 +125,7 @@ export const photoLabels: Record<string, string> = {
   vin_photo: "VIN",
 };
 
-export const vehicleCategories = ["M1", "M2", "M3", "N1", "N2", "N3"];
+export const vehicleCategories = ["M1", "M2", "M3", "N1", "N2", "N3", "O3-O4"];
 export const REPORT_TYPE_OPTIONS = [
   { value: "all", label: "Все" },
   { value: "tech_inspection", label: "Техосмотр" },
@@ -216,6 +216,7 @@ export function operatorName(user: Inspection["created_by"]) {
 export function categoryClassName(category: string) {
   if (category.startsWith("M")) return "category-mark category-mark-m";
   if (category.startsWith("N")) return "category-mark category-mark-n";
+  if (category.startsWith("O")) return "category-mark category-mark-o";
   return "category-mark";
 }
 
