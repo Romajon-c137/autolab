@@ -137,6 +137,7 @@ class SecurityTests(TestCase):
         inspection.refresh_from_db()
 
         self.assertIn("vehicles/KNAG6412BLA015238/inspections", inspection.front_photo.name)
+        self.assertTrue(inspection.front_photo.name.endswith(".png"))
         self.assertTrue(Path(inspection.front_photo.path).is_file())
         self.assertFalse(staged_path.exists())
 

@@ -12,17 +12,25 @@ def _safe_storage_part(value):
     return cleaned or "NO_VIN"
 
 
+def _safe_storage_filename(value):
+    cleaned = "".join(
+        char if char.isalnum() or char in ("-", "_", ".") else "_"
+        for char in str(value or "").strip()
+    )
+    return cleaned.strip(".") or "file"
+
+
 def vehicle_staging_upload_to(instance, filename):
     vin = getattr(instance, "vin", "")
     if not vin and getattr(instance, "inspection_id", None):
         vin = instance.inspection.vin
-    return f"vehicles/{_safe_storage_part(vin)}/staging/{_safe_storage_part(filename)}"
+    return f"vehicles/{_safe_storage_part(vin)}/staging/{_safe_storage_filename(filename)}"
 
 
 def client_application_upload_to(instance, filename):
     return (
         f"vehicles/{_safe_storage_part(instance.vin)}/applications/"
-        f"{_safe_storage_part(filename)}"
+        f"{_safe_storage_filename(filename)}"
     )
 
 
