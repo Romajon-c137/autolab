@@ -4,6 +4,28 @@ from django.utils import timezone
 import uuid
 
 
+def _safe_storage_part(value):
+    cleaned = "".join(
+        char if char.isalnum() or char in ("-", "_") else "_"
+        for char in str(value or "").strip()
+    )
+    return cleaned or "NO_VIN"
+
+
+def vehicle_staging_upload_to(instance, filename):
+    vin = getattr(instance, "vin", "")
+    if not vin and getattr(instance, "inspection_id", None):
+        vin = instance.inspection.vin
+    return f"vehicles/{_safe_storage_part(vin)}/staging/{_safe_storage_part(filename)}"
+
+
+def client_application_upload_to(instance, filename):
+    return (
+        f"vehicles/{_safe_storage_part(instance.vin)}/applications/"
+        f"{_safe_storage_part(filename)}"
+    )
+
+
 class Branch(models.Model):
     name = models.CharField("Название филиала", max_length=120, unique=True)
     is_active = models.BooleanField("Активен", default=True)
@@ -223,63 +245,63 @@ class VehicleInspection(models.Model):
     )
     application_photo = models.ImageField(
         "Фото заявки",
-        upload_to="inspections/application/",
+        upload_to=vehicle_staging_upload_to,
         max_length=255,
         null=True,
         blank=True,
     )
     front_photo = models.ImageField(
         "Фото спереди",
-        upload_to="inspections/front/",
+        upload_to=vehicle_staging_upload_to,
         max_length=255,
         null=True,
         blank=True,
     )
     rear_photo = models.ImageField(
         "Фото сзади",
-        upload_to="inspections/rear/",
+        upload_to=vehicle_staging_upload_to,
         max_length=255,
         null=True,
         blank=True,
     )
     left_photo = models.ImageField(
         "Фото слева",
-        upload_to="inspections/left/",
+        upload_to=vehicle_staging_upload_to,
         max_length=255,
         null=True,
         blank=True,
     )
     right_photo = models.ImageField(
         "Фото справа",
-        upload_to="inspections/right/",
+        upload_to=vehicle_staging_upload_to,
         max_length=255,
         null=True,
         blank=True,
     )
     mileage_photo = models.ImageField(
         "Фото пробега",
-        upload_to="inspections/mileage/",
+        upload_to=vehicle_staging_upload_to,
         max_length=255,
         null=True,
         blank=True,
     )
     vin_photo = models.ImageField(
         "Фото VIN",
-        upload_to="inspections/vin/",
+        upload_to=vehicle_staging_upload_to,
         max_length=255,
         null=True,
         blank=True,
     )
     document_pdf = models.FileField(
         "Документ PDF",
-        upload_to="inspections/documents/",
+        upload_to=vehicle_staging_upload_to,
         max_length=255,
         null=True,
         blank=True,
     )
     application_pdf = models.FileField(
         "PDF заявки клиента",
-        upload_to="inspections/applications/",
+        upload_to=vehicle_staging_upload_to,
         max_length=255,
         null=True,
         blank=True,
@@ -345,7 +367,7 @@ class VehicleInspectionExtraPhoto(models.Model):
     )
     image = models.ImageField(
         "Фото переоборудованной части",
-        upload_to="inspections/conversion/",
+        upload_to=vehicle_staging_upload_to,
         max_length=255,
     )
     taken_at = models.DateTimeField("Дата фото", null=True, blank=True)
@@ -370,12 +392,12 @@ class ClientApplication(models.Model):
     vin = models.CharField("VIN / номер кузова", max_length=32)
     pdf = models.FileField(
         "PDF заявки",
-        upload_to="inspections/applications/",
+        upload_to=client_application_upload_to,
         max_length=255,
     )
     signature = models.ImageField(
         "Подпись заявителя",
-        upload_to="inspections/application_signatures/",
+        upload_to=client_application_upload_to,
         max_length=255,
         null=True,
         blank=True,

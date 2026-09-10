@@ -13,6 +13,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import Branch, LoginChallenge, UserProfile, VehicleInspection
+from .storage_mirror import mirror_inspection
 from .two_factor import TwoFactorError, verify_login_challenge
 from .views import normalize_vehicle_category
 
@@ -118,6 +119,26 @@ class SecurityTests(TestCase):
         self.assertTrue(second.json()["duplicate"])
         self.assertEqual(first.json()["id"], second.json()["id"])
         self.assertEqual(VehicleInspection.objects.count(), 1)
+
+    def test_inspection_file_is_promoted_within_vin_storage_without_duplicate(self):
+        inspection = VehicleInspection.objects.create(
+            title="Car",
+            brand="Car",
+            vin="KNAG6412BLA015238",
+            branch=self.branch,
+            created_by=self.user,
+            front_photo=uploaded_image("front.png"),
+        )
+        staged_path = Path(inspection.front_photo.path)
+        self.assertIn("vehicles/KNAG6412BLA015238/staging", inspection.front_photo.name)
+        self.assertTrue(staged_path.is_file())
+
+        mirror_inspection(inspection.id)
+        inspection.refresh_from_db()
+
+        self.assertIn("vehicles/KNAG6412BLA015238/inspections", inspection.front_photo.name)
+        self.assertTrue(Path(inspection.front_photo.path).is_file())
+        self.assertFalse(staged_path.exists())
 
     def test_invalid_vehicle_identifier_is_rejected(self):
         self.client.force_login(self.user)

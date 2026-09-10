@@ -1,5 +1,6 @@
 import json
-import shutil
+import filecmp
+import os
 from pathlib import Path
 
 from django.conf import settings
@@ -47,35 +48,43 @@ def mirror_inspection(inspection):
     inspection_data = inspection_json(inspection)
     inspection_updates = {}
     extra_photo_updates = []
+    staged_sources = []
 
     for field_name in PHOTO_FIELDS:
         field = getattr(inspection, field_name, None)
-        copied = copy_field_file(field, photos_dir, field_name)
-        if copied:
-            inspection_data["files"]["photos"][field_name] = copied
-            inspection_updates[field_name] = copied
+        linked, source_to_remove = link_field_file(field, photos_dir, field_name)
+        if linked:
+            inspection_data["files"]["photos"][field_name] = linked
+            inspection_updates[field_name] = linked
+            if source_to_remove:
+                staged_sources.append(source_to_remove)
 
     for field_name in DOCUMENT_FIELDS:
         field = getattr(inspection, field_name, None)
-        copied = copy_field_file(field, documents_dir, field_name)
-        if copied:
-            inspection_data["files"]["documents"][field_name] = copied
-            inspection_updates[field_name] = copied
+        linked, source_to_remove = link_field_file(field, documents_dir, field_name)
+        if linked:
+            inspection_data["files"]["documents"][field_name] = linked
+            inspection_updates[field_name] = linked
+            if source_to_remove:
+                staged_sources.append(source_to_remove)
 
     for photo in inspection.extra_photos.all():
-        copied = copy_field_file(photo.image, extra_dir, f"extra_{photo.id}")
-        if copied:
+        linked, source_to_remove = link_field_file(photo.image, extra_dir, f"extra_{photo.id}")
+        if linked:
             inspection_data["files"]["extra_photos"].append({
                 "id": photo.id,
-                "image": copied,
+                "image": linked,
                 "taken_at": serialize_datetime(photo.taken_at),
                 "created_at": serialize_datetime(photo.created_at),
             })
-            extra_photo_updates.append((photo.id, copied))
+            extra_photo_updates.append((photo.id, linked))
+            if source_to_remove:
+                staged_sources.append(source_to_remove)
 
     write_json(vehicle_dir / "vehicle.json", vehicle_data)
     write_json(inspection_dir / "inspection.json", inspection_data)
     promote_inspection_files(inspection.id, inspection_updates, extra_photo_updates)
+    remove_staged_sources(staged_sources)
     return inspection_dir
 
 
@@ -150,19 +159,40 @@ def inspection_json(inspection):
     }
 
 
-def copy_field_file(field, target_dir, name_prefix):
+def link_field_file(field, target_dir, name_prefix):
     if not field:
-        return ""
+        return "", None
 
     source = Path(field.path)
     if not source.exists():
-        return ""
+        return "", None
 
     suffix = source.suffix.lower()
     target = target_dir / f"{safe_path_part(name_prefix)}{suffix}"
-    if source.resolve() != target.resolve():
-        shutil.copy2(source, target)
-    return str(target.relative_to(storage_root()))
+    if source.resolve() == target.resolve():
+        return str(target.relative_to(storage_root())), None
+
+    if target.exists():
+        if not filecmp.cmp(source, target, shallow=False):
+            raise RuntimeError(f"Storage target differs from source: {target}")
+    else:
+        # Both paths live under AUTOLAB_STORAGE_ROOT. A hard link makes the
+        # promotion atomic without allocating a second copy of the file.
+        os.link(source, target)
+    return str(target.relative_to(storage_root())), source
+
+
+def remove_staged_sources(paths):
+    for path in paths:
+        path.unlink(missing_ok=True)
+        parent = path.parent
+        root = storage_root().resolve()
+        while parent.resolve() != root:
+            try:
+                parent.rmdir()
+            except OSError:
+                break
+            parent = parent.parent
 
 
 def promote_inspection_files(inspection_id, inspection_updates, extra_photo_updates):
