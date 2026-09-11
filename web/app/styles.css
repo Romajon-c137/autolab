@@ -1192,6 +1192,10 @@ button:disabled {
   height: 15px;
 }
 
+.ilim-preview-trigger {
+  right: 52px;
+}
+
 .milestone-icon {
   width: 60px;
   height: 60px;

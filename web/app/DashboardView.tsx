@@ -2,7 +2,7 @@
 
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, CalendarRange, PieChart, Sparkles, Users } from "lucide-react";
+import { Building2, CalendarRange, PieChart, Smile, Sparkles, Users } from "lucide-react";
 import {
   CHART_FALLBACK_COLOR,
   OPERATION_COLORS,
@@ -16,6 +16,7 @@ import {
 } from "./lib";
 import { Spinner } from "./Spinner";
 import { MilestoneCelebration } from "./MilestoneCelebration";
+import { IlimSmileGreeting } from "./IlimSmileGreeting";
 
 export function DashboardView() {
   const { serverUrl, sessionKey, canDashboard, canViewAmounts } = useSession();
@@ -54,6 +55,8 @@ function DashboardContent({
   const [error, setError] = useState("");
   const [milestoneClicks, setMilestoneClicks] = useState(0);
   const [milestonePreview, setMilestonePreview] = useState(false);
+  const [smileClicks, setSmileClicks] = useState(0);
+  const [smilePreview, setSmilePreview] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -116,6 +119,17 @@ function DashboardContent({
     setMilestoneClicks(0);
   }
 
+  function confirmSmilePreview() {
+    const nextClicks = smileClicks + 1;
+    if (nextClicks < 10) {
+      setSmileClicks(nextClicks);
+      return;
+    }
+
+    setSmilePreview(false);
+    setSmileClicks(0);
+  }
+
   return (
     <>
       {milestonePreview && (
@@ -125,10 +139,14 @@ function DashboardContent({
           onConfirm={confirmMilestone}
         />
       )}
+      {smilePreview && (
+        <IlimSmileGreeting clicks={smileClicks} onSmile={confirmSmilePreview} />
+      )}
       <button
         className="milestone-preview-trigger"
         type="button"
         onClick={() => {
+          setSmilePreview(false);
           setMilestoneClicks(0);
           setMilestonePreview(true);
         }}
@@ -136,6 +154,19 @@ function DashboardContent({
         aria-label="Предпросмотр поздравления"
       >
         <Sparkles aria-hidden="true" />
+      </button>
+      <button
+        className="milestone-preview-trigger ilim-preview-trigger"
+        type="button"
+        onClick={() => {
+          setMilestonePreview(false);
+          setSmileClicks(0);
+          setSmilePreview(true);
+        }}
+        title="Предпросмотр приветствия Илима"
+        aria-label="Предпросмотр приветствия Илима"
+      >
+        <Smile aria-hidden="true" />
       </button>
       <div className="topbar">
         <div className="page-title">
