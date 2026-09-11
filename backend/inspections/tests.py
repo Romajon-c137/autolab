@@ -264,6 +264,22 @@ class RolePermissionTests(TestCase):
         self.assertTrue(acknowledged.json()["acknowledged"])
         self.assertFalse(after.json()["show"])
 
+    def test_smile_greeting_is_only_for_ilim_and_is_acknowledged(self):
+        self.assertFalse(self.client.get("/api/greetings/ilim-smile/").json()["show"])
+
+        ilim = get_user_model().objects.create_user(
+            "ilim",
+            password="A-safe-password-123",
+        )
+        self.client.force_login(ilim)
+        first = self.client.get("/api/greetings/ilim-smile/")
+        acknowledged = self.client.post("/api/greetings/ilim-smile/")
+        after = self.client.get("/api/greetings/ilim-smile/")
+
+        self.assertTrue(first.json()["show"])
+        self.assertTrue(acknowledged.json()["acknowledged"])
+        self.assertFalse(after.json()["show"])
+
 
 @override_settings(SECURE_SSL_REDIRECT=False)
 class AdminPasswordTests(TestCase):

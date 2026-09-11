@@ -1031,6 +1031,103 @@ button:disabled {
   backdrop-filter: blur(7px);
 }
 
+.ilim-greeting-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 15%, rgba(255, 209, 102, 0.55), transparent 34%),
+    linear-gradient(145deg, rgba(13, 82, 72, 0.94), rgba(10, 45, 65, 0.96));
+  backdrop-filter: blur(8px);
+}
+
+.ilim-greeting-modal {
+  position: relative;
+  z-index: 2;
+  width: min(500px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 36px 34px 30px;
+  border: 4px solid #ffd166;
+  border-radius: 28px;
+  background: linear-gradient(155deg, #fffdf2, #fff2b8 58%, #dcf9ed);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.48), 0 0 60px rgba(255, 209, 102, 0.5);
+  text-align: center;
+}
+
+.ilim-greeting-sun {
+  width: 72px;
+  height: 72px;
+  padding: 12px;
+  border-radius: 50%;
+  background: #ffd166;
+  color: #b45309;
+  box-shadow: 0 8px 30px rgba(245, 158, 11, 0.36);
+}
+
+.ilim-greeting-kicker {
+  padding: 5px 13px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ilim-greeting-modal h2 {
+  margin: 0;
+  color: var(--primary-dark);
+  font-size: clamp(28px, 6vw, 42px);
+  line-height: 1.08;
+}
+
+.ilim-greeting-modal p {
+  max-width: 410px;
+  margin: 0;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.ilim-smile-button {
+  min-width: 240px;
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 900;
+  box-shadow: 0 10px 26px rgba(249, 115, 22, 0.35);
+}
+
+.ilim-smile-button:hover {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+.ilim-smile-button svg {
+  width: 24px;
+  height: 24px;
+}
+
+.ilim-greeting-modal small {
+  color: #76520d;
+  font-weight: 800;
+}
+
 .milestone-modal {
   position: relative;
   z-index: 2;

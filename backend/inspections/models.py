@@ -102,6 +102,12 @@ class UserProfile(models.Model):
         blank=True,
         editable=False,
     )
+    ilim_smile_greeting_acknowledged_at = models.DateTimeField(
+        "Персональное приветствие Илима просмотрено",
+        null=True,
+        blank=True,
+        editable=False,
+    )
 
     class Meta:
         verbose_name = "Профиль пользователя"

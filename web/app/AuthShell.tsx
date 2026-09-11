@@ -26,12 +26,18 @@ import {
 } from "./lib";
 import { FullPageSpinner } from "./Spinner";
 import { MilestoneCelebration } from "./MilestoneCelebration";
+import { IlimSmileGreeting } from "./IlimSmileGreeting";
 
 type MilestoneStatus = {
   total: number;
   reached: boolean;
   acknowledged: boolean;
   show: boolean;
+};
+
+type GreetingStatus = {
+  show: boolean;
+  acknowledged: boolean;
 };
 
 export function AuthShell({ children }: { children: ReactNode }) {
@@ -46,6 +52,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [milestoneTotal, setMilestoneTotal] = useState<number | null>(null);
   const [milestoneClicks, setMilestoneClicks] = useState(0);
+  const [showIlimGreeting, setShowIlimGreeting] = useState(false);
+  const [ilimGreetingClicks, setIlimGreetingClicks] = useState(0);
 
   useEffect(() => {
     const storedSessionKey = localStorage.getItem("session_key") ?? "";
@@ -78,6 +86,14 @@ export function AuthShell({ children }: { children: ReactNode }) {
       .catch(() => null);
   }, [serverUrl, sessionKey, user]);
 
+  useEffect(() => {
+    if (!sessionKey || !user) return;
+
+    apiFetch<GreetingStatus>(serverUrl, sessionKey, "/api/greetings/ilim-smile/")
+      .then((data) => setShowIlimGreeting(data.show))
+      .catch(() => null);
+  }, [serverUrl, sessionKey, user]);
+
   async function confirmMilestone() {
     const nextClicks = milestoneClicks + 1;
     if (nextClicks < 10) {
@@ -96,11 +112,31 @@ export function AuthShell({ children }: { children: ReactNode }) {
     }
   }
 
+  async function confirmIlimGreeting() {
+    const nextClicks = ilimGreetingClicks + 1;
+    if (nextClicks < 10) {
+      setIlimGreetingClicks(nextClicks);
+      return;
+    }
+
+    try {
+      await apiFetch<GreetingStatus>(serverUrl, sessionKey, "/api/greetings/ilim-smile/", {
+        method: "POST",
+      });
+      setShowIlimGreeting(false);
+      setIlimGreetingClicks(0);
+    } catch {
+      setIlimGreetingClicks(9);
+    }
+  }
+
   function logout() {
     apiFetch(serverUrl, sessionKey, "/api/auth/logout/", { method: "POST" }).catch(() => null);
     localStorage.removeItem("session_key");
     setSessionKey("");
     setUser(null);
+    setShowIlimGreeting(false);
+    setIlimGreetingClicks(0);
   }
 
   if (!authChecked) {
@@ -144,13 +180,15 @@ export function AuthShell({ children }: { children: ReactNode }) {
 
   return (
     <div className={sidebarCollapsed ? "app-shell sidebar-collapsed" : "app-shell"}>
-      {milestoneTotal !== null && (
+      {showIlimGreeting ? (
+        <IlimSmileGreeting clicks={ilimGreetingClicks} onSmile={confirmIlimGreeting} />
+      ) : milestoneTotal !== null ? (
         <MilestoneCelebration
           clicks={milestoneClicks}
           total={milestoneTotal}
           onConfirm={confirmMilestone}
         />
-      )}
+      ) : null}
       <div className="mobile-appbar">
         <button
           className="mobile-menu-button"

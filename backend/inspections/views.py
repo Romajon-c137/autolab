@@ -780,6 +780,31 @@ def milestone_1000(request):
     })
 
 
+@csrf_exempt
+def ilim_smile_greeting(request):
+    auth_error, user = require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    if request.method not in ("GET", "POST"):
+        return JsonResponse({"ok": False, "error": "Method not allowed"}, status=405)
+
+    is_ilim = user.get_username().strip().lower() == "ilim"
+    profile = profile_for(user)
+
+    if request.method == "POST" and is_ilim:
+        if profile.ilim_smile_greeting_acknowledged_at is None:
+            profile.ilim_smile_greeting_acknowledged_at = timezone.now()
+            profile.save(update_fields=["ilim_smile_greeting_acknowledged_at"])
+
+    acknowledged = profile.ilim_smile_greeting_acknowledged_at is not None
+    return JsonResponse({
+        "ok": True,
+        "show": is_ilim and not acknowledged,
+        "acknowledged": acknowledged,
+    })
+
+
 def reports_summary(request):
     auth_error, user = require_auth(request)
     if auth_error is not None:
