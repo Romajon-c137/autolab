@@ -8,6 +8,7 @@ import re
 import secrets
 
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.sessions.models import Session
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.core.files.base import ContentFile
@@ -36,7 +37,7 @@ from .application_pdfs import (
     link_application_on_submit,
     save_client_application,
 )
-from .background_tasks import schedule_inspection_postprocessing
+from .background_tasks import schedule_inspection_archive, schedule_inspection_postprocessing
 from .models import (
     Branch,
     ClientApplication,
@@ -45,7 +46,7 @@ from .models import (
     VehicleInspection,
     VehicleInspectionExtraPhoto,
 )
-from .pricing import current_inspection_amount
+from .pricing import MissingInspectionPrice, current_inspection_amount
 from .serializers import (
     file_url,
     serialize_application,
@@ -58,7 +59,6 @@ from .security import (
     validate_image,
     validate_pdf,
 )
-from .storage_mirror import mirror_inspection
 from .two_factor import (
     TwoFactorError,
     create_login_challenge,
@@ -471,7 +471,17 @@ def logout_view(request):
             "error": "Only POST is allowed",
         }, status=405)
 
+    supplied_session_key = request.headers.get("X-Session-Key", "").strip()
+    auth_error, user = require_auth(request)
+    if auth_error is not None:
+        return auth_error
     logout(request)
+    if supplied_session_key:
+        Session.objects.filter(session_key=supplied_session_key).delete()
+    profile = profile_for(user)
+    if profile.current_session_key in {supplied_session_key, request.session.session_key or ""}:
+        profile.current_session_key = ""
+        profile.save(update_fields=["current_session_key"])
     return JsonResponse({"ok": True})
 
 
@@ -480,10 +490,21 @@ def me_view(request):
     if auth_error is not None:
         return auth_error
 
-    return JsonResponse({
+    response = JsonResponse({
         "ok": True,
         "user": _serialize_user(user),
     })
+    supplied_session_key = request.headers.get("X-Session-Key", "").strip()
+    if supplied_session_key and request.session.session_key != supplied_session_key:
+        response.set_cookie(
+            settings.SESSION_COOKIE_NAME,
+            supplied_session_key,
+            max_age=settings.SESSION_COOKIE_AGE,
+            secure=settings.SESSION_COOKIE_SECURE,
+            httponly=True,
+            samesite=settings.SESSION_COOKIE_SAMESITE,
+        )
+    return response
 
 
 def branches_view(request):
@@ -702,6 +723,17 @@ def inspections_list(request):
 
         queryset = queryset.filter(created_at__gte=start, created_at__lt=end)
 
+    operation_type = request.GET.get("operation_type", "").strip()
+    vehicle_category = request.GET.get("vehicle_category", "").strip().upper()
+    if operation_type:
+        if operation_type not in dict(VehicleInspection.OPERATION_CHOICES):
+            return JsonResponse({"ok": False, "error": "Invalid operation_type"}, status=400)
+        queryset = queryset.filter(operation_type=operation_type)
+    if vehicle_category:
+        if vehicle_category not in dict(VehicleInspection.CATEGORY_CHOICES):
+            return JsonResponse({"ok": False, "error": "Invalid vehicle_category"}, status=400)
+        queryset = queryset.filter(vehicle_category=vehicle_category)
+
     if query:
         queryset = queryset.filter(
             brand__icontains=query
@@ -713,7 +745,9 @@ def inspections_list(request):
             vin__icontains=query
         )
 
-    return JsonResponse({
+    can_report_totals = is_report_user(user)
+    aggregate = queryset.aggregate(count=Count("id"), amount=Sum("amount")) if can_report_totals else None
+    response = {
         "ok": True,
         "inspections": [
             serialize_inspection(
@@ -725,7 +759,12 @@ def inspections_list(request):
             )
             for inspection in queryset.order_by("-created_at")[:300]
         ],
-    })
+    }
+    if aggregate is not None:
+        response["total_count"] = aggregate["count"] or 0
+        response["total_amount"] = int(aggregate["amount"] or 0) if can_view_amounts(user) else None
+        response["is_truncated"] = response["total_count"] > len(response["inspections"])
+    return JsonResponse(response)
 
 
 def inspection_detail(request, inspection_id):
@@ -760,9 +799,10 @@ def milestone_1000(request):
     if request.method not in ("GET", "POST"):
         return JsonResponse({"ok": False, "error": "Method not allowed"}, status=405)
 
+    profile = profile_for(user)
+    may_view_total = profile.role != UserProfile.ROLE_MVD or user.is_superuser
     total = VehicleInspection.objects.count()
     reached = total >= 1000
-    profile = profile_for(user)
 
     if request.method == "POST":
         if not reached:
@@ -773,7 +813,7 @@ def milestone_1000(request):
 
     return JsonResponse({
         "ok": True,
-        "total": total,
+        "total": total if may_view_total else None,
         "reached": reached,
         "acknowledged": profile.milestone_1000_acknowledged_at is not None,
         "show": reached and profile.milestone_1000_acknowledged_at is None,
@@ -826,6 +866,16 @@ def reports_summary(request):
         return int(value or 0) if show_amounts else None
 
     queryset = allowed_inspections(user).filter(created_at__gte=start, created_at__lt=end)
+    operation_type = request.GET.get("operation_type", "").strip()
+    vehicle_category = request.GET.get("vehicle_category", "").strip().upper()
+    if operation_type:
+        if operation_type not in dict(VehicleInspection.OPERATION_CHOICES):
+            return JsonResponse({"ok": False, "error": "Invalid operation_type"}, status=400)
+        queryset = queryset.filter(operation_type=operation_type)
+    if vehicle_category:
+        if vehicle_category not in dict(VehicleInspection.CATEGORY_CHOICES):
+            return JsonResponse({"ok": False, "error": "Invalid vehicle_category"}, status=400)
+        queryset = queryset.filter(vehicle_category=vehicle_category)
 
     branch_counts = queryset.values("branch_id", "branch__name").annotate(
         inspections_count=Count("id"),
@@ -862,6 +912,10 @@ def reports_summary(request):
     week_start = today - timedelta(days=6)
     month_start = today.replace(day=1)
     base = allowed_inspections(user)
+    if operation_type:
+        base = base.filter(operation_type=operation_type)
+    if vehicle_category:
+        base = base.filter(vehicle_category=vehicle_category)
 
     def totals_for(qs):
         row = qs.aggregate(count=Count("id"), amount=Sum("amount"))
@@ -958,6 +1012,24 @@ def client_application_submit(request):
         return JsonResponse({"ok": False, "error": "Too many requests"}, status=429)
 
     vin = _normalize_vin_text(request.POST.get("vin", ""))
+    request_id = request.POST.get("request_id", "").strip()
+    if request_id and not re.fullmatch(r"[A-Za-z0-9_-]{8,64}", request_id):
+        return JsonResponse({"ok": False, "error": "Field 'request_id' has an invalid format"}, status=400)
+    if request_id:
+        existing_application = ClientApplication.objects.filter(request_id=request_id).first()
+        if existing_application is not None:
+            if existing_application.vin.upper() != vin:
+                return JsonResponse({
+                    "ok": False,
+                    "error": "Request identifier was already used for another application",
+                }, status=409)
+            return JsonResponse({
+                "ok": True,
+                "duplicate": True,
+                "inspection": None if existing_application.inspection_id is None else {
+                    "id": existing_application.inspection_id
+                },
+            })
     if not VIN_PATTERN.match(vin):
         return JsonResponse({
             "ok": False,
@@ -1003,20 +1075,33 @@ def client_application_submit(request):
             "error": "An application is already attached to this VIN",
         }, status=409)
 
-    application = save_client_application(
-        vin,
-        applicant_name,
-        inn,
-        phone,
-        vehicle_name,
-        plate_number,
-        year,
-        uploaded_pdf,
-        signature,
-    )
+    try:
+        application = save_client_application(
+            vin,
+            applicant_name,
+            inn,
+            phone,
+            vehicle_name,
+            plate_number,
+            year,
+            uploaded_pdf,
+            signature,
+            request_id=request_id or None,
+        )
+    except IntegrityError:
+        application = ClientApplication.objects.filter(request_id=request_id).first()
+        if application is None or application.vin.upper() != vin:
+            raise
+        return JsonResponse({
+            "ok": True,
+            "duplicate": True,
+            "inspection": None if application.inspection_id is None else {
+                "id": application.inspection_id
+            },
+        })
     inspection = link_application_on_submit(application)
     if inspection is not None:
-        mirror_inspection(inspection)
+        schedule_inspection_archive(inspection.id)
 
     return JsonResponse({
         "ok": True,
@@ -1143,7 +1228,7 @@ def client_application_rebuild(request, application_id):
     if old_pdf_name and old_pdf_name != application.pdf.name:
         application.pdf.storage.delete(old_pdf_name)
     if inspection is not None:
-        mirror_inspection(inspection)
+        schedule_inspection_archive(inspection.id)
     return JsonResponse({
         "ok": True,
         "application": serialize_application(request, application),
@@ -1304,6 +1389,12 @@ def create_inspection(request):
     )
 
     try:
+        inspection_amount = current_inspection_amount(operation_type, vehicle_category)
+    except MissingInspectionPrice as error:
+        logger.error("Inspection creation blocked because price is missing: %s", error)
+        return JsonResponse({"ok": False, "error": str(error)}, status=409)
+
+    try:
         with transaction.atomic():
             existing = VehicleInspection.objects.filter(request_fingerprint=fingerprint).first()
             if existing is not None:
@@ -1316,7 +1407,7 @@ def create_inspection(request):
                 brand=brand,
                 country=country,
                 vehicle_category=vehicle_category,
-                amount=current_inspection_amount(operation_type, vehicle_category),
+                amount=inspection_amount,
                 branch=branch,
                 created_by=user,
                 vin=vin,

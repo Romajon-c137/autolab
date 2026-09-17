@@ -1,4 +1,5 @@
 from django.core.files import File
+from django.db import transaction
 from django.utils import timezone
 
 from .models import ClientApplication, VehicleInspection
@@ -14,6 +15,7 @@ def save_client_application(
     year,
     uploaded_pdf,
     signature,
+    request_id=None,
 ):
     filename = f"application_{vin}_{timezone.now().strftime('%Y%m%d%H%M%S')}.pdf"
     application = ClientApplication(
@@ -24,22 +26,34 @@ def save_client_application(
         plate_number=plate_number,
         year=year,
         vin=vin,
+        request_id=request_id,
     )
     application.pdf.save(filename, uploaded_pdf, save=False)
     application.signature.save(f"signature_{vin}_{timezone.now().strftime('%Y%m%d%H%M%S')}.png", signature, save=False)
-    application.save()
+    try:
+        application.save()
+    except Exception:
+        if application.pdf:
+            application.pdf.storage.delete(application.pdf.name)
+        if application.signature:
+            application.signature.storage.delete(application.signature.name)
+        raise
     return application
 
 
 def detach_application(application):
-    """Detach an application and remove only the PDF copy created by our linker."""
+    """Detach an application and remove its copy from the previously linked inspection."""
     inspection = application.inspection
     if inspection is not None and inspection.application_pdf:
-        filename = inspection.application_pdf.name.rsplit("/", 1)[-1]
-        if filename.startswith(f"application_{application.vin}_"):
-            inspection.application_pdf.delete(save=False)
-            inspection.application_pdf = None
-            inspection.save(update_fields=["application_pdf"])
+        old_pdf_name = inspection.application_pdf.name
+        inspection.application_pdf = None
+        inspection.save(update_fields=["application_pdf"])
+
+        def clean_old_inspection():
+            from .background_tasks import schedule_inspection_archive
+            schedule_inspection_archive(inspection.id, delete_file_path=old_pdf_name)
+
+        transaction.on_commit(clean_old_inspection)
     application.inspection = None
     application.save(update_fields=["inspection"])
 

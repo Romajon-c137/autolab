@@ -5,6 +5,8 @@ def file_url(request, field):
     if not field:
         return ""
 
+    # Nginx serves the original efficiently (including HTTP range requests),
+    # but authorizes every /media request through the backend first.
     return request.build_absolute_uri(field.url)
 
 

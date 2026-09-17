@@ -127,30 +127,21 @@ class _HomeSecondaryButton extends StatelessWidget {
 }
 
 class _MenuButton extends StatelessWidget {
-  const _MenuButton({
-    required this.title,
-    required this.onTap,
-    this.subtitle,
-    this.primary = false,
-  });
+  const _MenuButton({required this.title, required this.onTap});
 
   final String title;
-  final String? subtitle;
   final VoidCallback onTap;
-  final bool primary;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
     return Material(
-      color: primary ? cs.primary : cs.surface,
+      color: cs.surface,
       borderRadius: BorderRadius.circular(10),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
-        side: primary
-            ? BorderSide.none
-            : BorderSide(color: cs.outlineVariant),
+        side: BorderSide(color: cs.outlineVariant),
       ),
       child: InkWell(
         onTap: onTap,
@@ -166,33 +157,15 @@ class _MenuButton extends StatelessWidget {
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: primary ? 16 : 15,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: primary ? cs.onPrimary : cs.onSurface,
+                        color: cs.onSurface,
                       ),
                     ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        subtitle!,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: primary
-                              ? cs.onPrimary.withValues(alpha: 0.75)
-                              : cs.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                size: 20,
-                color: primary
-                    ? cs.onPrimary.withValues(alpha: 0.7)
-                    : cs.onSurfaceVariant,
-              ),
+              Icon(Icons.chevron_right, size: 20, color: cs.onSurfaceVariant),
             ],
           ),
         ),

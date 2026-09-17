@@ -9,18 +9,38 @@ from django.utils.crypto import get_random_string
 from django.utils.html import format_html
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
+from django.db import transaction
 
 from .models import (
     Branch,
     ClientApplication,
     InspectionPrice,
+    InspectionPostprocessJob,
     LoginChallenge,
     OpenAIApiKey,
     UserProfile,
     VehicleInspection,
     VehicleInspectionExtraPhoto,
 )
-from .pricing import current_inspection_amount
+from .pricing import MissingInspectionPrice, current_inspection_amount
+from .background_tasks import schedule_inspection_archive
+
+
+class VehicleInspectionAdminForm(forms.ModelForm):
+    class Meta:
+        model = VehicleInspection
+        fields = "__all__"
+
+    def clean(self):
+        cleaned = super().clean()
+        operation_type = cleaned.get("operation_type")
+        vehicle_category = cleaned.get("vehicle_category")
+        if operation_type and vehicle_category:
+            try:
+                current_inspection_amount(operation_type, vehicle_category)
+            except MissingInspectionPrice as error:
+                self.add_error("vehicle_category", str(error))
+        return cleaned
 
 
 class ApplicationLinkStatusFilter(admin.SimpleListFilter):
@@ -275,6 +295,7 @@ class VehicleInspectionExtraPhotoInline(admin.TabularInline):
 
 @admin.register(VehicleInspection)
 class VehicleInspectionAdmin(admin.ModelAdmin):
+    form = VehicleInspectionAdminForm
     inlines = (VehicleInspectionExtraPhotoInline,)
     list_display = (
         "id",
@@ -370,6 +391,11 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
             )
         super().save_model(request, obj, form, change)
 
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        inspection_id = form.instance.id
+        transaction.on_commit(lambda: schedule_inspection_archive(inspection_id))
+
     @admin.display(description="Пробег")
     def mileage_preview(self, obj):
         return self._image_preview(obj.mileage_photo)
@@ -424,3 +450,24 @@ class VehicleInspectionAdmin(admin.ModelAdmin):
             '</a>',
             url=image.url,
         )
+
+
+@admin.register(InspectionPostprocessJob)
+class InspectionPostprocessJobAdmin(admin.ModelAdmin):
+    list_display = (
+        "inspection", "attempts", "mirror_completed_at",
+        "notification_completed_at", "completed_at", "available_at",
+    )
+    list_filter = ("completed_at", "mirror_completed_at", "notification_completed_at")
+    search_fields = ("inspection__vin", "inspection__id", "last_error")
+    readonly_fields = (
+        "inspection", "base_url", "attempts", "available_at",
+        "mirror_completed_at", "notification_completed_at", "completed_at",
+        "delete_file_path", "last_error", "created_at", "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

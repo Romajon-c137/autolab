@@ -29,11 +29,6 @@ def notify_telegram_inspection_created(base_url, inspection):
     created_at = timezone.localtime(inspection.created_at).strftime("%d.%m.%Y %H:%M")
     sequence_number = inspection_sequence_number(inspection)
     admin_url = f"{base_url}/admin/inspections/vehicleinspection/{inspection.id}/change/"
-    document_url = (
-        f"{base_url}{inspection.document_pdf.url}"
-        if inspection.document_pdf
-        else ""
-    )
 
     lines = [
         "<b>Новый осмотр</b>",
@@ -47,19 +42,13 @@ def notify_telegram_inspection_created(base_url, inspection):
         f"<b>Дата:</b> {html.escape(created_at)}",
         f'<a href="{html.escape(admin_url)}">Открыть в админке</a>',
     ]
-    if document_url:
-        lines.append(f'<a href="{html.escape(document_url)}">Скачать PDF</a>')
-
-    try:
-        requests.post(
-            f"https://api.telegram.org/bot{token}/sendMessage",
-            json={
-                "chat_id": chat_id,
-                "text": "\n".join(lines),
-                "parse_mode": "HTML",
-                "disable_web_page_preview": True,
-            },
-            timeout=5,
-        ).raise_for_status()
-    except requests.RequestException as error:
-        print(f"Telegram notification failed for inspection {inspection.id}: {error}")
+    requests.post(
+        f"https://api.telegram.org/bot{token}/sendMessage",
+        json={
+            "chat_id": chat_id,
+            "text": "\n".join(lines),
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        },
+        timeout=5,
+    ).raise_for_status()

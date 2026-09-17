@@ -76,10 +76,11 @@ If nginx serves frontend and backend on the same domain, keep `NEXT_PUBLIC_API_U
 
 ```bash
 sudo cp /opt/autolab/deploy/ubuntu/autolab-backend.service /etc/systemd/system/
+sudo cp /opt/autolab/deploy/ubuntu/autolab-worker.service /etc/systemd/system/
 sudo cp /opt/autolab/deploy/ubuntu/autolab-web.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now autolab-backend autolab-web
-sudo systemctl status autolab-backend autolab-web
+sudo systemctl enable --now autolab-backend autolab-worker autolab-web
+sudo systemctl status autolab-backend autolab-worker autolab-web
 ```
 
 ## 6. nginx
@@ -115,7 +116,7 @@ DJANGO_CORS_ALLOWED_ORIGINS=https://auto.example.com
 Restart:
 
 ```bash
-sudo systemctl restart autolab-backend autolab-web
+sudo systemctl restart autolab-backend autolab-worker autolab-web
 ```
 
 ## 8. Mobile APK for production server

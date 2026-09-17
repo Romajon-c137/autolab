@@ -29,7 +29,7 @@ import { MilestoneCelebration } from "./MilestoneCelebration";
 import { IlimSmileGreeting } from "./IlimSmileGreeting";
 
 type MilestoneStatus = {
-  total: number;
+  total: number | null;
   reached: boolean;
   acknowledged: boolean;
   show: boolean;
@@ -54,6 +54,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const [milestoneClicks, setMilestoneClicks] = useState(0);
   const [showIlimGreeting, setShowIlimGreeting] = useState(false);
   const [ilimGreetingClicks, setIlimGreetingClicks] = useState(0);
+  const [celebrationError, setCelebrationError] = useState("");
 
   useEffect(() => {
     const storedSessionKey = localStorage.getItem("session_key") ?? "";
@@ -79,19 +80,34 @@ export function AuthShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!sessionKey || !user) return;
 
-    apiFetch<MilestoneStatus>(serverUrl, sessionKey, "/api/milestones/1000/")
-      .then((data) => {
-        if (data.show) setMilestoneTotal(data.total);
-      })
-      .catch(() => null);
+    let active = true;
+    const refreshMilestone = () => {
+      apiFetch<MilestoneStatus>(serverUrl, sessionKey, "/api/milestones/1000/")
+        .then((data) => {
+          if (active && data.show) setMilestoneTotal(data.total ?? 1000);
+        })
+        .catch(() => null);
+    };
+    refreshMilestone();
+    const interval = window.setInterval(refreshMilestone, 60_000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
   }, [serverUrl, sessionKey, user]);
 
   useEffect(() => {
     if (!sessionKey || !user) return;
 
+    let active = true;
     apiFetch<GreetingStatus>(serverUrl, sessionKey, "/api/greetings/ilim-smile/")
-      .then((data) => setShowIlimGreeting(data.show))
+      .then((data) => {
+        if (active) setShowIlimGreeting(data.show);
+      })
       .catch(() => null);
+    return () => {
+      active = false;
+    };
   }, [serverUrl, sessionKey, user]);
 
   async function confirmMilestone() {
@@ -102,6 +118,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
     }
 
     try {
+      setCelebrationError("");
       await apiFetch<MilestoneStatus>(serverUrl, sessionKey, "/api/milestones/1000/", {
         method: "POST",
       });
@@ -109,6 +126,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
       setMilestoneClicks(0);
     } catch {
       setMilestoneClicks(9);
+      setCelebrationError("Не удалось сохранить подтверждение. Проверьте соединение и нажмите ещё раз.");
     }
   }
 
@@ -120,6 +138,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
     }
 
     try {
+      setCelebrationError("");
       await apiFetch<GreetingStatus>(serverUrl, sessionKey, "/api/greetings/ilim-smile/", {
         method: "POST",
       });
@@ -127,6 +146,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
       setIlimGreetingClicks(0);
     } catch {
       setIlimGreetingClicks(9);
+      setCelebrationError("Не удалось сохранить подтверждение. Проверьте соединение и нажмите ещё раз.");
     }
   }
 
@@ -137,6 +157,9 @@ export function AuthShell({ children }: { children: ReactNode }) {
     setUser(null);
     setShowIlimGreeting(false);
     setIlimGreetingClicks(0);
+    setMilestoneTotal(null);
+    setMilestoneClicks(0);
+    setCelebrationError("");
   }
 
   if (!authChecked) {
@@ -181,12 +204,13 @@ export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div className={sidebarCollapsed ? "app-shell sidebar-collapsed" : "app-shell"}>
       {showIlimGreeting ? (
-        <IlimSmileGreeting clicks={ilimGreetingClicks} onSmile={confirmIlimGreeting} />
+        <IlimSmileGreeting clicks={ilimGreetingClicks} onSmile={confirmIlimGreeting} error={celebrationError} />
       ) : milestoneTotal !== null ? (
         <MilestoneCelebration
           clicks={milestoneClicks}
           total={milestoneTotal}
           onConfirm={confirmMilestone}
+          error={celebrationError}
         />
       ) : null}
       <div className="mobile-appbar">

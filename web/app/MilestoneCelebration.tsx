@@ -7,10 +7,12 @@ export function MilestoneCelebration({
   clicks,
   total,
   onConfirm,
+  error,
 }: {
   clicks: number;
   total: number;
   onConfirm: () => void;
+  error?: string;
 }) {
   const remaining = 10 - clicks;
 
@@ -39,6 +41,7 @@ export function MilestoneCelebration({
             ? "Последнее нажатие — и праздничное окно закроется 🎉"
             : `Чтобы закрыть праздничное окно, нажмите «ОК» ещё ${remaining} раз 🎉`}
         </small>
+        {error ? <p role="alert" className="field-error">{error}</p> : null}
       </section>
     </div>
   );

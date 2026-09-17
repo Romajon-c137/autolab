@@ -6,6 +6,8 @@ from django.conf import settings
 from django.http import FileResponse, Http404
 from PIL import Image, ImageOps
 
+from .protected_media import authorize_media_path
+
 
 PREVIEW_MAX_SIZE = (1920, 1920)
 PREVIEW_WEBP_QUALITY = 82
@@ -20,6 +22,9 @@ def preview_file_url(request, field):
 
 
 def photo_preview(request, photo_path):
+    authorization_error = authorize_media_path(request, photo_path, images_only=True)
+    if authorization_error is not None:
+        return authorization_error
     media_root = Path(settings.MEDIA_ROOT).resolve()
     source = (media_root / photo_path).resolve()
     allowed_roots = (

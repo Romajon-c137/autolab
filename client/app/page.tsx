@@ -97,6 +97,7 @@ export default function Page() {
   const scanInputRef = useRef<HTMLInputElement | null>(null);
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
+  const submitRequestIdRef = useRef("");
 
   const completed = useMemo(() => {
     const filled = requiredFields.filter((key) => isFieldComplete(key, form)).length + (signatureData ? 1 : 0);
@@ -249,10 +250,12 @@ export default function Page() {
     setSubmitLoading(true);
 
     try {
+      if (!submitRequestIdRef.current) submitRequestIdRef.current = crypto.randomUUID();
       const response = await fetch("/api/applications/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ form, signatureData }),
+        body: JSON.stringify({ form, signatureData, requestId: submitRequestIdRef.current }),
+        signal: AbortSignal.timeout(90_000),
       });
       const result = await response.json();
       if (!response.ok || !result.ok) {
@@ -267,10 +270,15 @@ export default function Page() {
           : "Совпадение не найдено. Заявка сохранена и будет прикреплена автоматически, как только осмотр появится в системе."
       );
       clearForm();
+      submitRequestIdRef.current = "";
       setSubmitted(true);
     } catch (error) {
       setSubmitStatus("");
-      setSubmitError(error instanceof Error ? error.message : "Не удалось отправить заявку");
+      setSubmitError(
+        error instanceof DOMException && error.name === "TimeoutError"
+          ? "Сервер отвечает слишком долго. Повторите отправку — повторная заявка не создастся."
+          : error instanceof Error ? error.message : "Не удалось отправить заявку"
+      );
     } finally {
       setSubmitLoading(false);
     }

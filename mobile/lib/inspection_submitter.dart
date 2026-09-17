@@ -28,8 +28,8 @@ Future<_SentInspection> _sendInspectionDraft({
     conversionPhotos: draft.conversionPhotos,
   );
 
-  await storage.removeDraft(draft.id);
   await storage.addSent(sentWithPhotos);
+  await storage.removeDraft(draft.id);
   return sentWithPhotos;
 }
 

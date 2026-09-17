@@ -397,6 +397,7 @@ class VehicleInspectionExtraPhoto(models.Model):
 
 
 class ClientApplication(models.Model):
+    request_id = models.CharField(max_length=64, unique=True, null=True, blank=True, editable=False)
     applicant_name = models.CharField("ФИО заявителя", max_length=200, blank=True)
     inn = models.CharField("ИНН", max_length=20, blank=True)
     phone = models.CharField("Телефон", max_length=32, blank=True)
@@ -433,3 +434,25 @@ class ClientApplication(models.Model):
 
     def __str__(self):
         return f"{self.applicant_name or 'Без имени'} ({self.vin})"
+
+
+class InspectionPostprocessJob(models.Model):
+    inspection = models.OneToOneField(
+        VehicleInspection, on_delete=models.CASCADE, related_name="postprocess_job"
+    )
+    base_url = models.URLField(max_length=255)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    available_at = models.DateTimeField(default=timezone.now, db_index=True)
+    mirror_completed_at = models.DateTimeField(null=True, blank=True)
+    notification_completed_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    delete_file_path = models.CharField(max_length=255, blank=True)
+    last_error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["available_at", "id"]
+
+    def __str__(self):
+        return f"Postprocess inspection #{self.inspection_id}"

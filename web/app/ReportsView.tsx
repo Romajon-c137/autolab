@@ -66,21 +66,35 @@ function ReportsContent({
   const [vinSearching, setVinSearching] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [resultCount, setResultCount] = useState(0);
+  const [resultAmount, setResultAmount] = useState<number | null>(null);
+  const [resultTruncated, setResultTruncated] = useState(false);
+
+  function addReportFilters(params: URLSearchParams) {
+    if (typeFilter !== "all") params.set("operation_type", typeFilter);
+    if ((typeFilter === "sbgts" || typeFilter === "tech_inspection") && categoryFilter !== "all") {
+      params.set("vehicle_category", categoryFilter);
+    }
+  }
 
   async function load() {
     setLoading(true);
     setError("");
     try {
       const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+      addReportFilters(params);
       const summaryRequest = canReportTotals
         ? apiFetch<ReportSummary>(serverUrl, sessionKey, `/api/reports/summary/?${params}`)
         : Promise.resolve(null);
       const [summaryData, inspectionsData] = await Promise.all([
         summaryRequest,
-        apiFetch<{ inspections: Inspection[] }>(serverUrl, sessionKey, `/api/inspections/?${params}`),
+        apiFetch<{ inspections: Inspection[]; total_count?: number; total_amount?: number | null; is_truncated?: boolean }>(serverUrl, sessionKey, `/api/inspections/?${params}`),
       ]);
       setSummary(summaryData);
       setInspections(inspectionsData.inspections);
+      setResultCount(inspectionsData.total_count ?? inspectionsData.inspections.length);
+      setResultAmount(inspectionsData.total_amount ?? null);
+      setResultTruncated(Boolean(inspectionsData.is_truncated));
     } catch (err) {
       setError(humanError(err));
     } finally {
@@ -100,12 +114,16 @@ function ReportsContent({
     setVinSearching(true);
     try {
       const params = new URLSearchParams({ vin: value });
-      const data = await apiFetch<{ inspections: Inspection[] }>(
+      addReportFilters(params);
+      const data = await apiFetch<{ inspections: Inspection[]; total_count?: number; total_amount?: number | null; is_truncated?: boolean }>(
         serverUrl,
         sessionKey,
         `/api/inspections/?${params}`
       );
       setVinResults(data.inspections);
+      setResultCount(data.total_count ?? data.inspections.length);
+      setResultAmount(data.total_amount ?? null);
+      setResultTruncated(Boolean(data.is_truncated));
       setVinSearchActive(true);
     } catch (err) {
       setError(humanError(err));
@@ -118,6 +136,7 @@ function ReportsContent({
     setVinQuery("");
     setVinResults([]);
     setVinSearchActive(false);
+    void load();
   }
 
   async function openInspection(inspection: Inspection) {
@@ -138,26 +157,22 @@ function ReportsContent({
   }
 
   useEffect(() => {
-    load();
+    if (vinSearchActive) {
+      void searchByVin();
+    } else {
+      void load();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [typeFilter, categoryFilter]);
 
   const isTodayPeriod = dateFrom === today && dateTo === today;
   const periodLabel = dateFrom === dateTo
     ? formatDateOnly(dateFrom)
     : `${formatDateOnly(dateFrom)} - ${formatDateOnly(dateTo)}`;
   const typeHasCategoryFilter = typeFilter === "sbgts" || typeFilter === "tech_inspection";
-  const filteredByType = typeFilter === "all"
-    ? inspections
-    : inspections.filter((item) => (item.operation_type ?? "") === typeFilter);
-  const filteredInspections =
-    typeHasCategoryFilter && categoryFilter !== "all"
-      ? filteredByType.filter((item) => item.vehicle_category === categoryFilter)
-      : filteredByType;
-  const visibleInspections = vinSearchActive ? vinResults : filteredInspections;
-  const visibleAmount = visibleInspections.reduce(
-    (total, inspection) => total + Number(inspection.amount ?? 0),
-    0
+  const visibleInspections = vinSearchActive ? vinResults : inspections;
+  const visibleAmount = resultAmount ?? visibleInspections.reduce(
+    (total, inspection) => total + Number(inspection.amount ?? 0), 0
   );
   const typeLabel = REPORT_TYPE_OPTIONS.find((option) => option.value === typeFilter)?.label ?? "Все";
   const filterLabel =
@@ -191,7 +206,7 @@ function ReportsContent({
         <div className="filters">
           <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
           <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-          <button className="btn" onClick={load}>
+          <button className="btn" onClick={resetVinSearch}>
             Найти
           </button>
           <div className="vin-global-search">
@@ -232,7 +247,7 @@ function ReportsContent({
                     ? "Сегодня"
                     : "За выбранный период"}
               </span>
-              <strong>{visibleInspections.length}</strong>
+              <strong>{resultCount}</strong>
               <small>
                 {vinSearchActive ? "Вся база" : `${periodLabel} · ${filterLabel}`}
               </small>
@@ -293,6 +308,9 @@ function ReportsContent({
               </div>
             )}
           </div>}
+          {resultTruncated && (
+            <div className="info-message">Показаны последние 300 записей. Итог рассчитан по всем найденным осмотрам.</div>
+          )}
           <div className={`inspection-list report-inspection-list${canViewAmounts ? "" : " without-amount"}`}>
             {visibleInspections.length === 0 ? (
               <div className="card empty">

@@ -6,13 +6,19 @@ from unittest.mock import patch
 
 from PIL import Image
 from django.contrib.auth import get_user_model
+from django.contrib.sessions.models import Session
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Branch, LoginChallenge, UserProfile, VehicleInspection
+from .application_pdfs import detach_application, save_client_application
+from .background_tasks import process_next_postprocessing_job, schedule_inspection_postprocessing
+from .models import (
+    Branch, ClientApplication, InspectionPostprocessJob, InspectionPrice,
+    LoginChallenge, UserProfile, VehicleInspection,
+)
 from .storage_mirror import mirror_inspection
 from .two_factor import TwoFactorError, verify_login_challenge
 from .views import normalize_vehicle_category
@@ -63,6 +69,12 @@ class SecurityTests(TestCase):
         profile.branch = self.branch
         profile.role = UserProfile.ROLE_OPERATOR
         profile.save()
+        InspectionPrice.objects.create(
+            operation_type=VehicleInspection.OPERATION_TECH_INSPECTION,
+            vehicle_category=VehicleInspection.CATEGORY_M1,
+            amount=850,
+            effective_from=timezone.localdate(),
+        )
 
     def tearDown(self):
         self.override.disable()
@@ -70,6 +82,23 @@ class SecurityTests(TestCase):
 
     def test_upload_endpoint_requires_authentication(self):
         response = self.client.post("/api/upload-image/", {"image": uploaded_image()})
+        self.assertEqual(response.status_code, 401)
+
+    def test_expired_header_session_is_rejected(self):
+        self.client.force_login(self.user)
+        session_key = self.client.session.session_key
+        Session.objects.filter(session_key=session_key).update(
+            expire_date=timezone.now() - timedelta(seconds=1)
+        )
+        response = Client().get("/api/auth/me/", HTTP_X_SESSION_KEY=session_key)
+        self.assertEqual(response.status_code, 401)
+
+    def test_password_change_invalidates_header_session(self):
+        self.client.force_login(self.user)
+        session_key = self.client.session.session_key
+        self.user.set_password("A-new-safe-password-456")
+        self.user.save(update_fields=["password"])
+        response = Client().get("/api/auth/me/", HTTP_X_SESSION_KEY=session_key)
         self.assertEqual(response.status_code, 401)
 
     def test_upload_rejects_spoofed_image(self):
@@ -101,6 +130,27 @@ class SecurityTests(TestCase):
             HTTP_X_CLIENT_APPLICATION_KEY="client-secret",
         )
         self.assertEqual(response.status_code, 409)
+
+    def test_client_application_request_is_idempotent(self):
+        payload = {
+            "vin": "KNAG6412BLA015238",
+            "request_id": "application-request-123",
+            "application_pdf": uploaded_pdf(),
+            "signature": uploaded_image("signature.png"),
+        }
+        first = self.client.post(
+            "/api/client-applications/", payload,
+            HTTP_X_CLIENT_APPLICATION_KEY="client-secret",
+        )
+        second = self.client.post(
+            "/api/client-applications/",
+            {"vin": payload["vin"], "request_id": payload["request_id"]},
+            HTTP_X_CLIENT_APPLICATION_KEY="client-secret",
+        )
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertTrue(second.json()["duplicate"])
+        self.assertEqual(ClientApplication.objects.count(), 1)
 
     def test_identical_inspection_request_is_idempotent(self):
         self.client.force_login(self.user)
@@ -146,6 +196,61 @@ class SecurityTests(TestCase):
         response = self.client.post("/api/inspections/", {"brand": "Car", "vin": "bad vin!"})
         self.assertEqual(response.status_code, 400)
 
+    def test_missing_price_blocks_inspection(self):
+        self.client.force_login(self.user)
+        InspectionPrice.objects.filter(
+            operation_type="tech_inspection", vehicle_category="N3"
+        ).delete()
+        response = self.client.post("/api/inspections/", {
+            "brand": "Car", "vin": "KNAG6412BLA015238",
+            "operation_type": "tech_inspection", "vehicle_category": "N3",
+        })
+        self.assertEqual(response.status_code, 409)
+
+    def test_detach_removes_archived_application_copy(self):
+        inspection = VehicleInspection.objects.create(
+            title="Car", brand="Car", vin="KNAG6412BLA015238",
+            branch=self.branch, created_by=self.user,
+        )
+        application = save_client_application(
+            inspection.vin, "Test", "123", "+996555111222", "Car", "01KG001", "2020",
+            uploaded_pdf(), uploaded_image("signature.png"),
+        )
+        application.inspection = inspection
+        application.save(update_fields=["inspection"])
+        inspection.application_pdf.save("linked.pdf", uploaded_pdf(), save=True)
+        mirror_inspection(inspection.id)
+        inspection.refresh_from_db()
+        archived_copy = Path(inspection.application_pdf.path)
+        self.assertTrue(archived_copy.exists())
+
+        with self.captureOnCommitCallbacks(execute=True):
+            detach_application(application)
+        with patch("inspections.background_tasks.notify_telegram_inspection_created"):
+            process_next_postprocessing_job()
+        inspection.refresh_from_db()
+        self.assertFalse(inspection.application_pdf)
+        self.assertFalse(archived_copy.exists())
+        self.assertTrue(Path(application.pdf.path).exists())
+
+    def test_postprocessing_job_is_durable_and_retryable(self):
+        inspection = VehicleInspection.objects.create(
+            title="Car", brand="Car", vin="KNAG6412BLA015238",
+            branch=self.branch, created_by=self.user,
+        )
+        schedule_inspection_postprocessing(inspection.id, "https://example.test")
+        with patch("inspections.background_tasks.mirror_inspection", side_effect=RuntimeError("disk")):
+            self.assertTrue(process_next_postprocessing_job())
+        job = InspectionPostprocessJob.objects.get(inspection=inspection)
+        self.assertIsNone(job.completed_at)
+        self.assertIn("disk", job.last_error)
+        job.available_at = timezone.now()
+        job.save(update_fields=["available_at"])
+        with patch("inspections.background_tasks.notify_telegram_inspection_created"):
+            self.assertTrue(process_next_postprocessing_job())
+        job.refresh_from_db()
+        self.assertIsNotNone(job.completed_at)
+
 
 class TwoFactorTests(TestCase):
     def test_used_challenge_cannot_be_reused(self):
@@ -160,12 +265,23 @@ class TwoFactorTests(TestCase):
 
 @override_settings(SECURE_SSL_REDIRECT=False)
 class PhotoPreviewTests(TestCase):
+    def setUp(self):
+        self.branch = Branch.objects.create(name="Preview branch")
+        self.user = get_user_model().objects.create_user("preview", password="A-safe-password-123")
+        self.user.profile.branch = self.branch
+        self.user.profile.save(update_fields=["branch"])
+        self.client.force_login(self.user)
+
     def test_preview_is_full_hd_sized_webp_and_keeps_original(self):
         with tempfile.TemporaryDirectory() as media_root:
             source = Path(media_root) / "inspections" / "front" / "large.jpg"
             source.parent.mkdir(parents=True)
             Image.new("RGB", (3000, 2000), "white").save(source, "JPEG", quality=95)
             original_size = source.stat().st_size
+            VehicleInspection.objects.create(
+                brand="Car", vin="KNAG6412BLA015238", branch=self.branch,
+                created_by=self.user, front_photo="inspections/front/large.jpg",
+            )
 
             with override_settings(MEDIA_ROOT=media_root):
                 response = self.client.get("/api/photo-preview/inspections/front/large.jpg")
@@ -187,6 +303,10 @@ class PhotoPreviewTests(TestCase):
             source = Path(media_root) / relative_path
             source.parent.mkdir(parents=True)
             Image.new("RGB", (1600, 1200), "white").save(source, "JPEG", quality=85)
+            VehicleInspection.objects.create(
+                brand="Car", vin="KMFXKS7BPVU138887", branch=self.branch,
+                created_by=self.user, front_photo=relative_path,
+            )
 
             with override_settings(MEDIA_ROOT=media_root):
                 response = self.client.get(f"/api/photo-preview/{relative_path}")
@@ -195,6 +315,10 @@ class PhotoPreviewTests(TestCase):
             self.assertEqual(response.status_code, 200)
             with Image.open(io.BytesIO(preview_bytes)) as preview:
                 self.assertEqual(preview.format, "WEBP")
+
+    def test_preview_requires_authentication(self):
+        response = Client().get("/api/photo-preview/vehicles/unknown/photo.jpg")
+        self.assertEqual(response.status_code, 401)
 
 
 @override_settings(SECURE_SSL_REDIRECT=False)
@@ -234,6 +358,8 @@ class RolePermissionTests(TestCase):
         self.assertEqual(self.client.get("/api/reports/summary/").status_code, 403)
         self.assertEqual(self.client.get("/api/client-applications/list/").status_code, 403)
         self.assertEqual(self.client.post("/api/inspections/", {}).status_code, 403)
+        milestone = self.client.get("/api/milestones/1000/").json()
+        self.assertIsNone(milestone["total"])
 
     def test_operator_can_see_count_reports_and_manage_applications_without_amounts(self):
         self.set_role(UserProfile.ROLE_OPERATOR)
@@ -252,6 +378,23 @@ class RolePermissionTests(TestCase):
         self.assertNotIn("amount", list_response.json()["inspections"][0])
         self.assertEqual(self.client.get("/api/reports/summary/").status_code, 200)
         self.assertEqual(self.client.get("/api/client-applications/list/").status_code, 200)
+
+    def test_report_total_is_not_limited_to_first_300_rows(self):
+        VehicleInspection.objects.bulk_create([
+            VehicleInspection(
+                title=f"Car {index}", brand="Car", vin=f"VIN{index:014d}",
+                amount=850, branch=self.branch, created_by=self.user,
+            )
+            for index in range(301)
+        ])
+        response = self.client.get("/api/inspections/", {
+            "date_from": timezone.localdate().isoformat(),
+            "date_to": timezone.localdate().isoformat(),
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["total_count"], 301)
+        self.assertEqual(len(response.json()["inspections"]), 300)
+        self.assertTrue(response.json()["is_truncated"])
 
     def test_milestone_is_acknowledged_per_user(self):
         with patch.object(VehicleInspection.objects, "count", return_value=1000):

@@ -3,6 +3,10 @@ from django.utils import timezone
 from .models import InspectionPrice, VehicleInspection
 
 
+class MissingInspectionPrice(ValueError):
+    pass
+
+
 def current_inspection_amount(operation_type, vehicle_category):
     """Return the active price for an inspection operation and category."""
     price_category = (
@@ -23,4 +27,7 @@ def current_inspection_amount(operation_type, vehicle_category):
         .order_by("-effective_from", "-id")
         .first()
     )
-    return 0 if price is None else price.amount
+    if price is None:
+        category = f" / {price_category}" if price_category else ""
+        raise MissingInspectionPrice(f"Не настроен действующий тариф: {operation_type}{category}")
+    return price.amount

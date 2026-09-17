@@ -12,6 +12,7 @@ const vinPattern = /^[A-HJ-NPR-Z0-9]{17}$/;
 type SubmitBody = {
   form?: Partial<ApplicationFormState>;
   signatureData?: string;
+  requestId?: string;
 };
 
 export async function POST(request: NextRequest) {
@@ -31,12 +32,16 @@ export async function POST(request: NextRequest) {
 
   const form = normalizeForm(body.form);
   const signatureData = typeof body.signatureData === "string" ? body.signatureData : "";
+  const requestId = typeof body.requestId === "string" ? body.requestId.trim() : "";
   const formError = validateForm(form);
   if (formError) {
     return NextResponse.json({ ok: false, error: formError }, { status: 400 });
   }
   if (!vinPattern.test(form.vin)) {
     return NextResponse.json({ ok: false, error: "VIN должен состоять из 17 допустимых символов" }, { status: 400 });
+  }
+  if (!/^[A-Za-z0-9_-]{8,64}$/.test(requestId)) {
+    return NextResponse.json({ ok: false, error: "Invalid request identifier" }, { status: 400 });
   }
 
   if (!signatureData.startsWith("data:image/png;base64,")) {
@@ -71,15 +76,26 @@ export async function POST(request: NextRequest) {
   data.append("year", form.year);
   data.append("application_pdf", new Blob([new Uint8Array(pdf)], { type: "application/pdf" }), applicationPdfName(form));
   data.append("signature", signatureBlob(signatureData), "signature.png");
+  data.append("request_id", requestId);
 
-  const response = await fetch(`${backendUrl}/api/client-applications/`, {
-    method: "POST",
-    headers: {
-      "X-Client-Application-Key": process.env.CLIENT_APPLICATION_API_KEY || "",
-      "X-Forwarded-For": trustedClientIp(request),
-    },
-    body: data,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${backendUrl}/api/client-applications/`, {
+      method: "POST",
+      headers: {
+        "X-Client-Application-Key": process.env.CLIENT_APPLICATION_API_KEY || "",
+        "X-Forwarded-For": trustedClientIp(request),
+      },
+      body: data,
+      signal: AbortSignal.timeout(45_000),
+    });
+  } catch (error) {
+    console.error("Application backend request failed", error);
+    return NextResponse.json(
+      { ok: false, error: "Сервер временно не отвечает. Повторите отправку — дубль не создастся." },
+      { status: 504 }
+    );
+  }
   const result = await response.json().catch(() => null);
 
   if (!response.ok || !result?.ok) {

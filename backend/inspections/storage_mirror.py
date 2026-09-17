@@ -1,6 +1,7 @@
 import json
 import filecmp
 import os
+from uuid import uuid4
 from pathlib import Path
 
 from django.conf import settings
@@ -81,9 +82,9 @@ def mirror_inspection(inspection):
             if source_to_remove:
                 staged_sources.append(source_to_remove)
 
+    promote_inspection_files(inspection.id, inspection_updates, extra_photo_updates)
     write_json(vehicle_dir / "vehicle.json", vehicle_data)
     write_json(inspection_dir / "inspection.json", inspection_data)
-    promote_inspection_files(inspection.id, inspection_updates, extra_photo_updates)
     remove_staged_sources(staged_sources)
     return inspection_dir
 
@@ -103,16 +104,21 @@ def storage_root():
 
 
 def vehicle_json(inspection):
+    latest = (
+        VehicleInspection.objects.filter(vin__iexact=inspection.vin)
+        .order_by("-created_at", "-id")
+        .first()
+    ) or inspection
     return {
-        "vin": inspection.vin,
-        "brand": inspection.brand,
-        "country": inspection.country,
-        "vehicle_category": inspection.vehicle_category,
-        "last_plate_number": inspection.plate_number,
-        "last_operation_type": inspection.operation_type,
-        "last_operation_type_label": inspection.get_operation_type_display(),
-        "last_inspection_id": inspection.id,
-        "last_inspection_created_at": serialize_datetime(inspection.created_at),
+        "vin": latest.vin,
+        "brand": latest.brand,
+        "country": latest.country,
+        "vehicle_category": latest.vehicle_category,
+        "last_plate_number": latest.plate_number,
+        "last_operation_type": latest.operation_type,
+        "last_operation_type_label": latest.get_operation_type_display(),
+        "last_inspection_id": latest.id,
+        "last_inspection_created_at": serialize_datetime(latest.created_at),
         "updated_at": timezone.now().isoformat(),
     }
 
@@ -165,7 +171,7 @@ def link_field_file(field, target_dir, name_prefix):
 
     source = Path(field.path)
     if not source.exists():
-        return "", None
+        raise FileNotFoundError(f"Inspection file is missing: {source}")
 
     suffix = source.suffix.lower()
     target = target_dir / f"{safe_path_part(name_prefix)}{suffix}"
@@ -174,7 +180,9 @@ def link_field_file(field, target_dir, name_prefix):
 
     if target.exists():
         if not filecmp.cmp(source, target, shallow=False):
-            raise RuntimeError(f"Storage target differs from source: {target}")
+            temporary_target = target.with_name(f".{target.name}.{uuid4().hex}.tmp")
+            os.link(source, temporary_target)
+            temporary_target.replace(target)
     else:
         # Both paths live under AUTOLAB_STORAGE_ROOT. A hard link makes the
         # promotion atomic without allocating a second copy of the file.

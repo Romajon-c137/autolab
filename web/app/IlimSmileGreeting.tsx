@@ -6,9 +6,11 @@ import ReactConfetti from "react-confetti";
 export function IlimSmileGreeting({
   clicks,
   onSmile,
+  error,
 }: {
   clicks: number;
   onSmile: () => void;
+  error?: string;
 }) {
   const remaining = 10 - clicks;
 
@@ -35,6 +37,7 @@ export function IlimSmileGreeting({
             ? "Осталась последняя улыбка 😊"
             : `Чтобы открыть сайт, нажми «Улыбка» ещё ${remaining} раз`}
         </small>
+        {error ? <p role="alert" className="field-error">{error}</p> : null}
       </section>
     </div>
   );

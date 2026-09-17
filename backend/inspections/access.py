@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth import HASH_SESSION_KEY, SESSION_KEY
+from django.utils.crypto import constant_time_compare
 from django.contrib.sessions.models import Session
 from django.http import JsonResponse
 from django.utils import timezone
@@ -10,15 +12,51 @@ from .models import UserProfile, VehicleInspection
 
 def require_auth(request):
     if request.user.is_authenticated:
-        return None, request.user
+        profile = profile_for(request.user)
+        request_session_key = request.session.session_key or ""
+        is_current_session = (
+            not profile.current_session_key
+            or profile.current_session_key == request_session_key
+        )
+        if request.user.is_active and profile.can_use_app and is_current_session:
+            return None, request.user
+        if not is_current_session:
+            return JsonResponse({
+                "ok": False,
+                "error": "Session was replaced by a newer login",
+            }, status=401), None
+        return JsonResponse({
+            "ok": False,
+            "error": "User access is disabled",
+        }, status=403), None
 
     session_key = request.headers.get("X-Session-Key", "").strip()
     if session_key:
-        session = Session.objects.filter(session_key=session_key).first()
+        session = Session.objects.filter(
+            session_key=session_key,
+            expire_date__gt=timezone.now(),
+        ).first()
         if session is not None:
-            user_id = session.get_decoded().get("_auth_user_id")
+            session_data = session.get_decoded()
+            user_id = session_data.get(SESSION_KEY)
             user = get_user_model().objects.filter(id=user_id, is_active=True).first()
-            if user is not None:
+            session_hash = session_data.get(HASH_SESSION_KEY, "")
+            if (
+                user is not None
+                and session_hash
+                and constant_time_compare(session_hash, user.get_session_auth_hash())
+            ):
+                profile = profile_for(user)
+                if not profile.can_use_app:
+                    return JsonResponse({
+                        "ok": False,
+                        "error": "User access is disabled",
+                    }, status=403), None
+                if profile.current_session_key and profile.current_session_key != session_key:
+                    return JsonResponse({
+                        "ok": False,
+                        "error": "Session was replaced by a newer login",
+                    }, status=401), None
                 return None, user
 
     return JsonResponse({

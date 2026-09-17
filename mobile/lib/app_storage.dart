@@ -167,6 +167,7 @@ class _AppStorage {
   }
 
   Future<void> addSent(_SentInspection inspection) async {
+    sent.removeWhere((item) => item.remoteId == inspection.remoteId);
     sent.insert(0, inspection);
     await _prefs.setString(
       'sent_inspections',

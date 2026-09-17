@@ -166,6 +166,7 @@ export async function apiFetch<T>(
   const response = await fetch(`${normalizedServerUrl}${path}`, {
     ...init,
     headers,
+    credentials: init.credentials ?? "include",
   });
   const url = `${normalizedServerUrl}${path}`;
   const text = await response.text();
@@ -228,7 +229,10 @@ export function sectionPath(section: Section) {
 }
 
 export function isoDate(date: Date) {
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function formatDate(value: string) {
