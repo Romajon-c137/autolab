@@ -1,0 +1,123 @@
+.page {
+  min-height: 100vh;
+  padding: 36px 24px 64px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(79, 109, 245, 0.08), transparent 27rem),
+    #f6f7fb;
+  color: #172033;
+}
+
+.shell { max-width: 1180px; margin: 0 auto; }
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.backLink { display: inline-block; margin-bottom: 22px; color: #657087; font-size: 13px; font-weight: 700; text-decoration: none; }
+.backLink:hover { color: #4f6df5; }
+.eyebrow { margin: 0 0 7px; color: #4f6df5; font-size: 12px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+.header h1 { margin: 0; font-size: clamp(32px, 4vw, 46px); letter-spacing: -.045em; line-height: 1; }
+.subtitle { margin: 10px 0 0; color: #6f788c; font-size: 15px; }
+.liveBadge { display: flex; align-items: center; gap: 9px; color: #697489; font-size: 12px; font-weight: 700; }
+.liveBadge span { width: 8px; height: 8px; border-radius: 50%; background: #35b979; box-shadow: 0 0 0 5px rgba(53, 185, 121, .12); }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 14px; }
+.statCard {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid #e6e9f1;
+  border-radius: 18px;
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 8px 30px rgba(31, 43, 74, .045);
+}
+.statCard div:nth-child(2) { min-width: 0; display: grid; gap: 5px; }
+.statCard span { color: #737d91; font-size: 12px; font-weight: 700; }
+.statCard strong { overflow: hidden; color: #172033; font-size: 25px; letter-spacing: -.035em; text-overflow: ellipsis; white-space: nowrap; }
+.statCard > small { align-self: end; padding-bottom: 4px; color: #929aab; font-size: 11px; }
+.iconBox { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; background: #ecf8f2; color: #2cad73; font-size: 17px; }
+.iconBox svg { width: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.iconBlue { color: #4f6df5; background: #eef1ff; }
+.iconOrange { color: #e88638; background: #fff1e4; }
+.growth { padding: 6px 9px; border-radius: 999px; color: #229a62; background: #eaf8f1; font-size: 11px; }
+.peakCard { border-color: #f3ddc9; background: linear-gradient(135deg, #fffaf5, #fff); }
+.peakCount { color: #e67729; font-size: 25px; }
+
+.chartCard { padding: 26px; border: 1px solid #e4e8f0; border-radius: 22px; background: #fff; box-shadow: 0 18px 60px rgba(31, 43, 74, .07); }
+.chartHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.titleLine { display: flex; align-items: center; gap: 18px; }
+.titleLine h2 { margin: 0; font-size: 20px; letter-spacing: -.025em; }
+.chartHeader p { margin: 7px 0 0; color: #7b8497; font-size: 13px; }
+.legend { display: flex; align-items: center; gap: 7px; color: #697489; font-size: 11px; font-weight: 700; }
+.legend i { width: 19px; height: 3px; border-radius: 3px; background: #5878f5; }
+.weekSwitch { display: grid; grid-template-columns: 34px minmax(132px, auto) 34px; align-items: center; border: 1px solid #e5e8ef; border-radius: 12px; overflow: hidden; }
+.weekSwitch button { width: 34px; height: 42px; display: grid; place-items: center; border: 0; background: #fafbfc; color: #59647a; }
+.weekSwitch button:hover:not(:disabled) { background: #f0f3ff; color: #4f6df5; }
+.weekSwitch button:disabled { cursor: default; color: #cbd0da; }
+.weekSwitch svg { width: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.weekSwitch > span { display: grid; gap: 1px; padding: 0 12px; color: #293248; font-size: 12px; font-weight: 800; text-align: center; }
+.weekSwitch small { color: #9098a8; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+
+.peakNotice { display: inline-flex; align-items: center; gap: 10px; margin-top: 24px; padding: 10px 13px; border: 1px solid #f7dfc8; border-radius: 12px; background: #fff8f1; }
+.peakNotice > span { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 8px; background: #ffe8d1; color: #e87c2d; font-size: 12px; }
+.peakNotice p { display: grid; gap: 2px; margin: 0; }
+.peakNotice strong { color: #75421f; font-size: 12px; }
+.peakNotice small { color: #a06e4d; font-size: 10px; }
+
+.chartWrap { width: 100%; margin-top: 4px; overflow-x: auto; scrollbar-width: thin; }
+.chart { display: block; width: 100%; min-width: 650px; height: auto; overflow: visible; font-family: Arial, Helvetica, sans-serif; }
+.gridLine { stroke: #e9ecf2; stroke-width: 1; stroke-dasharray: 3 6; }
+.axisValue, .dateLabel { fill: #9aa2b2; font-size: 10px; }
+.dayLabel { fill: #4c566c; font-size: 11px; font-weight: 800; }
+.area { fill: url(#chart-area); }
+.line { fill: none; stroke: #5878f5; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.pointGroup { outline: none; cursor: pointer; }
+.hitArea { fill: transparent; }
+.point { fill: #fff; stroke: #5878f5; stroke-width: 3; transition: r .15s ease; }
+.peakGlow { fill: #f29449; opacity: .35; filter: url(#peak-glow); }
+.peakPoint { fill: #f28a3b; stroke: #fff; stroke-width: 3; transition: r .15s ease; }
+.pointValue { fill: #536078; font-size: 10px; font-weight: 800; }
+.peakValue { fill: #df7021; font-size: 12px; font-weight: 900; }
+.pointGroup:focus .point { stroke: #2f50df; }
+.tooltip { pointer-events: none; }
+.tooltip rect { fill: #172033; filter: drop-shadow(0 5px 8px rgba(23,32,51,.18)); }
+.tooltip text { fill: #bfc7d7; font-size: 9px; }
+.tooltip .tooltipValue { fill: #fff; font-size: 11px; font-weight: 800; }
+
+.chartFooter { display: flex; align-items: center; gap: 18px; padding-top: 16px; border-top: 1px solid #eef0f4; }
+.chartFooter span { display: flex; align-items: center; gap: 7px; color: #747e91; font-size: 10px; font-weight: 700; }
+.chartFooter i { width: 8px; height: 8px; border-radius: 50%; }
+.dotBlue { background: #5878f5; }
+.dotOrange { background: #f28a3b; }
+.chartFooter small { margin-left: auto; color: #9aa2b1; font-size: 10px; }
+
+@media (max-width: 860px) {
+  .stats { grid-template-columns: 1fr 1fr; }
+  .peakCard { grid-column: 1 / -1; }
+  .chartHeader { align-items: stretch; flex-direction: column; }
+  .weekSwitch { align-self: flex-start; }
+}
+
+@media (max-width: 580px) {
+  .page { padding: 22px 12px 36px; }
+  .header { align-items: flex-start; flex-direction: column; margin-bottom: 20px; }
+  .backLink { margin-bottom: 18px; }
+  .stats { grid-template-columns: 1fr; }
+  .peakCard { grid-column: auto; }
+  .chartCard { padding: 18px 14px; border-radius: 18px; }
+  .titleLine { align-items: flex-start; flex-direction: column; gap: 9px; }
+  .peakNotice { align-items: flex-start; }
+  .chartFooter { align-items: flex-start; flex-wrap: wrap; }
+  .chartFooter small { width: 100%; margin: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .point, .peakPoint { transition: none; }
+}

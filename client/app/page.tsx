@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, PointerEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { ApplicationFormState, buildApplicationDocument } from "./application-document";
 
 type FormState = ApplicationFormState;
@@ -309,6 +310,7 @@ export default function Page() {
             <h1>Онлайн заявка</h1>
           </div>
           <div className="progress" aria-label={`Заполнено ${completed}%`}>
+            <Link className="analytics-link" href="/analytics">Открыть аналитику →</Link>
             <span>{completed}%</span>
             <div>
               <i style={{ width: `${completed}%` }} />

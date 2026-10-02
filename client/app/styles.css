@@ -80,6 +80,17 @@ h1 {
   font-weight: 700;
 }
 
+.analytics-link {
+  color: var(--primary-dark);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.analytics-link:hover {
+  text-decoration: underline;
+}
+
 .progress div {
   height: 8px;
   overflow: hidden;
